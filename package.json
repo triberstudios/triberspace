@@ -1,0 +1,17 @@
+{
+  "name": "triberspace",
+  "private": true,
+  "packageManager": "npm@10.9.0",
+  "workspaces": [
+    "frontend/*",
+    "backend/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build"
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  }
+}
