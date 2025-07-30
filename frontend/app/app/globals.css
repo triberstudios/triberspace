@@ -120,3 +120,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .sidebar-enhanced {
+    width: var(--sidebar-width);
+    transition: width 0.3s ease;
+    overflow: visible;
+  }
+  
+  .sidebar-collapsed {
+    --sidebar-width: 68px;
+  }
+  
+  .sidebar-expanded {
+    --sidebar-width: 298px;
+  }
+}
