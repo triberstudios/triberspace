@@ -1,21 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Home, Compass, ShoppingBag, User, PanelLeftClose } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { 
+  House,
+  Compass,
+  ShoppingBag,
+  User,
+  ArrowLineLeft,
+  ArrowLineRight
+} from "@phosphor-icons/react"
 
 interface MenuItem {
   title: string
   icon: any
   href: string
+  weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone"
 }
 
 const items: MenuItem[] = [
   {
     title: "Home",
-    icon: Home,
+    icon: House,
     href: "/",
   },
   {
@@ -42,7 +50,13 @@ export function AppSidebar() {
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
+    setShowTooltip(false) // Hide tooltip when toggling
   }
+
+  // Hide tooltip when sidebar state changes
+  useEffect(() => {
+    setShowTooltip(false)
+  }, [isCollapsed])
 
   return (
     <div 
@@ -61,19 +75,28 @@ export function AppSidebar() {
             Navigate
           </h2>
         )}
-        <div className="relative">
+        <div 
+          className="relative"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
           <button
             onClick={toggleSidebar}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
             className={cn(
               "flex items-center justify-center rounded-lg bg-transparent hover:bg-sidebar-accent transition-colors duration-200 h-8 w-8"
             )}
           >
-            <PanelLeftClose className="h-4 w-4" />
+            {isCollapsed ? (
+              <ArrowLineRight className="h-5 w-5" />
+            ) : (
+              <ArrowLineLeft className="h-5 w-5" />
+            )}
           </button>
           {showTooltip && (
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded border border-gray-600 whitespace-nowrap z-50">
+            <div 
+              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded border border-gray-600 whitespace-nowrap z-50 pointer-events-none"
+              style={{ visibility: showTooltip ? 'visible' : 'hidden' }}
+            >
               {isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             </div>
           )}
@@ -98,14 +121,12 @@ export function AppSidebar() {
                 isCollapsed ? "justify-center px-0" : "gap-4 px-4",
                 isActive 
                   ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                  : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  : "hover:bg-sidebar-accent/25 hover:text-sidebar-accent-foreground"
               )}
             >
               <IconComponent 
-                className="h-6 w-6 flex-shrink-0"
-                fill={isActive ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth={2}
+                className="h-6 w-6 flex-shrink-0" 
+                weight={isActive ? "fill" : "regular"}
               />
               {!isCollapsed && (
                 <span className="text-base font-medium">
