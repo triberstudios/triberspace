@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { 
   House,
-  Compass,
-  ShoppingBag,
+  Globe,
+  ShoppingCartSimple,
   User,
   ArrowLineLeft,
   ArrowLineRight
@@ -28,12 +28,12 @@ const items: MenuItem[] = [
   },
   {
     title: "Explore",
-    icon: Compass,
+    icon: Globe,
     href: "/explore",
   },
   {
     title: "Store", 
-    icon: ShoppingBag,
+    icon: ShoppingCartSimple,
     href: "/store",
   },
   {
@@ -71,7 +71,7 @@ export function AppSidebar() {
         isCollapsed ? "justify-center px-2 pt-8" : "justify-between px-4 pt-8"
       )}>
         {!isCollapsed && (
-          <h2 className="text-lg font-normal text-sidebar-foreground">
+          <h2 className="text-lg font-medium text-sidebar-foreground">
             Navigate
           </h2>
         )}
@@ -129,7 +129,7 @@ export function AppSidebar() {
                 weight={isActive ? "fill" : "regular"}
               />
               {!isCollapsed && (
-                <span className="text-base font-medium">
+                <span className="text-2xl font-medium">
                   {item.title}
                 </span>
               )}

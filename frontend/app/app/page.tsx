@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
     <div className="p-8 flex flex-col gap-8">
-      <h1 className="text-4xl font-bold">Shadcn/UI Component Test</h1>
+      <h1 className="text-4xl font-semibold">Shadcn/UI Component Test</h1>
         
         <section className="flex flex-col gap-8">
           <div className="flex flex-col gap-4">
