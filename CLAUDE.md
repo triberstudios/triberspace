@@ -29,6 +29,7 @@ Currently, the backend services (API and game-server) only have placeholder test
 - Use TypeScript properly with explicit types and interfaces
 - Prefer composition over complex inheritance
 - Remove unused code, imports, and console.logs before committing
+- Use semantic HTML/TSX elements whenever possible instead of generic `<div>` elements
 
 ### Spacing & Layout Standards
 - **4px Spacing Scale**: All spacing must use multiples of 4px (4, 8, 12, 16, 20, 24, 32, etc.)
