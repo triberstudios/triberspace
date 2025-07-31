@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Triber Space",
-  description: "Your creative space",
+  title: "triberspace",
+  description: "A new dimension.",
 };
 
 export default function RootLayout({
