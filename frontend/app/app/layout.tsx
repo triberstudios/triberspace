@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/ui/app-sidebar";
+import { Providers } from "@/lib/providers";
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
@@ -31,12 +32,14 @@ export default function RootLayout({
       <body
         className={`${workSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <div className="flex h-screen">
-          <AppSidebar />
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </div>
+        <Providers>
+          <div className="flex h-screen">
+            <AppSidebar />
+            <main className="flex-1 overflow-auto">
+              {children}
+            </main>
+          </div>
+        </Providers>
       </body>
     </html>
   );

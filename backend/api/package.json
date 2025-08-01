@@ -1,8 +1,11 @@
 {
   "name": "@triberspace/api",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,6 +14,14 @@
   "description": "",
   "dependencies": {
     "@fastify/cors": "^11.0.1",
-    "fastify": "^5.4.0"
+    "fastify": "^5.4.0",
+    "@triberspace/auth": "file:../../packages/auth",
+    "@triberspace/database": "file:../../packages/database"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.20.3",
+    "dotenv": "^17.2.1"
   }
 }

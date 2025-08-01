@@ -18,8 +18,15 @@ Triberspace is an immersive experience platform where fans can unlock exclusive 
 - `npm run lint` - Run Next.js linting
 - `npm start` - Start the production server
 
-### Backend Commands
-Currently, the backend services (API and game-server) only have placeholder test scripts. Development and build scripts need to be implemented.
+### Backend Commands (from backend/api/)
+- `npm run dev` - Start Fastify API server with Better Auth
+- `npm run build` - Build TypeScript to dist/
+- `npm run start` - Start production server
+
+### Database Commands (from packages/database/)
+- `npm run db:generate` - Generate migrations from schema changes
+- `npm run db:migrate` - Apply migrations to database
+- `npm run db:studio` - Open Drizzle Studio (database GUI)
 
 ## Code Quality & Standards
 
@@ -56,18 +63,19 @@ This is a Turborepo monorepo with the following structure:
 - **Tailwind CSS v4** for styling
 - **Custom UI Components**: Built from scratch with shadcn/ui utilities
 - **Three.js** and **@react-three/fiber** for 3D graphics
+- **Better Auth UI** for authentication forms with shadcn/ui styling
 - Components structure:
   - `components/ui/` - Reusable UI components (buttons, sidebar, etc.)
   - `components/` - App-specific composed components
 - Path aliases configured: `@/components`, `@/lib`, `@/ui`
 
 ### Backend Services
-- **`backend/api/`**: Fastify-based API server (setup pending)
+- **`backend/api/`**: Fastify API server with Better Auth integration
 - **`backend/game-server/`**: Colyseus game server with Express (setup pending)
 
 ### Shared Packages (`packages/`)
-- **`auth/`**: Better Auth configuration (to be implemented)
-- **`database/`**: Drizzle ORM schema and client (to be implemented)
+- **`auth/`**: Better Auth configuration with email/password authentication
+- **`database/`**: Drizzle ORM with PostgreSQL and Better Auth schema
 - **`utils/`**: Shared helpers and types (to be implemented)
 
 ### Build System
@@ -89,9 +97,10 @@ This is a Turborepo monorepo with the following structure:
 ## Development Notes
 
 ### Current Status
-- Frontend fully configured with custom sidebar navigation and component system
-- Backend services scaffolded but need development scripts and proper entry points
-- Shared packages are defined but not yet implemented
+- Frontend fully configured with custom sidebar navigation and Better Auth UI integration
+- Backend API server operational with Better Auth authentication endpoints
+- Database layer implemented with PostgreSQL and Better Auth schema
+- Authentication system working end-to-end with session management
 - ESLint configured but no test framework yet
 
 ### Code Standards Enforcement

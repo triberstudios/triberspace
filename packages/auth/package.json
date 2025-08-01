@@ -1,8 +1,11 @@
 {
   "name": "@triberspace/auth",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -10,6 +13,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "better-auth": "^1.3.4"
+    "better-auth": "^1.3.4",
+    "@triberspace/database": "file:../database"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
+    "dotenv": "^17.2.1"
   }
 }
