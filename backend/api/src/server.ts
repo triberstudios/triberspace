@@ -3,6 +3,8 @@ import { resolve } from 'path';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { auth } from '@triberspace/auth';
+import { v1Routes } from './routes/v1';
+import { errorHandler } from './middleware/error';
 
 // Load .env from root directory
 config({ path: resolve(__dirname, '../../../.env') });
@@ -10,6 +12,9 @@ config({ path: resolve(__dirname, '../../../.env') });
 const fastify = Fastify({
   logger: true
 });
+
+// Set error handler
+fastify.setErrorHandler(errorHandler);
 
 // Start server
 const start = async () => {
@@ -66,7 +71,10 @@ const start = async () => {
       }
     });
 
-    // Protected route example
+    // Register v1 API routes
+    await fastify.register(v1Routes, { prefix: '/api/v1' });
+
+    // Protected route example (keeping for backward compatibility)
     fastify.get('/protected', async (request, reply) => {
       const headers = new Headers();
       Object.entries(request.headers).forEach(([key, value]) => {

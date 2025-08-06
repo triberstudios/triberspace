@@ -14,7 +14,11 @@
   "description": "",
   "dependencies": {
     "@fastify/cors": "^11.0.1",
+    "@fastify/swagger": "^9.2.0",
+    "@fastify/swagger-ui": "^5.1.0",
+    "@fastify/rate-limit": "^10.1.1",
     "fastify": "^5.4.0",
+    "zod": "^3.24.1",
     "@triberspace/auth": "file:../../packages/auth",
     "@triberspace/database": "file:../../packages/database"
   },
