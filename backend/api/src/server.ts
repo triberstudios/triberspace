@@ -2,6 +2,8 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import { auth } from '@triberspace/auth';
 import { v1Routes } from './routes/v1';
 import { errorHandler } from './middleware/error';
@@ -29,6 +31,50 @@ const start = async () => {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    });
+
+    // Register Swagger
+    await fastify.register(swagger, {
+      openapi: {
+        openapi: '3.0.0',
+        info: {
+          title: 'Triberspace API',
+          description: 'REST API for Triberspace immersive experience platform',
+          version: '1.0.0',
+        },
+        servers: [
+          {
+            url: 'http://localhost:3001',
+            description: 'Development server'
+          }
+        ],
+        components: {
+          securitySchemes: {
+            cookieAuth: {
+              type: 'apiKey',
+              in: 'cookie',
+              name: 'better-auth.session_token'
+            }
+          }
+        }
+      }
+    });
+
+    // Register Swagger UI
+    await fastify.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: {
+        docExpansion: 'full',
+        deepLinking: false
+      },
+      uiHooks: {
+        onRequest: function (request, reply, next) { next() },
+        preHandler: function (request, reply, next) { next() }
+      },
+      staticCSP: true,
+      transformStaticCSP: (header) => header,
+      transformSpecification: (swaggerObject, request, reply) => { return swaggerObject },
+      transformSpecificationClone: true
     });
 
     // Health check route
