@@ -14,9 +14,10 @@ import {
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(), 
-  firstName: text("firstName").notNull(),
-  lastName: text("lastName").notNull(),
-  userName: text("userName").notNull(),
+  name: text("name").notNull(), // Keep original name field for Better Auth compatibility
+  firstName: text("firstName"), // Made nullable for migration
+  lastName: text("lastName"), // Made nullable for migration
+  userName: text("userName"), // Made nullable for migration
   email: text("email").notNull(),
   emailVerified: boolean("emailVerified").notNull().default(false),
   image: text("image"),

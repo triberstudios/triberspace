@@ -14,6 +14,41 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    additionalFields: {
+      firstName: {
+        type: "string",
+        required: false,
+        defaultValue: null
+      },
+      lastName: {
+        type: "string", 
+        required: false,
+        defaultValue: null
+      },
+      userName: {
+        type: "string",
+        required: false,
+        defaultValue: null
+      },
+      avatar_url: {
+        type: "string",
+        required: false,
+        defaultValue: null
+      },
+      socialLinks: {
+        type: "string",
+        required: false,
+        defaultValue: null
+      },
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "user",
+        input: false
+      }
+    }
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
