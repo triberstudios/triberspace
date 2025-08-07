@@ -11,7 +11,7 @@ import {
   user
 } from '@triberspace/database';
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { authMiddleware, optionalAuthMiddleware, AuthenticatedRequest } from '../../middleware/auth';
+import { authMiddleware, optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
 import { validateParams, validateQuery, validateBody } from '../../middleware/validation';
 import { publicIdSchema, paginationSchema } from '../../schemas/common';
 
@@ -27,6 +27,28 @@ const purchasePackageSchema = z.object({
   packageId: publicIdSchema,
   paymentProvider: z.enum(['stripe', 'paypal']).default('stripe'),
   paymentId: z.string().min(1)
+});
+
+// Creator package management schemas
+const createPackageSchema = z.object({
+  name: z.string().min(1, 'Package name is required').max(100),
+  pointsAmount: z.number().int().min(1, 'Points amount must be at least 1'),
+  priceUSD: z.number().min(0.01, 'Price must be at least $0.01'),
+  bonusPoints: z.number().int().min(0).default(0),
+  displayOrder: z.number().int().min(0).default(0)
+});
+
+const updatePackageSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  pointsAmount: z.number().int().min(1).optional(),
+  priceUSD: z.number().min(0.01).optional(),
+  bonusPoints: z.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+  displayOrder: z.number().int().min(0).optional()
+});
+
+const packageParamsSchema = z.object({
+  packageId: publicIdSchema
 });
 
 export async function v1PointsRoutes(fastify: FastifyInstance) {
@@ -558,6 +580,258 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           message: 'No balances found (database might be empty)'
         }
       };
+    }
+  });
+
+  // ===================================================================
+  // CREATOR PACKAGE MANAGEMENT
+  // ===================================================================
+
+  // Protected: Get creator's point packages for management
+  fastify.get('/my-packages', {
+    preHandler: [creatorOnlyMiddleware, validateQuery(paginationSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { page, limit } = request.query as z.infer<typeof paginationSchema>;
+    const offset = (page - 1) * limit;
+    const creatorId = request.creator!.id;
+
+    try {
+      const packages = await db
+        .select({
+          id: pointsPackages.publicId,
+          name: pointsPackages.name,
+          pointsAmount: pointsPackages.pointsAmount,
+          priceUSD: pointsPackages.priceUSD,
+          bonusPoints: pointsPackages.bonusPoints,
+          isActive: pointsPackages.isActive,
+          displayOrder: pointsPackages.displayOrder,
+          createdAt: pointsPackages.createdAt
+        })
+        .from(pointsPackages)
+        .where(eq(pointsPackages.creatorId, creatorId))
+        .orderBy(pointsPackages.displayOrder, pointsPackages.pointsAmount)
+        .limit(limit)
+        .offset(offset);
+
+      // Get sales stats for each package
+      const packagesWithStats = await Promise.all(
+        packages.map(async (pkg) => {
+          const [stats] = await db
+            .select({
+              totalSales: sql<number>`count(*)`,
+              totalRevenue: sql<number>`sum(${pointsPurchases.amountUSD})`,
+              totalPoints: sql<number>`sum(${pointsPurchases.pointsReceived})`
+            })
+            .from(pointsPurchases)
+            .innerJoin(pointsPackages, eq(pointsPurchases.packageId, pointsPackages.id))
+            .where(eq(pointsPackages.publicId, pkg.id));
+
+          return {
+            ...pkg,
+            priceUSD: parseFloat(pkg.priceUSD),
+            stats: {
+              totalSales: stats.totalSales || 0,
+              totalRevenue: parseFloat(String(stats.totalRevenue || '0')),
+              totalPointsSold: stats.totalPoints || 0
+            }
+          };
+        })
+      );
+
+      return {
+        success: true,
+        data: {
+          packages: packagesWithStats,
+          pagination: {
+            page,
+            limit,
+            hasMore: packages.length === limit
+          }
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error('Error fetching creator packages:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch packages',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Create new points package
+  fastify.post('/packages', {
+    preHandler: [creatorOnlyMiddleware, validateBody(createPackageSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const packageData = request.body as z.infer<typeof createPackageSchema>;
+    const creatorId = request.creator!.id;
+
+    try {
+      const [newPackage] = await db
+        .insert(pointsPackages)
+        .values({
+          creatorId,
+          ...packageData,
+          priceUSD: packageData.priceUSD.toFixed(2)
+        })
+        .returning({
+          id: pointsPackages.publicId,
+          name: pointsPackages.name,
+          pointsAmount: pointsPackages.pointsAmount,
+          priceUSD: pointsPackages.priceUSD,
+          bonusPoints: pointsPackages.bonusPoints,
+          displayOrder: pointsPackages.displayOrder,
+          createdAt: pointsPackages.createdAt
+        });
+
+      return reply.code(201).send({
+        success: true,
+        data: {
+          message: 'Points package created successfully',
+          package: {
+            ...newPackage,
+            priceUSD: parseFloat(newPackage.priceUSD)
+          }
+        }
+      });
+
+    } catch (error) {
+      fastify.log.error('Error creating package:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create package',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Update points package
+  fastify.put('/packages/:packageId', {
+    preHandler: [creatorOnlyMiddleware, validateParams(packageParamsSchema), validateBody(updatePackageSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { packageId } = request.params as z.infer<typeof packageParamsSchema>;
+    const updates = request.body as z.infer<typeof updatePackageSchema>;
+    const creatorId = request.creator!.id;
+
+    try {
+      // Verify package ownership
+      const [packageInfo] = await db
+        .select({ internalId: pointsPackages.id })
+        .from(pointsPackages)
+        .where(and(
+          eq(pointsPackages.creatorId, creatorId),
+          eq(pointsPackages.publicId, packageId)
+        ))
+        .limit(1);
+
+      if (!packageInfo) {
+        return reply.code(404).send({
+          error: {
+            code: 'PACKAGE_NOT_FOUND',
+            message: 'Package not found or not owned by creator',
+            statusCode: 404
+          }
+        });
+      }
+
+      // Prepare updates
+      const dbUpdates: any = { ...updates };
+      if (updates.priceUSD) {
+        dbUpdates.priceUSD = updates.priceUSD.toFixed(2);
+      }
+
+      const [updatedPackage] = await db
+        .update(pointsPackages)
+        .set(dbUpdates)
+        .where(eq(pointsPackages.id, packageInfo.internalId))
+        .returning({
+          id: pointsPackages.publicId,
+          name: pointsPackages.name,
+          pointsAmount: pointsPackages.pointsAmount,
+          priceUSD: pointsPackages.priceUSD,
+          bonusPoints: pointsPackages.bonusPoints,
+          isActive: pointsPackages.isActive,
+          displayOrder: pointsPackages.displayOrder
+        });
+
+      return {
+        success: true,
+        data: {
+          message: 'Package updated successfully',
+          package: {
+            ...updatedPackage,
+            priceUSD: parseFloat(updatedPackage.priceUSD)
+          }
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error('Error updating package:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to update package',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Delete points package
+  fastify.delete('/packages/:packageId', {
+    preHandler: [creatorOnlyMiddleware, validateParams(packageParamsSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { packageId } = request.params as z.infer<typeof packageParamsSchema>;
+    const creatorId = request.creator!.id;
+
+    try {
+      // Verify package ownership
+      const [packageInfo] = await db
+        .select({ internalId: pointsPackages.id })
+        .from(pointsPackages)
+        .where(and(
+          eq(pointsPackages.creatorId, creatorId),
+          eq(pointsPackages.publicId, packageId)
+        ))
+        .limit(1);
+
+      if (!packageInfo) {
+        return reply.code(404).send({
+          error: {
+            code: 'PACKAGE_NOT_FOUND',
+            message: 'Package not found or not owned by creator',
+            statusCode: 404
+          }
+        });
+      }
+
+      // Soft delete by setting inactive
+      await db
+        .update(pointsPackages)
+        .set({ isActive: false })
+        .where(eq(pointsPackages.id, packageInfo.internalId));
+
+      return {
+        success: true,
+        data: {
+          message: 'Package deleted successfully'
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error('Error deleting package:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to delete package',
+          statusCode: 500
+        }
+      });
     }
   });
 }

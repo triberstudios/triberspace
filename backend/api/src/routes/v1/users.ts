@@ -13,7 +13,7 @@ const updateProfileSchema = z.object({
     .max(20, 'Username must be at most 20 characters')
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
     .optional(),
-  socialLinks: z.string().optional() // JSON string format for Better Auth compatibility
+  socialLinks: z.union([z.string(), z.record(z.string())]).optional() // Accept JSON string or object
 });
 
 const updateAvatarSchema = z.object({
@@ -42,7 +42,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
           lastName,
           userName,
           avatar_url,
-          socialLinks: socialLinks ? JSON.parse(socialLinks) : null, // Parse JSON string
+          socialLinks: socialLinks, // Already a JSON object from JSONB
           role,
           emailVerified: request.user!.emailVerified,
           createdAt: request.user!.createdAt,
@@ -80,24 +80,29 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
         }
       }
 
-      // Prepare updates with JSON stringified socialLinks if provided
+      // Prepare updates with proper socialLinks handling
       const dbUpdates: any = {
         ...updates,
         updatedAt: new Date()
       };
       
+      // Handle socialLinks - convert to JSON object if it's a string
       if (updates.socialLinks) {
-        // Validate JSON format
-        try {
-          JSON.parse(updates.socialLinks);
-        } catch {
-          return reply.code(400).send({
-            error: {
-              code: 'INVALID_JSON',
-              message: 'socialLinks must be valid JSON string',
-              statusCode: 400
-            }
-          });
+        if (typeof updates.socialLinks === 'string') {
+          try {
+            dbUpdates.socialLinks = JSON.parse(updates.socialLinks);
+          } catch {
+            return reply.code(400).send({
+              error: {
+                code: 'INVALID_JSON',
+                message: 'socialLinks must be valid JSON string',
+                statusCode: 400
+              }
+            });
+          }
+        } else {
+          // It's already an object, use as-is
+          dbUpdates.socialLinks = updates.socialLinks;
         }
       }
 
@@ -124,7 +129,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
           message: 'Profile updated successfully',
           user: {
             ...updatedUser,
-            socialLinks: updatedUser.socialLinks ? JSON.parse(updatedUser.socialLinks as string) : null
+            socialLinks: updatedUser.socialLinks // Already a JSON object from JSONB
           }
         }
       };

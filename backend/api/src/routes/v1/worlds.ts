@@ -2,8 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { db, worlds, spaces, creators, user } from '@triberspace/database';
 import { eq, desc, sql } from 'drizzle-orm';
-import { optionalAuthMiddleware, AuthenticatedRequest } from '../../middleware/auth';
-import { validateParams, validateQuery } from '../../middleware/validation';
+import { optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
+import { validateParams, validateQuery, validateBody } from '../../middleware/validation';
 import { publicIdSchema, paginationSchema } from '../../schemas/common';
 import { NotFoundError } from '../../middleware/error';
 
@@ -13,6 +13,17 @@ const worldParamsSchema = z.object({
 
 const worldsQuerySchema = paginationSchema.extend({
   search: z.string().optional()
+});
+
+// Creator world management schemas
+const createWorldSchema = z.object({
+  name: z.string().min(1, 'World name is required').max(100),
+  description: z.string().max(500).optional()
+});
+
+const updateWorldSchema = z.object({
+  name: z.string().min(1, 'World name is required').max(100).optional(),
+  description: z.string().max(500).optional()
 });
 
 export async function v1WorldsRoutes(fastify: FastifyInstance) {
@@ -246,6 +257,177 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'Failed to fetch world spaces',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // ===================================================================
+  // CREATOR WORLD MANAGEMENT (CRUD OPERATIONS)
+  // ===================================================================
+
+  // Protected: Create world (creators only)
+  fastify.post('/', {
+    preHandler: [creatorOnlyMiddleware, validateBody(createWorldSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { name, description } = request.body as z.infer<typeof createWorldSchema>;
+    const creatorId = request.creator!.id;
+
+    try {
+      // Check if creator already has a world (one world per creator rule)
+      const [existingWorld] = await db
+        .select({ id: worlds.id })
+        .from(worlds)
+        .where(eq(worlds.creatorId, creatorId))
+        .limit(1);
+
+      if (existingWorld) {
+        return reply.code(409).send({
+          error: {
+            code: 'WORLD_EXISTS',
+            message: 'Creator already has a world. Only one world per creator is allowed.',
+            statusCode: 409
+          }
+        });
+      }
+
+      // Create the world
+      const [newWorld] = await db
+        .insert(worlds)
+        .values({
+          creatorId,
+          name,
+          description
+        })
+        .returning({
+          id: worlds.publicId,
+          name: worlds.name,
+          description: worlds.description,
+          createdAt: worlds.createdAt
+        });
+
+      return reply.code(201).send({
+        success: true,
+        data: {
+          message: 'World created successfully',
+          world: newWorld
+        }
+      });
+
+    } catch (error) {
+      fastify.log.error('Create world error:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create world',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Update world (creator only, their own world)
+  fastify.put('/:worldId', {
+    preHandler: [creatorOnlyMiddleware, validateParams(worldParamsSchema), validateBody(updateWorldSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { worldId } = request.params as z.infer<typeof worldParamsSchema>;
+    const updates = request.body as z.infer<typeof updateWorldSchema>;
+    const creatorId = request.creator!.id;
+
+    try {
+      // Verify world ownership
+      const [worldInfo] = await db
+        .select({ internalId: worlds.id })
+        .from(worlds)
+        .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(worlds.publicId, worldId)}`)
+        .limit(1);
+
+      if (!worldInfo) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'World not found or not owned by creator',
+            statusCode: 404
+          }
+        });
+      }
+
+      // Update the world
+      const [updatedWorld] = await db
+        .update(worlds)
+        .set(updates)
+        .where(eq(worlds.id, worldInfo.internalId))
+        .returning({
+          id: worlds.publicId,
+          name: worlds.name,
+          description: worlds.description,
+          createdAt: worlds.createdAt
+        });
+
+      return {
+        success: true,
+        data: {
+          message: 'World updated successfully',
+          world: updatedWorld
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error('Update world error:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to update world',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Delete world (creator only, their own world)
+  fastify.delete('/:worldId', {
+    preHandler: [creatorOnlyMiddleware, validateParams(worldParamsSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { worldId } = request.params as z.infer<typeof worldParamsSchema>;
+    const creatorId = request.creator!.id;
+
+    try {
+      // Verify world ownership
+      const [worldInfo] = await db
+        .select({ internalId: worlds.id })
+        .from(worlds)
+        .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(worlds.publicId, worldId)}`)
+        .limit(1);
+
+      if (!worldInfo) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'World not found or not owned by creator',
+            statusCode: 404
+          }
+        });
+      }
+
+      // Delete the world (spaces will be cascade deleted)
+      await db
+        .delete(worlds)
+        .where(eq(worlds.id, worldInfo.internalId));
+
+      return {
+        success: true,
+        data: {
+          message: 'World and all spaces deleted successfully'
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error('Delete world error:', error);
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to delete world',
           statusCode: 500
         }
       });
