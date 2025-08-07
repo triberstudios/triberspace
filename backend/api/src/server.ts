@@ -82,9 +82,9 @@ const start = async () => {
       return { message: 'Triberspace API is running', status: 'healthy' };
     });
 
-    // Auth routes
+    // Auth routes with proper request handling
     fastify.route({
-      method: ["GET", "POST"],
+      method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
       url: "/api/auth/*",
       async handler(request, reply) {
         try {
@@ -95,19 +95,52 @@ const start = async () => {
             if (value) headers.append(key, Array.isArray(value) ? value[0] : value);
           });
 
+          // Better handling of request body
+          let body = null;
+          if (request.body) {
+            if (typeof request.body === 'string') {
+              body = request.body;
+            } else if (request.body instanceof Buffer) {
+              body = request.body.toString();
+            } else if (typeof request.body === 'object') {
+              body = JSON.stringify(request.body);
+            }
+          }
+
           const req = new Request(url.toString(), {
             method: request.method,
             headers,
-            body: request.body ? JSON.stringify(request.body) : undefined,
+            body: body,
           });
 
           const response = await auth.handler(req);
 
+          // Set status code
           reply.status(response.status);
-          response.headers.forEach((value, key) => reply.header(key, value));
           
-          const responseBody = response.body ? await response.text() : null;
-          return responseBody;
+          // Set headers
+          response.headers.forEach((value, key) => {
+            // Skip content-length as Fastify handles it
+            if (key.toLowerCase() !== 'content-length') {
+              reply.header(key, value);
+            }
+          });
+          
+          // Handle response body
+          if (response.body) {
+            const responseBody = await response.text();
+            // Try to parse as JSON for proper content type
+            try {
+              const jsonData = JSON.parse(responseBody);
+              reply.header('content-type', 'application/json');
+              return jsonData;
+            } catch {
+              // Return as text if not valid JSON
+              return responseBody;
+            }
+          }
+          
+          return null;
 
         } catch (error) {
           fastify.log.error("Authentication Error:", error);

@@ -1,12 +1,14 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { auth, User } from '@triberspace/auth';
+import { db, creators } from '@triberspace/database';
+import { eq } from 'drizzle-orm';
 
 // Extended user type that includes custom fields
 export interface ExtendedUser extends User {
   firstName?: string;
   lastName?: string;
   userName?: string;
-  role?: string;
+  role: string | null | undefined; // Match Better Auth type
   socialLinks?: any;
 }
 
@@ -16,6 +18,7 @@ export interface AuthenticatedRequest extends FastifyRequest {
     user: ExtendedUser;
     session: any;
   };
+  creator?: { id: number; publicId: string };
 }
 
 export async function authMiddleware(request: AuthenticatedRequest, reply: FastifyReply) {
@@ -86,6 +89,68 @@ export async function adminMiddleware(request: AuthenticatedRequest, reply: Fast
         code: 'FORBIDDEN',
         message: 'Admin access required',
         statusCode: 403
+      }
+    });
+  }
+}
+
+export async function requireCompleteProfile(request: AuthenticatedRequest, reply: FastifyReply) {
+  if (!request.user) {
+    await authMiddleware(request, reply);
+  }
+  
+  if (!request.user) return;
+
+  const { firstName, lastName, userName } = request.user;
+  
+  if (!firstName || !lastName || !userName) {
+    return reply.code(403).send({
+      error: {
+        code: 'INCOMPLETE_PROFILE',
+        message: 'Please complete your profile to access this feature',
+        statusCode: 403,
+        details: {
+          missingFields: [
+            !firstName && 'firstName',
+            !lastName && 'lastName', 
+            !userName && 'userName'
+          ].filter(Boolean)
+        }
+      }
+    });
+  }
+}
+
+export async function creatorOnlyMiddleware(request: AuthenticatedRequest, reply: FastifyReply) {
+  await requireCompleteProfile(request, reply);
+  
+  if (!request.user) return;
+
+  try {
+    const [creator] = await db
+      .select({ id: creators.id, publicId: creators.publicId })
+      .from(creators)
+      .where(eq(creators.userId, request.user.id))
+      .limit(1);
+
+    if (!creator) {
+      return reply.code(403).send({
+        error: {
+          code: 'NOT_CREATOR',
+          message: 'Creator access required. Please apply to become a creator first.',
+          statusCode: 403
+        }
+      });
+    }
+
+    request.creator = creator;
+  } catch (error) {
+    request.log.error('Creator middleware error:', error);
+    return reply.code(500).send({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to verify creator status',
+        statusCode: 500
       }
     });
   }

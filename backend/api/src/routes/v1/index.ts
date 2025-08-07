@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { v1AuthRoutes } from './auth';
+import { v1UsersRoutes } from './users';
 import { v1WorldsRoutes } from './worlds';
 import { v1CreatorsRoutes } from './creators';
 import { v1AvatarsRoutes } from './avatars';
@@ -9,6 +10,9 @@ import { v1PointsRoutes } from './points';
 export async function v1Routes(fastify: FastifyInstance) {
   // Auth routes - extends your existing Better Auth
   await fastify.register(v1AuthRoutes, { prefix: '/auth' });
+  
+  // User routes - user profile management
+  await fastify.register(v1UsersRoutes, { prefix: '/users' });
   
   // Worlds routes - public discovery with search and details
   await fastify.register(v1WorldsRoutes, { prefix: '/worlds' });
@@ -34,6 +38,7 @@ export async function v1Routes(fastify: FastifyInstance) {
         version: '1.0.0',
         endpoints: [
           '/v1/auth',
+          '/v1/users',
           '/v1/worlds',
           '/v1/creators',
           '/v1/avatars',

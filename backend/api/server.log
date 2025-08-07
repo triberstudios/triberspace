@@ -1,0 +1,46 @@
+
+> @triberspace/api@1.0.0 dev
+> tsx watch src/server.ts
+
+[dotenv@17.2.1] injecting env (6) from ../../.env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.1] injecting env (0) from ../../.env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.1] injecting env (0) from ../../.env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+{"level":30,"time":1754530757194,"pid":79876,"hostname":"Akils-MacBook-Pro.local","msg":"Server listening at http://127.0.0.1:3001"}
+{"level":30,"time":1754530757194,"pid":79876,"hostname":"Akils-MacBook-Pro.local","msg":"Server listening at http://192.168.1.63:3001"}
+{"level":30,"time":1754530757194,"pid":79876,"hostname":"Akils-MacBook-Pro.local","msg":"Server listening at http://10.211.55.2:3001"}
+{"level":30,"time":1754530757194,"pid":79876,"hostname":"Akils-MacBook-Pro.local","msg":"Server listening at http://10.37.129.2:3001"}
+{"level":30,"time":1754530757194,"pid":79876,"hostname":"Akils-MacBook-Pro.local","msg":"Server started successfully"}
+{"level":30,"time":1754530764630,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-1","req":{"method":"GET","url":"/","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61355},"msg":"incoming request"}
+{"level":30,"time":1754530764635,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-1","res":{"statusCode":200},"responseTime":4.817917108535767,"msg":"request completed"}
+{"level":30,"time":1754530772346,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-2","req":{"method":"POST","url":"/api/auth/sign-up/email","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61381},"msg":"incoming request"}
+{"level":30,"time":1754530772531,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-2","res":{"statusCode":200},"responseTime":184.73191714286804,"msg":"request completed"}
+{"level":30,"time":1754530783010,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-3","req":{"method":"POST","url":"/api/auth/sign-in/email","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61411},"msg":"incoming request"}
+{"level":30,"time":1754530783126,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-3","res":{"statusCode":200},"responseTime":115.04729199409485,"msg":"request completed"}
+{"level":30,"time":1754530791840,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-4","req":{"method":"GET","url":"/api/auth/session","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61456},"msg":"incoming request"}
+{"level":30,"time":1754530791848,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-4","res":{"statusCode":404},"responseTime":7.31041693687439,"msg":"request completed"}
+{"level":30,"time":1754530822955,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-5","req":{"method":"POST","url":"/api/auth/sign-up/email","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61539},"msg":"incoming request"}
+{"level":30,"time":1754530823085,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-5","res":{"statusCode":200},"responseTime":130.38283395767212,"msg":"request completed"}
+{"level":30,"time":1754530823104,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-6","req":{"method":"POST","url":"/api/auth/sign-in/email","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61543},"msg":"incoming request"}
+{"level":30,"time":1754530823194,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-6","res":{"statusCode":200},"responseTime":89.37366700172424,"msg":"request completed"}
+{"level":30,"time":1754530823206,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-7","req":{"method":"GET","url":"/api/auth/session","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61545},"msg":"incoming request"}
+{"level":30,"time":1754530823207,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-7","res":{"statusCode":404},"responseTime":0.7444579601287842,"msg":"request completed"}
+{"level":30,"time":1754530823225,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-8","req":{"method":"GET","url":"/protected","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61547},"msg":"incoming request"}
+{"level":30,"time":1754530823226,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-8","res":{"statusCode":401},"responseTime":0.7052919864654541,"msg":"request completed"}
+{"level":30,"time":1754530823234,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-9","req":{"method":"POST","url":"/api/v1/auth/signup-full","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61549},"msg":"incoming request"}
+{"level":30,"time":1754530823324,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-9","res":{"statusCode":201},"responseTime":90.2740409374237,"msg":"request completed"}
+{"level":30,"time":1754530906957,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-a","req":{"method":"OPTIONS","url":"/api/auth/sign-up/email","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61642},"msg":"incoming request"}
+{"level":30,"time":1754530906959,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-a","res":{"statusCode":204},"responseTime":1.4235420227050781,"msg":"request completed"}
+{"level":30,"time":1754530906960,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-b","req":{"method":"POST","url":"/api/auth/sign-up/email","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61644},"msg":"incoming request"}
+{"level":30,"time":1754530907146,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-b","res":{"statusCode":200},"responseTime":186.07683300971985,"msg":"request completed"}
+{"level":30,"time":1754530907161,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-c","req":{"method":"GET","url":"/api/auth/get-session","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61644},"msg":"incoming request"}
+{"level":30,"time":1754530907166,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-c","res":{"statusCode":200},"responseTime":5.502665996551514,"msg":"request completed"}
+{"level":30,"time":1754530907167,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-d","req":{"method":"GET","url":"/api/auth/get-session","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61644},"msg":"incoming request"}
+{"level":30,"time":1754530907171,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-d","res":{"statusCode":200},"responseTime":3.717665910720825,"msg":"request completed"}
+{"level":30,"time":1754530940797,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-e","req":{"method":"OPTIONS","url":"/api/auth/sign-out","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61652},"msg":"incoming request"}
+{"level":30,"time":1754530940799,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-e","res":{"statusCode":204},"responseTime":1.2957079410552979,"msg":"request completed"}
+{"level":30,"time":1754530940799,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-f","req":{"method":"POST","url":"/api/auth/sign-out","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61654},"msg":"incoming request"}
+{"level":30,"time":1754530940861,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-f","res":{"statusCode":200},"responseTime":61.35062503814697,"msg":"request completed"}
+{"level":30,"time":1754530940875,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-g","req":{"method":"GET","url":"/api/auth/get-session","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61654},"msg":"incoming request"}
+{"level":30,"time":1754530940882,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-g","res":{"statusCode":200},"responseTime":6.773165941238403,"msg":"request completed"}
+{"level":30,"time":1754530940883,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-h","req":{"method":"GET","url":"/api/auth/get-session","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":61654},"msg":"incoming request"}
+{"level":30,"time":1754530940885,"pid":79876,"hostname":"Akils-MacBook-Pro.local","reqId":"req-h","res":{"statusCode":200},"responseTime":2.204624891281128,"msg":"request completed"}
