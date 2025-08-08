@@ -9,13 +9,13 @@ import {
   Globe,
   ShoppingCartSimple,
   User,
-  ArrowLineLeft,
-  ArrowLineRight
+  Sidebar,
+  type Icon
 } from "@phosphor-icons/react"
 
 interface MenuItem {
   title: string
-  icon: any
+  icon: Icon
   href: string
   weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone"
 }
@@ -83,14 +83,10 @@ export function AppSidebar() {
           <button
             onClick={toggleSidebar}
             className={cn(
-              "flex items-center justify-center rounded-lg bg-transparent hover:bg-sidebar-accent transition-colors duration-200 h-8 w-8"
+              "flex items-center justify-center rounded-lg bg-transparent hover:bg-sidebar-accent transition-colors duration-200 h-8 w-8 cursor-pointer"
             )}
           >
-            {isCollapsed ? (
-              <ArrowLineRight className="h-5 w-5" />
-            ) : (
-              <ArrowLineLeft className="h-5 w-5" />
-            )}
+            <Sidebar className="h-5 w-5" />
           </button>
           {showTooltip && (
             <div 
