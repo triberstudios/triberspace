@@ -36,6 +36,8 @@ export const worlds = pgTable("worlds", {
   creatorId: integer("creatorId").notNull().references(() => creators.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
+  thumbnail_url: text("thumbnail_url"),
+  model_url: text("model_url"),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique("creator_idx").on(table.creatorId),
@@ -48,6 +50,8 @@ export const spaces = pgTable("spaces", {
   worldId: integer("worldId").notNull().references(() => worlds.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   spaceType: text("spaceType").notNull(),
+  thumbnail_url: text("thumbnail_url"),
+  model_url: text("model_url"),
   isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -64,6 +68,7 @@ export const events = pgTable("events", {
   startTime: timestamp("startTime", { withTimezone: true }).notNull(),
   endTime: timestamp("endTime", { withTimezone: true }).notNull(),
   description: text("description"),
+  thumbnail_url: text("thumbnail_url"),
   isLive: boolean("isLive").default(false),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

@@ -43,7 +43,7 @@ export async function authMiddleware(request: AuthenticatedRequest, reply: Fasti
     request.user = session.user as ExtendedUser;
     request.session = { ...session, user: session.user as ExtendedUser };
   } catch (error) {
-    request.log.error('Auth middleware error:', error);
+    request.log.error(error as Error, 'Auth middleware error');
     return reply.code(500).send({ 
       error: {
         code: 'AUTH_ERROR',
@@ -68,7 +68,7 @@ export async function optionalAuthMiddleware(request: AuthenticatedRequest, repl
       request.session = { ...session, user: session.user as ExtendedUser };
     }
   } catch (error) {
-    request.log.error('Optional auth middleware error:', error);
+    request.log.error(error as Error, 'Optional auth middleware error');
   }
 }
 
@@ -145,7 +145,7 @@ export async function creatorOnlyMiddleware(request: AuthenticatedRequest, reply
 
     request.creator = creator;
   } catch (error) {
-    request.log.error('Creator middleware error:', error);
+    request.log.error(error as Error, 'Creator middleware error');
     return reply.code(500).send({
       error: {
         code: 'INTERNAL_ERROR',

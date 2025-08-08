@@ -18,12 +18,16 @@ const worldsQuerySchema = paginationSchema.extend({
 // Creator world management schemas
 const createWorldSchema = z.object({
   name: z.string().min(1, 'World name is required').max(100),
-  description: z.string().max(500).optional()
+  description: z.string().max(500).optional(),
+  thumbnail_url: z.string().url().optional(),
+  model_url: z.string().url().optional()
 });
 
 const updateWorldSchema = z.object({
   name: z.string().min(1, 'World name is required').max(100).optional(),
-  description: z.string().max(500).optional()
+  description: z.string().max(500).optional(),
+  thumbnail_url: z.string().url().optional(),
+  model_url: z.string().url().optional()
 });
 
 export async function v1WorldsRoutes(fastify: FastifyInstance) {
@@ -42,6 +46,8 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
               id: worlds.publicId,
               name: worlds.name,
               description: worlds.description,
+              thumbnail_url: worlds.thumbnail_url,
+              model_url: worlds.model_url,
               createdAt: worlds.createdAt,
               creatorId: worlds.creatorId
             })
@@ -55,6 +61,8 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
               id: worlds.publicId,
               name: worlds.name,
               description: worlds.description,
+              thumbnail_url: worlds.thumbnail_url,
+              model_url: worlds.model_url,
               createdAt: worlds.createdAt,
               creatorId: worlds.creatorId
             })
@@ -98,7 +106,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
               creator: creatorInfo || null
             };
           } catch (creatorError) {
-            fastify.log.warn('Failed to fetch creator for world:', world.id);
+            fastify.log.warn({ worldId: world.id }, 'Failed to fetch creator for world');
             return {
               ...world,
               creator: null
@@ -119,7 +127,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching worlds:', error);
+      fastify.log.error(error as Error, 'Error fetching worlds');
       return {
         success: true,
         data: {
@@ -188,7 +196,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching world:', error);
+      fastify.log.error(error as Error, 'Error fetching world');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -252,7 +260,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching world spaces:', error);
+      fastify.log.error(error as Error, 'Error fetching world spaces');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -316,7 +324,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Create world error:', error);
+      fastify.log.error(error as Error, 'Create world error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -374,7 +382,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update world error:', error);
+      fastify.log.error(error as Error, 'Update world error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -423,7 +431,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete world error:', error);
+      fastify.log.error(error as Error, 'Delete world error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

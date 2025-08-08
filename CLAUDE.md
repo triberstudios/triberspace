@@ -70,12 +70,12 @@ This is a Turborepo monorepo with the following structure:
 - Path aliases configured: `@/components`, `@/lib`, `@/ui`
 
 ### Backend Services
-- **`backend/api/`**: Fastify API server with Better Auth integration
+- **`backend/api/`**: Fastify API server with Better Auth integration and Cloudflare R2 upload system
 - **`backend/game-server/`**: Colyseus game server with Express (setup pending)
 
 ### Shared Packages (`packages/`)
 - **`auth/`**: Better Auth configuration with email/password authentication
-- **`database/`**: Drizzle ORM with PostgreSQL and Better Auth schema
+- **`database/`**: Drizzle ORM with PostgreSQL, Better Auth schema, and file URL fields for R2 integration
 - **`utils/`**: Shared helpers and types (to be implemented)
 
 ### Build System
@@ -93,14 +93,17 @@ This is a Turborepo monorepo with the following structure:
 6. **Navigation**: Custom sidebar implementation with smooth width transitions and state management
 7. **Game Server**: Colyseus for real-time multiplayer functionality
 8. **API Server**: Fastify for high-performance REST API
+9. **File Storage**: Cloudflare R2 with presigned URLs for secure direct uploads
 
 ## Development Notes
 
 ### Current Status
 - Frontend fully configured with custom sidebar navigation and Better Auth UI integration
 - Backend API server operational with Better Auth authentication endpoints
-- Database layer implemented with PostgreSQL and Better Auth schema
+- Database layer implemented with PostgreSQL, Better Auth schema, and file URL fields
 - Authentication system working end-to-end with session management
+- Cloudflare R2 upload system with presigned URLs and file validation
+- File upload testing page with drag-and-drop interface at `/store`
 - ESLint configured but no test framework yet
 
 ### Code Standards Enforcement
@@ -114,3 +117,35 @@ This is a Turborepo monorepo with the following structure:
 - The sidebar uses custom implementation with smooth transitions and state management
 - Components are organized in `ui/` for reusable pieces and root `components/` for app-specific compositions
 - Tailwind CSS v4 with CSS variables for theming and dark mode support
+
+## Database Schema Updates
+
+### File URL Fields Added
+The database schema has been updated to support file uploads with the following new fields:
+
+**Worlds**: `thumbnail_url`, `model_url`  
+**Spaces**: `thumbnail_url`, `model_url`  
+**Events**: `thumbnail_url`  
+**Products**: `thumbnail_url`, `gallery_urls` (array)  
+**Tribes**: `logo_url`, `banner_url`
+
+All file URL fields are optional and store CDN URLs from Cloudflare R2.
+
+## API Endpoints
+
+### Upload Endpoints (`/api/v1/uploads`)
+- `POST /presigned` - Generate presigned upload URL (auth required)
+- `DELETE /file` - Delete uploaded file (auth required)  
+- `GET /file/:category/:entityId/:filename` - Check file existence
+- `GET /config` - Get upload configuration and limits
+- `GET /health` - R2 connection health check
+
+### File Categories
+- `users`, `creators`, `worlds`, `spaces`, `events`, `products`, `avatars`, `shared`, `temp`
+
+### Supported File Types
+- **Images**: jpg, jpeg, png, webp, gif (10MB max)
+- **3D Models**: glb, gltf (50MB max)
+- **Videos**: mp4, webm, mov (100MB max)  
+- **Audio**: mp3, ogg, wav (20MB max)
+- **Documents**: pdf, zip (25MB max)

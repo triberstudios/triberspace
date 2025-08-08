@@ -135,7 +135,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update profile error:', error);
+      fastify.log.error(error as Error, 'Update profile error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -175,7 +175,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update avatar error:', error);
+      fastify.log.error(error as Error, 'Update avatar error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -222,7 +222,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete account error:', error);
+      fastify.log.error(error as Error, 'Delete account error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

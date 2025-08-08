@@ -128,7 +128,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching avatar base models:', error);
+      fastify.log.error(error as Error, 'Error fetching avatar base models');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -222,7 +222,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching avatar items:', error);
+      fastify.log.error(error as Error, 'Error fetching avatar items');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -294,7 +294,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching user avatars:', error);
+      fastify.log.error(error as Error, 'Error fetching user avatars');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -375,7 +375,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching user avatar:', error);
+      fastify.log.error(error as Error, 'Error fetching user avatar');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -445,7 +445,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Create avatar error:', error);
+      fastify.log.error(error as Error, 'Create avatar error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -518,7 +518,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update avatar error:', error);
+      fastify.log.error(error as Error, 'Update avatar error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -589,7 +589,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete avatar error:', error);
+      fastify.log.error(error as Error, 'Delete avatar error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -658,7 +658,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching avatar equipment:', error);
+      fastify.log.error(error as Error, 'Error fetching avatar equipment');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -759,7 +759,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Equip item error:', error);
+      fastify.log.error(error as Error, 'Equip item error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -815,7 +815,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Unequip item error:', error);
+      fastify.log.error(error as Error, 'Unequip item error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -866,7 +866,7 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching avatar inventory:', error);
+      fastify.log.error(error as Error, 'Error fetching avatar inventory');
       return {
         success: true,
         data: {

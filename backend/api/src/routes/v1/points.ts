@@ -145,7 +145,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching points balance:', error);
+      fastify.log.error(error as Error, 'Error fetching points balance');
       return reply.code(500).send({
         error: {
           code: 'BALANCE_FETCH_ERROR',
@@ -246,7 +246,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching points packages:', error);
+      fastify.log.error(error as Error, 'Error fetching points packages');
       return {
         success: true,
         data: {
@@ -400,7 +400,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         }
       });
     } catch (error) {
-      fastify.log.error('Error purchasing points package:', error);
+      fastify.log.error(error as Error, 'Error purchasing points package');
       return reply.code(500).send({
         error: {
           code: 'PURCHASE_FAILED',
@@ -497,7 +497,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching points transactions:', error);
+      fastify.log.error(error as Error, 'Error fetching points transactions');
       return {
         success: true,
         data: {
@@ -566,7 +566,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching points balances:', error);
+      fastify.log.error(error as Error, 'Error fetching points balances');
       return {
         success: true,
         data: {
@@ -651,7 +651,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching creator packages:', error);
+      fastify.log.error(error as Error, 'Error fetching creator packages');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -699,7 +699,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Error creating package:', error);
+      fastify.log.error(error as Error, 'Error creating package');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -771,7 +771,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error updating package:', error);
+      fastify.log.error(error as Error, 'Error updating package');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -824,7 +824,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error deleting package:', error);
+      fastify.log.error(error as Error, 'Error deleting package');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

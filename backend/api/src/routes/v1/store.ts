@@ -55,6 +55,8 @@ const createProductSchema = z.object({
   }),
   pricePoints: z.number().min(0, 'Price must be at least 0 points'),
   digitalAssetUrl: z.string().url().optional(),
+  thumbnail_url: z.string().url().optional(),
+  gallery_urls: z.array(z.string().url()).optional(),
   maxQuantity: z.number().min(1).optional(),
   currentStock: z.number().min(0).optional(),
   releaseDate: z.string().datetime().optional(),
@@ -67,6 +69,8 @@ const updateProductSchema = z.object({
   description: z.string().max(2000).optional(),
   pricePoints: z.number().min(0, 'Price must be at least 0 points').optional(),
   digitalAssetUrl: z.string().url().optional(),
+  thumbnail_url: z.string().url().optional(),
+  gallery_urls: z.array(z.string().url()).optional(),
   maxQuantity: z.number().min(1).optional(),
   currentStock: z.number().min(0).optional(),
   releaseDate: z.string().datetime().optional(),
@@ -164,6 +168,8 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           description: products.description,
           productType: products.productType,
           digitalAssetUrl: products.digitalAssetUrl,
+          thumbnail_url: products.thumbnail_url,
+          gallery_urls: products.gallery_urls,
           pricePoints: products.pricePoints,
           maxQuantity: products.maxQuantity,
           currentStock: products.currentStock,
@@ -235,7 +241,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching global products:', error);
+      fastify.log.error(error as Error, 'Error fetching global products');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -260,6 +266,8 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           description: products.description,
           productType: products.productType,
           digitalAssetUrl: products.digitalAssetUrl,
+          thumbnail_url: products.thumbnail_url,
+          gallery_urls: products.gallery_urls,
           pricePoints: products.pricePoints,
           maxQuantity: products.maxQuantity,
           currentStock: products.currentStock,
@@ -335,7 +343,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching product:', error);
+      fastify.log.error(error as Error, 'Error fetching product');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -407,7 +415,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching stores:', error);
+      fastify.log.error(error as Error, 'Error fetching stores');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -472,7 +480,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update store error:', error);
+      fastify.log.error(error as Error, 'Update store error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -506,6 +514,8 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           description: products.description,
           productType: products.productType,
           digitalAssetUrl: products.digitalAssetUrl,
+          thumbnail_url: products.thumbnail_url,
+          gallery_urls: products.gallery_urls,
           pricePoints: products.pricePoints,
           maxQuantity: products.maxQuantity,
           currentStock: products.currentStock,
@@ -523,7 +533,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Create product error:', error);
+      fastify.log.error(error as Error, 'Create product error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -580,6 +590,8 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           description: products.description,
           productType: products.productType,
           digitalAssetUrl: products.digitalAssetUrl,
+          thumbnail_url: products.thumbnail_url,
+          gallery_urls: products.gallery_urls,
           pricePoints: products.pricePoints,
           maxQuantity: products.maxQuantity,
           currentStock: products.currentStock,
@@ -597,7 +609,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update product error:', error);
+      fastify.log.error(error as Error, 'Update product error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -650,7 +662,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete product error:', error);
+      fastify.log.error(error as Error, 'Delete product error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -735,7 +747,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching creator store:', error);
+      fastify.log.error(error as Error, 'Error fetching creator store');
       return reply.code(500).send({
         error: {
           code: 'STORE_FETCH_ERROR',
@@ -780,6 +792,8 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           description: products.description,
           productType: products.productType,
           digitalAssetUrl: products.digitalAssetUrl,
+          thumbnail_url: products.thumbnail_url,
+          gallery_urls: products.gallery_urls,
           pricePoints: products.pricePoints,
           isActive: products.isActive,
           maxQuantity: products.maxQuantity,
@@ -846,7 +860,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching store products:', error);
+      fastify.log.error(error as Error, 'Error fetching store products');
       return {
         success: true,
         data: {
@@ -1053,7 +1067,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         }
       });
     } catch (error) {
-      fastify.log.error('Error processing purchase:', error);
+      fastify.log.error(error as Error, 'Error processing purchase');
       return reply.code(500).send({
         error: {
           code: 'PURCHASE_FAILED',
@@ -1105,7 +1119,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching user orders:', error);
+      fastify.log.error(error as Error, 'Error fetching user orders');
       return {
         success: true,
         data: {
@@ -1139,6 +1153,8 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
             name: products.name,
             productType: products.productType,
             digitalAssetUrl: products.digitalAssetUrl,
+          thumbnail_url: products.thumbnail_url,
+          gallery_urls: products.gallery_urls,
             metadata: products.metadata
           },
           creator: {
@@ -1166,7 +1182,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching user inventory:', error);
+      fastify.log.error(error as Error, 'Error fetching user inventory');
       return {
         success: true,
         data: {

@@ -21,6 +21,7 @@ const eventsQuerySchema = paginationSchema.extend({
 const createEventSchema = z.object({
   name: z.string().min(1, 'Event name is required').max(200),
   description: z.string().max(1000).optional(),
+  thumbnail_url: z.string().url().optional(),
   startTime: z.string().datetime('Start time must be a valid ISO datetime'),
   endTime: z.string().datetime('End time must be a valid ISO datetime'),
   spaceId: publicIdSchema.optional() // If not provided, uses creator's first space
@@ -32,6 +33,7 @@ const createEventSchema = z.object({
 const updateEventSchema = z.object({
   name: z.string().min(1, 'Event name is required').max(200).optional(),
   description: z.string().max(1000).optional(),
+  thumbnail_url: z.string().url().optional(),
   startTime: z.string().datetime().optional(),
   endTime: z.string().datetime().optional(),
   isLive: z.boolean().optional()
@@ -86,6 +88,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           id: events.publicId,
           name: events.name,
           description: events.description,
+          thumbnail_url: events.thumbnail_url,
           startTime: events.startTime,
           endTime: events.endTime,
           isLive: events.isLive,
@@ -133,7 +136,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching events:', error);
+      fastify.log.error(error as Error, 'Error fetching events');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -156,6 +159,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           id: events.publicId,
           name: events.name,
           description: events.description,
+          thumbnail_url: events.thumbnail_url,
           startTime: events.startTime,
           endTime: events.endTime,
           isLive: events.isLive,
@@ -228,7 +232,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching event:', error);
+      fastify.log.error(error as Error, 'Error fetching event');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -310,6 +314,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           id: events.publicId,
           name: events.name,
           description: events.description,
+          thumbnail_url: events.thumbnail_url,
           startTime: events.startTime,
           endTime: events.endTime,
           isLive: events.isLive,
@@ -325,7 +330,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Create event error:', error);
+      fastify.log.error(error as Error, 'Create event error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -385,6 +390,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           id: events.publicId,
           name: events.name,
           description: events.description,
+          thumbnail_url: events.thumbnail_url,
           startTime: events.startTime,
           endTime: events.endTime,
           isLive: events.isLive,
@@ -400,7 +406,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update event error:', error);
+      fastify.log.error(error as Error, 'Update event error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -454,7 +460,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete event error:', error);
+      fastify.log.error(error as Error, 'Delete event error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -539,7 +545,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Join event error:', error);
+      fastify.log.error(error as Error, 'Join event error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -611,7 +617,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Get attendees error:', error);
+      fastify.log.error(error as Error, 'Get attendees error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
