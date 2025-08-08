@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "@/lib/auth-client";
-import { AuthCard } from "@daveyplate/better-auth-ui";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 

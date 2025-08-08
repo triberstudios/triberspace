@@ -13,7 +13,7 @@ export function AuthView({ pathname }: { pathname: string }) {
       <div className="w-full max-w-md [&>*]:flex [&>*]:flex-col [&>*]:gap-6 [&_form]:flex [&_form]:flex-col [&_form]:gap-4 [&_form>div]:flex [&_form>div]:flex-col [&_form>div]:gap-2">
         <AuthCard 
           pathname={pathname}
-          redirectTo="/explore"
+          redirectTo="http://localhost:3000/explore"
           className="rounded-lg border bg-card px-4 py-8"
         />
       </div>

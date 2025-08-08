@@ -18,6 +18,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         router.refresh();
       }}
       Link={Link}
+      social={{
+        providers: ["google"]
+      }}
+      signUp={{
+        fields: []
+      }}
     >
       {children}
       <Toaster theme="dark" />
