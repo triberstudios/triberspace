@@ -208,7 +208,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching user inventory:', error);
+      fastify.log.error(error as Error, 'Error fetching user inventory');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -327,7 +327,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching inventory item:', error);
+      fastify.log.error(error as Error, 'Error fetching inventory item');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -442,7 +442,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching inventory stats:', error);
+      fastify.log.error(error as Error, 'Error fetching inventory stats');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -599,7 +599,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error transferring item:', error);
+      fastify.log.error(error as Error, 'Error transferring item');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -702,7 +702,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error consuming item:', error);
+      fastify.log.error(error as Error, 'Error consuming item');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -778,7 +778,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching inventory by type:', error);
+      fastify.log.error(error as Error, 'Error fetching inventory by type');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

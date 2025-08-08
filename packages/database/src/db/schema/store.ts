@@ -46,6 +46,8 @@ export const products = pgTable("products", {
   description: text("description"),
   productType: text("productType").notNull(),
   digitalAssetUrl: text("digitalAssetUrl"),
+  thumbnail_url: text("thumbnail_url"),
+  gallery_urls: text("gallery_urls").array(),
   itemId: integer("itemId"),
   pricePoints: integer("pricePoints").notNull(),
   isActive: boolean("isActive").default(true),

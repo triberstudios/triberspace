@@ -49,6 +49,8 @@ export const tribes = pgTable("tribes", {
   creatorId: integer("creatorId").notNull().references(() => creators.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
+  logo_url: text("logo_url"),
+  banner_url: text("banner_url"),
   perks: jsonb("perks"),
   joinCost: integer("joinCost").default(0),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),

@@ -21,12 +21,16 @@ const createSpaceSchema = z.object({
   spaceType: z.enum(['gallery', 'theater', 'meetup', 'store', 'custom'], {
     errorMap: () => ({ message: 'Space type must be one of: gallery, theater, meetup, store, custom' })
   }),
+  thumbnail_url: z.string().url().optional(),
+  model_url: z.string().url().optional(),
   worldId: publicIdSchema.optional() // If not provided, uses creator's world
 });
 
 const updateSpaceSchema = z.object({
   name: z.string().min(1, 'Space name is required').max(100).optional(),
   spaceType: z.enum(['gallery', 'theater', 'meetup', 'store', 'custom']).optional(),
+  thumbnail_url: z.string().url().optional(),
+  model_url: z.string().url().optional(),
   isActive: z.boolean().optional()
 });
 
@@ -63,6 +67,8 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           id: spaces.publicId,
           name: spaces.name,
           spaceType: spaces.spaceType,
+          thumbnail_url: spaces.thumbnail_url,
+          model_url: spaces.model_url,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt,
           world: {
@@ -100,7 +106,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching spaces:', error);
+      fastify.log.error(error as Error, 'Error fetching spaces');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -123,6 +129,8 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           id: spaces.publicId,
           name: spaces.name,
           spaceType: spaces.spaceType,
+          thumbnail_url: spaces.thumbnail_url,
+          model_url: spaces.model_url,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt,
           world: {
@@ -175,7 +183,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching space:', error);
+      fastify.log.error(error as Error, 'Error fetching space');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -263,7 +271,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Create space error:', error);
+      fastify.log.error(error as Error, 'Create space error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -323,7 +331,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update space error:', error);
+      fastify.log.error(error as Error, 'Update space error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -373,7 +381,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete space error:', error);
+      fastify.log.error(error as Error, 'Delete space error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

@@ -19,6 +19,8 @@ const tribesQuerySchema = paginationSchema.extend({
 const createTribeSchema = z.object({
   name: z.string().min(1, 'Tribe name is required').max(100),
   description: z.string().max(1000).optional(),
+  logo_url: z.string().url().optional(),
+  banner_url: z.string().url().optional(),
   perks: z.array(z.string().max(200)).max(10).optional(),
   joinCost: z.number().min(0).max(1000000).default(0)
 });
@@ -26,6 +28,8 @@ const createTribeSchema = z.object({
 const updateTribeSchema = z.object({
   name: z.string().min(1, 'Tribe name is required').max(100).optional(),
   description: z.string().max(1000).optional(),
+  logo_url: z.string().url().optional(),
+  banner_url: z.string().url().optional(),
   perks: z.array(z.string().max(200)).max(10).optional(),
   joinCost: z.number().min(0).max(1000000).optional()
 });
@@ -63,6 +67,8 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
             id: tribes.publicId,
             name: tribes.name,
             description: tribes.description,
+            logo_url: tribes.logo_url,
+            banner_url: tribes.banner_url,
             perks: tribes.perks,
             joinCost: tribes.joinCost,
             createdAt: tribes.createdAt,
@@ -84,6 +90,8 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
             id: tribes.publicId,
             name: tribes.name,
             description: tribes.description,
+            logo_url: tribes.logo_url,
+            banner_url: tribes.banner_url,
             perks: tribes.perks,
             joinCost: tribes.joinCost,
             createdAt: tribes.createdAt,
@@ -158,7 +166,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching tribes:', error);
+      fastify.log.error(error as Error, 'Error fetching tribes');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -243,7 +251,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error fetching tribe:', error);
+      fastify.log.error(error as Error, 'Error fetching tribe');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -311,7 +319,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Create tribe error:', error);
+      fastify.log.error(error as Error, 'Create tribe error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -374,7 +382,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Update tribe error:', error);
+      fastify.log.error(error as Error, 'Update tribe error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -426,7 +434,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Delete tribe error:', error);
+      fastify.log.error(error as Error, 'Delete tribe error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -533,7 +541,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Join tribe error:', error);
+      fastify.log.error(error as Error, 'Join tribe error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -607,7 +615,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Leave tribe error:', error);
+      fastify.log.error(error as Error, 'Leave tribe error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -681,7 +689,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Get tribe members error:', error);
+      fastify.log.error(error as Error, 'Get tribe members error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

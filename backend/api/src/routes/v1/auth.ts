@@ -209,7 +209,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Complete profile error:', error);
+      fastify.log.error(error as Error, 'Complete profile error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -242,7 +242,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Check username error:', error);
+      fastify.log.error(error as Error, 'Check username error');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',

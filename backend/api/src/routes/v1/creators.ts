@@ -63,7 +63,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error('Error fetching creators:', error);
+      fastify.log.error(error as Error, 'Error fetching creators');
       throw new Error('Failed to fetch creators');
     }
   });
@@ -189,7 +189,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error) {
-      fastify.log.error('Error applying for creator:', error);
+      fastify.log.error(error as Error, 'Error applying for creator');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -255,7 +255,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       };
 
     } catch (error) {
-      fastify.log.error('Error removing creator:', error);
+      fastify.log.error(error as Error, 'Error removing creator');
       return reply.code(500).send({
         error: {
           code: 'INTERNAL_ERROR',
@@ -301,7 +301,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       };
     } catch (error) {
       if (error instanceof NotFoundError) throw error;
-      fastify.log.error('Error fetching creator:', error);
+      fastify.log.error(error as Error, 'Error fetching creator');
       throw new Error('Failed to fetch creator');
     }
   });
@@ -337,7 +337,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       };
     } catch (error) {
       if (error instanceof NotFoundError) throw error;
-      fastify.log.error('Error fetching creator world:', error);
+      fastify.log.error(error as Error, 'Error fetching creator world');
       throw new Error('Failed to fetch creator world');
     }
   });
@@ -375,7 +375,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       };
     } catch (error) {
       if (error instanceof NotFoundError) throw error;
-      fastify.log.error('Error fetching creator tribe:', error);
+      fastify.log.error(error as Error, 'Error fetching creator tribe');
       throw new Error('Failed to fetch creator tribe');
     }
   });
@@ -429,7 +429,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       };
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) throw error;
-      fastify.log.error('Error updating creator:', error);
+      fastify.log.error(error as Error, 'Error updating creator');
       throw new Error('Failed to update creator profile');
     }
   });

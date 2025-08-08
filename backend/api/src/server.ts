@@ -143,7 +143,7 @@ const start = async () => {
           return null;
 
         } catch (error) {
-          fastify.log.error("Authentication Error:", error);
+          fastify.log.error(error as Error, "Authentication Error");
           reply.status(500);
           return { error: "Internal authentication error" };
         }

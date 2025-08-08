@@ -18,7 +18,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
       
       request.body = result.data;
     } catch (error) {
-      request.log.error('Validation error:', error);
+      request.log.error(error as Error, 'Validation error');
       return reply.code(400).send({ error: 'Invalid request data' });
     }
   };
@@ -41,7 +41,7 @@ export function validateParams<T>(schema: ZodSchema<T>) {
       
       request.params = result.data;
     } catch (error) {
-      request.log.error('Parameter validation error:', error);
+      request.log.error(error as Error, 'Parameter validation error');
       return reply.code(400).send({ error: 'Invalid parameters' });
     }
   };
@@ -64,7 +64,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
       
       request.query = result.data;
     } catch (error) {
-      request.log.error('Query validation error:', error);
+      request.log.error(error as Error, 'Query validation error');
       return reply.code(400).send({ error: 'Invalid query parameters' });
     }
   };
