@@ -70,10 +70,7 @@ export const auth = betterAuth({
     "http://127.0.0.1:3000"
   ],
   plugins: [
-    username({
-      minLength: 3,
-      maxLength: 20
-    })
+    username()
   ]
 });
 

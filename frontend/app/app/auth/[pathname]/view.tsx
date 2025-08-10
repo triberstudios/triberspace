@@ -1,6 +1,5 @@
 "use client";
 
-import { AuthCard } from "@daveyplate/better-auth-ui";
 import { SignInForm } from "@/components/ui/sign-in-form";
 import { SignUpForm } from "@/components/ui/sign-up-form";
 
@@ -11,14 +10,6 @@ export function AuthView({ pathname }: { pathname: string }) {
         return <SignInForm />;
       case "sign-up":
         return <SignUpForm />;
-      default:
-        return (
-          <AuthCard 
-            pathname={pathname}
-            redirectTo="http://localhost:3000/explore"
-            className="rounded-lg border bg-card px-4 py-8"
-          />
-        );
     }
   };
 

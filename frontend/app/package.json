@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@daveyplate/better-auth-ui": "^2.1.2",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
