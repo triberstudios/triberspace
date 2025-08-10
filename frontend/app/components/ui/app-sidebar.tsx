@@ -61,14 +61,14 @@ export function AppSidebar() {
   return (
     <div 
       className={cn(
-        "sidebar-enhanced flex flex-col gap-8 h-screen border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        "sidebar-enhanced flex flex-col gap-6 h-full border-r border-sidebar-border bg-sidebar text-sidebar-foreground overflow-visible relative z-10",
         isCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
       )}
     >
       {/* Header Section */}
       <div className={cn(
         "flex items-center transition-all duration-300",
-        isCollapsed ? "justify-center px-2 pt-8" : "justify-between px-4 pt-8"
+        isCollapsed ? "justify-center px-2 pt-4" : "justify-between px-4 pt-4"
       )}>
         {!isCollapsed && (
           <h2 className="text-lg font-medium text-sidebar-foreground">
