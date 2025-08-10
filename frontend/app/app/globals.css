@@ -135,4 +135,28 @@
   .sidebar-expanded {
     --sidebar-width: 298px;
   }
+  
+  /* Fix for Better Auth UI password toggle button position */
+  [data-slot="form-item"]:has(button[aria-label*="password" i]),
+  [data-slot="form-item"]:has(input[name="password"]) {
+    position: relative;
+  }
+  
+  [data-slot="form-item"] input[name="password"] + button,
+  [data-slot="form-item"] input[type="password"] + button,
+  [data-slot="form-item"] input[type="text"][name="password"] + button {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: auto;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+  
+  [data-slot="form-item"] input[name="password"],
+  [data-slot="form-item"] input[type="password"] {
+    padding-right: 48px;
+  }
 }

@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { GlobalNav } from "@/components/ui/global-nav";
 import { Providers } from "@/lib/providers";
+import { Toaster } from "sonner";
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
             </div>
           </div>
         </Providers>
+        <Toaster theme="dark" />
       </body>
     </html>
   );

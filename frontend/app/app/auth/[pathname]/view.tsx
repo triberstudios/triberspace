@@ -1,8 +1,18 @@
 "use client";
 
-import { AuthCard } from "@daveyplate/better-auth-ui";
+import { SignInForm } from "@/components/ui/sign-in-form";
+import { SignUpForm } from "@/components/ui/sign-up-form";
 
 export function AuthView({ pathname }: { pathname: string }) {
+  const renderAuthForm = () => {
+    switch (pathname) {
+      case "sign-in":
+        return <SignInForm />;
+      case "sign-up":
+        return <SignUpForm />;
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
       <div className="flex flex-col items-center gap-4">
@@ -10,12 +20,8 @@ export function AuthView({ pathname }: { pathname: string }) {
         <p className="text-muted-foreground">A new dimension.</p>
       </div>
       
-      <div className="w-full max-w-md [&>*]:flex [&>*]:flex-col [&>*]:gap-6 [&_form]:flex [&_form]:flex-col [&_form]:gap-4 [&_form>div]:flex [&_form>div]:flex-col [&_form>div]:gap-2">
-        <AuthCard 
-          pathname={pathname}
-          redirectTo="http://localhost:3000/explore"
-          className="rounded-lg border bg-card px-4 py-8"
-        />
+      <div className="w-full max-w-md">
+        {renderAuthForm()}
       </div>
     </div>
   );

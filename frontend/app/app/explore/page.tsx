@@ -1,11 +1,29 @@
 "use client";
 
-import { useSession } from "@/lib/auth-client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession, authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import Link from "next/link";
 
 export default function ExplorePage() {
   const { data: session, isPending } = useSession();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await authClient.signOut();
+      toast.success("Successfully signed out!");
+      router.push("/");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign out");
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <div className="p-8 flex flex-col gap-8">
@@ -44,8 +62,8 @@ export default function ExplorePage() {
                 You are signed in! Test protected features or try signing out.
               </p>
               <div className="flex gap-4">
-                <Button asChild>
-                  <Link href="/auth/sign-out">Sign Out</Link>
+                <Button onClick={handleSignOut} disabled={isSigningOut}>
+                  {isSigningOut ? "Signing out..." : "Sign Out"}
                 </Button>
               </div>
             </div>
