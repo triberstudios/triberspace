@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { username } from "better-auth/plugins";
 import { db } from "@triberspace/database";
 
 // Load .env from root directory
@@ -68,6 +69,12 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://127.0.0.1:3000"
   ],
+  plugins: [
+    username({
+      minLength: 3,
+      maxLength: 20
+    })
+  ]
 });
 
 export type Session = typeof auth.$Infer.Session.session;
