@@ -1,13 +1,39 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { useSession } from "@/lib/auth-client"
-import { UserCircle } from "@phosphor-icons/react"
+import { useSession, authClient } from "@/lib/auth-client"
+import { UserCircle, User, Gear, SignOut } from "@phosphor-icons/react"
+import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function GlobalNav() {
   const { data: session, isPending } = useSession()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true)
+    try {
+      await authClient.signOut()
+      toast.success("Successfully signed out!")
+      router.push("/")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign out")
+    } finally {
+      setIsSigningOut(false)
+    }
+  }
 
   return (
     <nav className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-8">
@@ -28,9 +54,39 @@ export function GlobalNav() {
         {isPending ? (
           <div className="h-9 w-9 animate-pulse rounded-full bg-sidebar-accent" />
         ) : session ? (
-          <Button variant="ghost" size="icon" className="h-10 w-10 cursor-pointer rounded-full">
-            <UserCircle className="size-8" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 cursor-pointer rounded-full">
+                <UserCircle className="size-8" weight="fill" style={{ color: '#FCFDE8' }}/>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="py-3">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-base font-medium leading-none">{session.user.name}</p>
+                  <p className="text-sm leading-none text-muted-foreground">{session.user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="py-3">
+                <Link href="/profile" className="cursor-pointer text-base">
+                  <User className="mr-3 h-5 w-5" />
+                  <span>View Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="py-3">
+                <Link href="/settings" className="cursor-pointer text-base">
+                  <Gear className="mr-3 h-5 w-5" />
+                  <span>Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut} className="cursor-pointer py-3 text-base">
+                <SignOut className="mr-3 h-5 w-5" />
+                <span>{isSigningOut ? "Signing out..." : "Sign Out"}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
           <>
             <Button variant="outline" asChild>
