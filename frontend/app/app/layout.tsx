@@ -3,6 +3,7 @@ import { Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { GlobalNav } from "@/components/ui/global-nav";
+import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
 import { Providers } from "@/lib/providers";
 import { Toaster } from "sonner";
 
@@ -39,10 +40,11 @@ export default function RootLayout({
             <GlobalNav />
             <div className="flex flex-1 overflow-hidden">
               <AppSidebar />
-              <main className="flex-1 overflow-auto">
+              <main className="flex-1 overflow-auto pb-16 md:pb-0">
                 {children}
               </main>
             </div>
+            <MobileBottomNav />
           </div>
         </Providers>
         <Toaster theme="dark" />

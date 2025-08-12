@@ -61,7 +61,7 @@ export function AppSidebar() {
   return (
     <div 
       className={cn(
-        "sidebar-enhanced flex flex-col gap-6 h-full border-r border-sidebar-border bg-sidebar text-sidebar-foreground overflow-visible relative z-10",
+        "sidebar-enhanced flex flex-col gap-6 h-full border-r border-sidebar-border bg-sidebar text-sidebar-foreground overflow-visible relative z-10 md:flex hidden",
         isCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
       )}
     >
