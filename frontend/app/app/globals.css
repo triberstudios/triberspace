@@ -124,21 +124,33 @@
 @layer components {
   .sidebar-enhanced {
     width: var(--sidebar-width);
-    min-width: var(--sidebar-min-width);
-    max-width: var(--sidebar-max-width);
-    transition: width 0.3s ease;
+    transition: width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease;
     overflow: visible;
   }
   
   .sidebar-collapsed {
     --sidebar-width: 68px;
-    --sidebar-min-width: 68px;
-    --sidebar-max-width: 68px;
   }
   
   .sidebar-expanded {
-    --sidebar-width: min(298px, 25vw);
-    --sidebar-min-width: 228px;
-    --sidebar-max-width: 320px;
+    --sidebar-width: clamp(228px, 25vw, 298px);
+  }
+  
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .sidebar-expanded {
+      --sidebar-width: 228px;
+    }
+  }
+  
+  @media (min-width: 1024px) and (max-width: 1280px) {
+    .sidebar-expanded {
+      --sidebar-width: 260px;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .sidebar-expanded {
+      --sidebar-width: 298px;
+    }
   }
 }
