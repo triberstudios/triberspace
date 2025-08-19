@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/common/button";
 import { toast } from "sonner";
 import Link from "next/link";
 

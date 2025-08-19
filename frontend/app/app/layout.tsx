@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Work_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AppSidebar } from "@/components/ui/app-sidebar";
-import { GlobalNav } from "@/components/ui/global-nav";
-import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
+import { AppSidebar } from "@/components/navigation/app-sidebar";
+import { GlobalNav } from "@/components/navigation/global-nav";
+import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { Providers } from "@/lib/providers";
 import { Toaster } from "sonner";
 

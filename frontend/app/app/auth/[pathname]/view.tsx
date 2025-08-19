@@ -1,7 +1,7 @@
 "use client";
 
-import { SignInForm } from "@/components/ui/sign-in-form";
-import { SignUpForm } from "@/components/ui/sign-up-form";
+import { SignInForm } from "@/components/profile/sign-in-form";
+import { SignUpForm } from "@/components/profile/sign-up-form";
 
 export function AuthView({ pathname }: { pathname: string }) {
   const renderAuthForm = () => {

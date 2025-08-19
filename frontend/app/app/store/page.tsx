@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/common/button";
+import { Input } from "@/components/common/input";
 import { Upload, X, FileText, Image, Video, Package, File } from "lucide-react";
 
 // Types for API responses
