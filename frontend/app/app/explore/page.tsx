@@ -115,7 +115,7 @@ export default function ExplorePage() {
           {searchQuery && filteredCategories.length === 0 && (
             <div className="flex items-center justify-center p-12">
               <p className="text-lg text-white/70">
-                No experiences found for "{searchQuery}"
+                No experiences found for &quot;{searchQuery}&quot;
               </p>
             </div>
           )}
