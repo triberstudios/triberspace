@@ -2,31 +2,83 @@
 
 import { useState } from "react"
 import { MagnifyingGlass } from "@phosphor-icons/react"
-import { cn } from "@/lib/utils"
-import { ExperiencesView } from "@/components/ui/experiences-view"
-import { WorldsView } from "@/components/ui/worlds-view"
-import { SegmentedControl } from "@/components/ui/segmented-control"
+import { ExperienceCard } from "@/components/ui/experience-card"
+
+// Placeholder data for experiences
+const categories = [
+  {
+    title: "Art",
+    experiences: [
+      { 
+        id: 1, 
+        title: "Triber Gallery: Exhibition 1", 
+        brand: "Triber Studios", 
+        type: "gallery",
+        url: "https://triberworld.triber.space"
+      },
+      { 
+        id: 2, 
+        title: "Beloved Gallery", 
+        brand: "Beloved.", 
+        type: "gallery",
+        url: "#"
+      },
+      { 
+        id: 3, 
+        title: "V2 Gallery", 
+        brand: "V2", 
+        type: "gallery",
+        url: "#"
+      },
+      { 
+        id: 4, 
+        title: "Ajaar Gallery", 
+        brand: "Ajaar", 
+        type: "gallery",
+        url: "#"
+      },
+    ]
+  },
+  {
+    title: "Music",
+    experiences: [
+      { id: 5, title: "Concert Hall", brand: "Music Venue", type: "concert" },
+      { id: 6, title: "Studio Sessions", brand: "Record Label", type: "studio" },
+    ]
+  },
+  {
+    title: "Film",
+    experiences: [
+      { id: 7, title: "Cinema Experience", brand: "Film Studio", type: "cinema" },
+      { id: 8, title: "Behind Scenes", brand: "Production Co", type: "production" },
+    ]
+  },
+  {
+    title: "Fashion",
+    experiences: [
+      { id: 9, title: "Runway Show", brand: "Fashion House", type: "runway" },
+      { id: 10, title: "Designer Studio", brand: "Luxury Brand", type: "studio" },
+    ]
+  }
+]
 
 export default function ExplorePage() {
-  const [activeView, setActiveView] = useState<"experiences" | "worlds">("experiences")
   const [searchQuery, setSearchQuery] = useState("")
 
-  return (
-    <div className="flex h-full flex-col gap-8 p-4 md:p-8">
-      {/* Toggle and Search Bar */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-2">
-        {/* Toggle Button Group */}
-        <SegmentedControl
-          options={[
-            { value: "experiences", label: "Experiences" },
-            { value: "worlds", label: "Worlds" }
-          ]}
-          value={activeView}
-          onChange={(value) => setActiveView(value as "experiences" | "worlds")}
-        />
+  // Filter experiences based on search query
+  const filteredCategories = categories.map(category => ({
+    ...category,
+    experiences: category.experiences.filter(exp => 
+      exp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      exp.brand.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(category => category.experiences.length > 0)
 
-        {/* Search Bar */}
-        <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 md:w-80">
+  return (
+    <div className="min-h-full">
+      {/* Search Bar */}
+      <div className="sticky top-0 z-[5] flex justify-center px-4 py-4 backdrop-blur-md bg-background/80 md:px-2">
+        <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 md:w-[640px]">
           <input
             type="text"
             placeholder="Search..."
@@ -38,13 +90,36 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Content - No Container */}
-      <div className="flex-1 overflow-y-auto">
-        {activeView === "experiences" ? (
-          <ExperiencesView searchQuery={searchQuery} />
-        ) : (
-          <WorldsView />
-        )}
+      {/* Content */}
+      <div className="px-4 pb-8 md:px-8">
+        <div className="flex flex-col gap-18">
+          {filteredCategories.map((category) => (
+            <div key={category.title} className="flex flex-col gap-4">
+              {/* Category Header */}
+              <div className="flex items-center justify-between px-2">
+                <h2 className="text-2xl font-semibold text-white tracking-tight">
+                  {category.title}
+                </h2>
+              </div>
+
+              {/* Experience Cards Grid */}
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-2">
+                {category.experiences.map((experience) => (
+                  <ExperienceCard key={experience.id} experience={experience} />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Empty state when no results */}
+          {searchQuery && filteredCategories.length === 0 && (
+            <div className="flex items-center justify-center p-12">
+              <p className="text-lg text-white/70">
+                No experiences found for "{searchQuery}"
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

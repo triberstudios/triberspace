@@ -25,7 +25,7 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
       )}
     >
       {/* Hover background overlay */}
-      <div className="absolute -inset-2 rounded-xl bg-white/0 transition-all duration-400 ease-out group-hover:bg-white/10 -z-10" />
+      <div className="absolute -inset-2 rounded-xl bg-white/0 transition-all duration-400 ease-out group-hover:bg-sidebar/50 -z-10" />
       {/* Card Image - 16:9 aspect ratio */}
       <div className="relative w-full aspect-video rounded-lg cursor-pointer overflow-hidden bg-sidebar">
         {/* Background image when available */}
@@ -52,7 +52,7 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
         <div className="text-white font-medium text-xl cursor-pointer mb-0 leading-tight">
           {experience.title}
         </div>
-        <div className="text-gray-300 font-medium text-base cursor-pointer">
+        <div className="text-gray-500 font-medium text-base cursor-pointer">
           {experience.brand}
         </div>
       </div>
