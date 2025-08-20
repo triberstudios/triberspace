@@ -1,89 +1,51 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession, authClient } from "@/lib/auth-client";
-import { Button } from "@/components/common/button";
-import { toast } from "sonner";
-import Link from "next/link";
+import { useState } from "react"
+import { MagnifyingGlass } from "@phosphor-icons/react"
+import { cn } from "@/lib/utils"
+import { ExperiencesView } from "@/components/ui/experiences-view"
+import { WorldsView } from "@/components/ui/worlds-view"
+import { SegmentedControl } from "@/components/ui/segmented-control"
 
 export default function ExplorePage() {
-  const { data: session, isPending } = useSession();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await authClient.signOut();
-      toast.success("Successfully signed out!");
-      router.push("/");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign out");
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
+  const [activeView, setActiveView] = useState<"experiences" | "worlds">("experiences")
+  const [searchQuery, setSearchQuery] = useState("")
 
   return (
-    <div className="p-8 flex flex-col gap-8">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-4xl font-semibold">Explore</h1>
-        <p className="text-lg text-muted-foreground">
-          Authentication testing ground
-        </p>
+    <div className="flex h-full flex-col gap-8 p-4 md:p-8">
+      {/* Toggle and Search Bar */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-2">
+        {/* Toggle Button Group */}
+        <SegmentedControl
+          options={[
+            { value: "experiences", label: "Experiences" },
+            { value: "worlds", label: "Worlds" }
+          ]}
+          value={activeView}
+          onChange={(value) => setActiveView(value as "experiences" | "worlds")}
+        />
+
+        {/* Search Bar */}
+        <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 md:w-80">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 bg-transparent text-white outline-none placeholder:text-white/50"
+          />
+          <MagnifyingGlass className="h-5 w-5 text-white/50" />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-8 max-w-md">
-        <div className="bg-card border rounded-lg p-8">
-          <h2 className="text-2xl font-medium mb-4">Authentication Status</h2>
-          <div className="flex flex-col gap-4">
-            <div className="text-sm">
-              <span className="font-medium">Status:</span>{" "}
-              {isPending ? "Loading..." : session ? "Authenticated" : "Not authenticated"}
-            </div>
-            <div className="text-sm">
-              <span className="font-medium">User:</span>{" "}
-              {session ? `${session.user.name} (${session.user.email})` : "None"}
-            </div>
-            {session && (
-              <div className="text-sm">
-                <span className="font-medium">Session ID:</span> {session.session.id}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-lg p-8 max-w-md">
-          <h2 className="text-2xl font-medium mb-4">Authentication</h2>
-          {session ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-muted-foreground">
-                You are signed in! Test protected features or try signing out.
-              </p>
-              <div className="flex gap-4">
-                <Button onClick={handleSignOut} disabled={isSigningOut}>
-                  {isSigningOut ? "Signing out..." : "Sign Out"}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <p className="text-muted-foreground">
-                Sign in or create an account to test authentication features.
-              </p>
-              <div className="flex gap-4">
-                <Button asChild>
-                  <Link href="/auth/sign-in">Sign In</Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/auth/sign-up">Sign Up</Link>
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Content - No Container */}
+      <div className="flex-1 overflow-y-auto">
+        {activeView === "experiences" ? (
+          <ExperiencesView searchQuery={searchQuery} />
+        ) : (
+          <WorldsView />
+        )}
       </div>
     </div>
-  );
+  )
 }
