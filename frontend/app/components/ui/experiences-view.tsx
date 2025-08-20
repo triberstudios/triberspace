@@ -14,28 +14,28 @@ const categories = [
       { 
         id: 1, 
         title: "Triber Gallery: Exhibition 1", 
-        brand: "Triber World", 
+        brand: "Triber Studios", 
         type: "gallery",
         url: "https://triberworld.triber.space"
       },
       { 
         id: 2, 
         title: "Beloved Gallery", 
-        brand: "Beloved. World", 
+        brand: "Beloved.", 
         type: "gallery",
         url: "#"
       },
       { 
         id: 3, 
         title: "V2 Gallery", 
-        brand: "V2 World", 
+        brand: "V2", 
         type: "gallery",
         url: "#"
       },
       { 
         id: 4, 
         title: "Ajaar Gallery", 
-        brand: "Ajaar World", 
+        brand: "Ajaar", 
         type: "gallery",
         url: "#"
       },
