@@ -1,89 +1,126 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession, authClient } from "@/lib/auth-client";
-import { Button } from "@/components/common/button";
-import { toast } from "sonner";
-import Link from "next/link";
+import { useState } from "react"
+import { MagnifyingGlass } from "@phosphor-icons/react"
+import { ExperienceCard } from "@/components/ui/experience-card"
+
+// Placeholder data for experiences
+const categories = [
+  {
+    title: "Art",
+    experiences: [
+      { 
+        id: 1, 
+        title: "Triber Gallery: Exhibition 1", 
+        brand: "Triber Studios", 
+        type: "gallery",
+        url: "https://triberworld.triber.space"
+      },
+      { 
+        id: 2, 
+        title: "Beloved Gallery", 
+        brand: "Beloved.", 
+        type: "gallery",
+        url: "#"
+      },
+      { 
+        id: 3, 
+        title: "V2 Gallery", 
+        brand: "V2", 
+        type: "gallery",
+        url: "#"
+      },
+      { 
+        id: 4, 
+        title: "Ajaar Gallery", 
+        brand: "Ajaar", 
+        type: "gallery",
+        url: "#"
+      },
+    ]
+  },
+  {
+    title: "Music",
+    experiences: [
+      { id: 5, title: "Concert Hall", brand: "Music Venue", type: "concert" },
+      { id: 6, title: "Studio Sessions", brand: "Record Label", type: "studio" },
+    ]
+  },
+  {
+    title: "Film",
+    experiences: [
+      { id: 7, title: "Cinema Experience", brand: "Film Studio", type: "cinema" },
+      { id: 8, title: "Behind Scenes", brand: "Production Co", type: "production" },
+    ]
+  },
+  {
+    title: "Fashion",
+    experiences: [
+      { id: 9, title: "Runway Show", brand: "Fashion House", type: "runway" },
+      { id: 10, title: "Designer Studio", brand: "Luxury Brand", type: "studio" },
+    ]
+  }
+]
 
 export default function ExplorePage() {
-  const { data: session, isPending } = useSession();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await authClient.signOut();
-      toast.success("Successfully signed out!");
-      router.push("/");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign out");
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
+  // Filter experiences based on search query
+  const filteredCategories = categories.map(category => ({
+    ...category,
+    experiences: category.experiences.filter(exp => 
+      exp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      exp.brand.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(category => category.experiences.length > 0)
 
   return (
-    <div className="p-8 flex flex-col gap-8">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-4xl font-semibold">Explore</h1>
-        <p className="text-lg text-muted-foreground">
-          Authentication testing ground
-        </p>
+    <div className="min-h-full">
+      {/* Search Bar */}
+      <div className="sticky top-0 z-[5] flex justify-center px-4 py-4 backdrop-blur-md bg-background/80 md:px-2">
+        <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 md:w-[640px]">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 bg-transparent text-white outline-none placeholder:text-white/50"
+          />
+          <MagnifyingGlass className="h-5 w-5 text-white/50" />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-8 max-w-md">
-        <div className="bg-card border rounded-lg p-8">
-          <h2 className="text-2xl font-medium mb-4">Authentication Status</h2>
-          <div className="flex flex-col gap-4">
-            <div className="text-sm">
-              <span className="font-medium">Status:</span>{" "}
-              {isPending ? "Loading..." : session ? "Authenticated" : "Not authenticated"}
-            </div>
-            <div className="text-sm">
-              <span className="font-medium">User:</span>{" "}
-              {session ? `${session.user.name} (${session.user.email})` : "None"}
-            </div>
-            {session && (
-              <div className="text-sm">
-                <span className="font-medium">Session ID:</span> {session.session.id}
+      {/* Content */}
+      <div className="px-4 pb-8 md:px-8">
+        <div className="flex flex-col gap-18">
+          {filteredCategories.map((category) => (
+            <div key={category.title} className="flex flex-col gap-4">
+              {/* Category Header */}
+              <div className="flex items-center justify-between px-2">
+                <h2 className="text-2xl font-semibold text-white tracking-tight">
+                  {category.title}
+                </h2>
               </div>
-            )}
-          </div>
-        </div>
 
-        <div className="bg-card border rounded-lg p-8 max-w-md">
-          <h2 className="text-2xl font-medium mb-4">Authentication</h2>
-          {session ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-muted-foreground">
-                You are signed in! Test protected features or try signing out.
-              </p>
-              <div className="flex gap-4">
-                <Button onClick={handleSignOut} disabled={isSigningOut}>
-                  {isSigningOut ? "Signing out..." : "Sign Out"}
-                </Button>
+              {/* Experience Cards Grid */}
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-2">
+                {category.experiences.map((experience) => (
+                  <ExperienceCard key={experience.id} experience={experience} />
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <p className="text-muted-foreground">
-                Sign in or create an account to test authentication features.
+          ))}
+
+          {/* Empty state when no results */}
+          {searchQuery && filteredCategories.length === 0 && (
+            <div className="flex items-center justify-center p-12">
+              <p className="text-lg text-white/70">
+                No experiences found for "{searchQuery}"
               </p>
-              <div className="flex gap-4">
-                <Button asChild>
-                  <Link href="/auth/sign-in">Sign In</Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/auth/sign-up">Sign Up</Link>
-                </Button>
-              </div>
             </div>
           )}
         </div>
       </div>
     </div>
-  );
+  )
 }
