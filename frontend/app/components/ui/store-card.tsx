@@ -61,17 +61,10 @@ export function StoreCard({ store, className }: StoreCardProps) {
 
       {/* Bottom text overlay with blur */}
       <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-1 p-4 backdrop-blur-lg bg-black/5 border-t border-white/10">
-        {/* Store title and price */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-white font-medium text-lg leading-tight flex-1">
-            {store.title}
-          </h3>
-          {(store.price || store.points) && (
-            <span className="text-white font-medium text-base whitespace-nowrap">
-              {store.points ? `${store.points} points` : `$${store.price}`}
-            </span>
-          )}
-        </div>
+        {/* Store title */}
+        <h3 className="text-white font-medium text-lg leading-tight">
+          {store.title}
+        </h3>
         
         {/* Creator name */}
         <p className="text-gray-300 text-sm">
