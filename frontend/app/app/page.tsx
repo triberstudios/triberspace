@@ -1,3 +1,5 @@
+"use client"
+
 import Banner from "@/components/common/banner";
 import { ExperienceCard } from "@/components/ui/experience-card";
 
@@ -80,8 +82,21 @@ export default function Home() {
   ];
 
   return (
-    <section className="w-full h-full flex flex-col p-6 font-sans">
-      <Banner />
+    <section className="w-full h-full flex flex-col p-8 font-sans">
+      <Banner 
+        variant="fullBackground"
+        title="Welcome to Triberspace"
+        subtitle="Discover exclusive content, collectibles, and merchandise from your favorite brands and artists."
+        rightImage="/TransparentImg.png"
+        primaryAction={{
+          label: "Get Started",
+          onClick: () => console.log("Get started clicked")
+        }}
+        secondaryAction={{
+          label: "Learn More",
+          onClick: () => console.log("Learn more clicked")
+        }}
+      />
 
       <h3 className="text-3xl my-6 font-semibold">For You</h3>
       <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
