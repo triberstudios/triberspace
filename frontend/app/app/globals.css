@@ -124,30 +124,37 @@
 @layer components {
   .sidebar-enhanced {
     width: var(--sidebar-width);
-    transition: width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease;
+    transition:
+      width 0.3s ease,
+      min-width 0.3s ease,
+      max-width 0.3s ease;
     overflow: visible;
   }
-  
+
   .sidebar-collapsed {
     --sidebar-width: 68px;
   }
-  
+
   .sidebar-expanded {
     --sidebar-width: clamp(228px, 25vw, 298px);
   }
-  
+
+  .bg-cover {
+    background-image: url("/TransparentImg.png");
+  }
+
   @media (min-width: 768px) and (max-width: 1024px) {
     .sidebar-expanded {
       --sidebar-width: 228px;
     }
   }
-  
+
   @media (min-width: 1024px) and (max-width: 1280px) {
     .sidebar-expanded {
       --sidebar-width: 260px;
     }
   }
-  
+
   @media (min-width: 1280px) {
     .sidebar-expanded {
       --sidebar-width: 298px;
