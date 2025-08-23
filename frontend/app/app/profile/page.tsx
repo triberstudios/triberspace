@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/common/button"
 import { EditProfileModal } from "@/components/profile/edit-profile-modal"
 
@@ -46,9 +47,9 @@ export default function Profile() {
                             variant="outline" 
                             size="default" 
                             className="rounded-full"
-                            onClick={() => console.log("Edit avatar clicked")}
+                            asChild
                         >
-                            Edit avatar
+                            <Link href="/avatar">Edit avatar</Link>
                         </Button>
                     </div>
                 </div>

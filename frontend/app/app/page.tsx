@@ -86,7 +86,7 @@ export default function Home() {
       <Banner 
         variant="fullBackground"
         title="Welcome to Triberspace"
-        subtitle="Discover exclusive content, collectibles, and merchandise from your favorite brands and artists."
+        subtitle="Discover immersive art and entertainment experiences from your favorite brands and artists. Earn points and unlock exclusive products by exploring and connecting."
         rightImage="/TransparentImg.png"
         primaryAction={{
           label: "Get Started",
