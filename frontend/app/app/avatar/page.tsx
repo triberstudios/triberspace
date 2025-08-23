@@ -176,7 +176,7 @@ export default function Avatar() {
                                     </button>
                                     <button
                                         onClick={() => handleEditConfig(config)}
-                                        className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-sm transition-colors cursor-pointer"
+                                        className="p-2 text-white/70 hover:text-white hover:bg-white/5 rounded-sm transition-colors cursor-pointer"
                                     >
                                         <PencilSimple className="h-3 w-3" />
                                     </button>
