@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## About Triberspace
 
-Triberspace is an immersive experience platform where fans can unlock exclusive content, collectibles, and merch by exploring, connecting, and earning points within immersive entertainment experiences by their favorite brands and artists.
+Triberspace is an immersive art and entertainment platform that makes it easy to create immersive environments and shows around digital content. When fans attend these experiences, they can unlock exclusive content, collectibles, and merch by exploring, connecting, and earning points within them.
 
 ## Common Development Commands
 
