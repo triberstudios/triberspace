@@ -37,18 +37,18 @@ export default function Profile() {
                          <Button 
                             variant="default" 
                             size="default" 
-                            className="rounded-full lg:hidden"
-                            onClick={() => console.log("Edit avatar clicked")}
+                            className="rounded-full"
+                            onClick={() => setEditModalOpen(true)}
                         >
-                            Edit avatar
+                            Edit profile
                         </Button>
                         <Button 
                             variant="outline" 
                             size="default" 
                             className="rounded-full"
-                            onClick={() => setEditModalOpen(true)}
+                            onClick={() => console.log("Edit avatar clicked")}
                         >
-                            Edit profile
+                            Edit avatar
                         </Button>
                     </div>
                 </div>
@@ -101,23 +101,6 @@ export default function Profile() {
                             />
                         ))}
                     </div>
-                </div>
-            </div>
-
-            {/* Right Section - Avatar Panel (fixed width, hidden on mobile) */}
-            <div className="hidden lg:flex sticky top-0 h-full w-[400px] xl:w-[450px] flex-shrink-0 flex-col items-center justify-center p-6">
-                {/* Avatar Display Area with button */}
-                <div className="relative flex w-full flex-1 items-center justify-center">
-                    <div className="flex w-full h-full items-center justify-center bg-white/0.5 rounded-lg border border-white/10">
-                        <div className="text-center">
-                            <p className="text-sm text-white/60">3D Avatar Preview</p>
-                        </div>
-                    </div>
-                    
-                    {/* Edit Avatar Button - Overlaying the container */}
-                    <Button className="absolute bottom-8 rounded-full bg-white text-black hover:bg-white/90">
-                        Edit avatar
-                    </Button>
                 </div>
             </div>
             

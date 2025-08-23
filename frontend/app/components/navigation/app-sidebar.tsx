@@ -39,7 +39,7 @@ const items: MenuItem[] = [
   {
     title: "Avatar",
     icon: User,
-    href: "/profile",
+    href: "/avatar",
   },
 ]
 
