@@ -7,7 +7,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/common/button"
 import { useSession, authClient } from "@/lib/auth-client"
-import { UserCircle, User, Gear, SignOut } from "@phosphor-icons/react"
+import { UserCircle, User, Gear, SignOut, UserFocus } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -95,7 +95,13 @@ export function GlobalNav() {
                     <DropdownMenuItem asChild className="py-3">
                       <Link href="/profile" className="cursor-pointer text-base">
                         <User className="mr-3 h-5 w-5" />
-                        <span>View Profile</span>
+                        <span>View profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="py-3">
+                      <Link href="/avatar" className="cursor-pointer text-base">
+                        <UserFocus className="mr-3 h-5 w-5" />
+                        <span>Edit avatar</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="py-3">

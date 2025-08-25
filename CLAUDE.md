@@ -47,6 +47,12 @@ Triberspace is an immersive art and entertainment platform that makes it easy to
   - ❌ Avoid: `<div className="space-y-3">` or individual `mb-*` classes
 - **Consistent Patterns**: Use the same spacing approach throughout components
 
+### UI & Text Standards
+- **Sentence case for all text**: Use sentence case (first word capitalized) for all UI text, labels, buttons, headings, and titles
+  - ✅ Good: "Save avatar preset", "Edit profile", "Configuration name"
+  - ❌ Avoid: "Save Avatar Preset", "Edit Profile", "Configuration Name"
+- **Button cursor styling**: All interactive buttons must include `cursor-pointer` class for consistent UX
+
 ### Component Architecture
 - Place reusable UI components in `components/ui/`
 - Use proper TypeScript interfaces for props
