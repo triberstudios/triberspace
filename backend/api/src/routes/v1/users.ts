@@ -8,10 +8,14 @@ import { eq } from 'drizzle-orm';
 const updateProfileSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50).optional(),
   lastName: z.string().min(1, 'Last name is required').max(50).optional(),
-  userName: z.string()
+  username: z.string()
     .min(3, 'Username must be at least 3 characters')
     .max(20, 'Username must be at most 20 characters')
     .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+    .optional(),
+  displayUsername: z.string()
+    .min(3, 'Display username must be at least 3 characters')
+    .max(20, 'Display username must be at most 20 characters')
     .optional(),
   socialLinks: z.union([z.string(), z.record(z.string())]).optional() // Accept JSON string or object
 });
@@ -25,12 +29,12 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
   fastify.get('/me', {
     preHandler: authMiddleware
   }, async (request: AuthenticatedRequest, reply) => {
-    const { firstName, lastName, userName, avatar_url, socialLinks, role } = request.user!;
+    const { firstName, lastName, username, displayUsername, avatar_url, socialLinks, role } = request.user!;
     const missingFields = [];
 
     if (!firstName) missingFields.push('firstName');
     if (!lastName) missingFields.push('lastName');
-    if (!userName) missingFields.push('userName');
+    if (!username) missingFields.push('username');
 
     return {
       success: true,
@@ -40,7 +44,8 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
           email: request.user!.email,
           firstName,
           lastName,
-          userName,
+          username,
+          displayUsername,
           avatar_url,
           socialLinks: socialLinks, // Already a JSON object from JSONB
           role,
@@ -62,11 +67,11 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
 
     try {
       // If updating username, check availability
-      if (updates.userName) {
+      if (updates.username) {
         const [existingUser] = await db
           .select({ id: user.id })
           .from(user)
-          .where(eq(user.userName, updates.userName))
+          .where(eq(user.username, updates.username))
           .limit(1);
 
         if (existingUser && existingUser.id !== request.user!.id) {
@@ -78,6 +83,11 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
             }
           });
         }
+
+        // If username is being updated and no displayUsername provided, use the username
+        if (!updates.displayUsername) {
+          updates.displayUsername = updates.username;
+        }
       }
 
       // Prepare updates with proper socialLinks handling
@@ -85,7 +95,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
         ...updates,
         updatedAt: new Date()
       };
-      
+
       // Handle socialLinks - convert to JSON object if it's a string
       if (updates.socialLinks) {
         if (typeof updates.socialLinks === 'string') {
@@ -116,7 +126,8 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          userName: user.userName,
+          username: user.username,
+          displayUsername: user.displayUsername,
           avatar_url: user.avatar_url,
           socialLinks: user.socialLinks,
           role: user.role,
@@ -196,7 +207,7 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
       // 2. Transfer creator content to another user
       // 3. Handle cascade deletes more carefully
       // 4. Send confirmation email first
-      
+
       // For now, we'll just mark the user as deleted by setting email to deleted state
       await db
         .update(user)
@@ -204,7 +215,8 @@ export async function v1UsersRoutes(fastify: FastifyInstance) {
           email: `deleted_${request.user!.id}@triberspace.deleted`,
           firstName: undefined,
           lastName: undefined,
-          userName: undefined,
+          username: undefined,
+          displayUsername: undefined,
           avatar_url: undefined,
           socialLinks: undefined,
           updatedAt: new Date()

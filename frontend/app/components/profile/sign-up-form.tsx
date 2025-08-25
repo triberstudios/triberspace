@@ -43,7 +43,7 @@ export function SignUpForm() {
         email,
         password,
         name: username, // Use username as name for now
-        userName: username,
+        username: username,
       });
       toast.success("Account created successfully!");
       router.push("/explore");

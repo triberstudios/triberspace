@@ -7,7 +7,8 @@ import { eq } from 'drizzle-orm';
 export interface ExtendedUser extends User {
   firstName?: string;
   lastName?: string;
-  userName?: string;
+  username?: string;
+  displayUsername?: string;
   role: string | null | undefined; // Match Better Auth type
   socialLinks?: any;
 }
@@ -101,9 +102,9 @@ export async function requireCompleteProfile(request: AuthenticatedRequest, repl
   
   if (!request.user) return;
 
-  const { firstName, lastName, userName } = request.user;
+  const { firstName, lastName, username } = request.user;
   
-  if (!firstName || !lastName || !userName) {
+  if (!firstName || !lastName || !username) {
     return reply.code(403).send({
       error: {
         code: 'INCOMPLETE_PROFILE',
@@ -113,7 +114,7 @@ export async function requireCompleteProfile(request: AuthenticatedRequest, repl
           missingFields: [
             !firstName && 'firstName',
             !lastName && 'lastName', 
-            !userName && 'userName'
+            !username && 'username'
           ].filter(Boolean)
         }
       }

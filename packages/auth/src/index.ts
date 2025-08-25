@@ -20,6 +20,21 @@ export const auth = betterAuth({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       redirectURI: `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`,
+      mapProfileToUser: (profile) => {
+        // Split Google's name into firstName and lastName
+        const nameParts = profile.name ? profile.name.trim().split(' ') : [''];
+        const firstName = nameParts[0] || null;
+        const lastName = nameParts.length >= 2 ? nameParts.slice(1).join(' ') : null;
+        
+        return {
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          emailVerified: profile.email_verified,
+          firstName,
+          lastName,
+        };
+      },
     },
   },
   user: {
@@ -31,11 +46,6 @@ export const auth = betterAuth({
       },
       lastName: {
         type: "string", 
-        required: false,
-        defaultValue: null
-      },
-      userName: {
-        type: "string",
         required: false,
         defaultValue: null
       },

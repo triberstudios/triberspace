@@ -17,7 +17,8 @@ export const user = pgTable("user", {
   name: text("name").notNull(), // Keep original name field for Better Auth compatibility
   firstName: text("firstName"), // Made nullable for migration
   lastName: text("lastName"), // Made nullable for migration
-  userName: text("userName"), // Made nullable for migration
+  username: text("username"), // Required by Better Auth username plugin (normalized)
+  displayUsername: text("displayUsername"), // Required by Better Auth username plugin (display name)
   email: text("email").notNull(),
   emailVerified: boolean("emailVerified").notNull().default(false),
   image: text("image"),
@@ -28,7 +29,8 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updatedAt").notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   unique("user_email_idx").on(table.email),
-  unique("user_username_idx").on(table.userName),
+  unique("user_username_idx").on(table.username),
+  unique("user_display_username_idx").on(table.displayUsername),
 ]);
 
 export const session = pgTable("session", {
