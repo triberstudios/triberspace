@@ -1,8 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { Canvas } from "@react-three/fiber"
+import { OrbitControls } from "@react-three/drei"
+import { EffectComposer, Bloom } from "@react-three/postprocessing"
 import { Button } from "@/components/common/button"
 import { CaretDown, PencilSimple } from "@phosphor-icons/react"
+import { Avatar3D } from "@/components/avatar/avatar-3d"
+import { ColorPicker } from "@/components/ui/color-picker"
 import {
   Dialog,
   DialogContent,
@@ -27,13 +32,27 @@ interface AvatarConfig {
   emoteIds?: string[]
 }
 
+interface AvatarData {
+  id: string
+  name: string
+  image: string | null
+  modelPath: string
+}
+
+interface OutfitData {
+  id: string
+  name: string
+  image: string
+}
+
 export default function Avatar() {
     const [activeTab, setActiveTab] = useState<TabType>("avatar")
     const [selectedAvatar, setSelectedAvatar] = useState<string>("1")
-    const [selectedOutfit, setSelectedOutfit] = useState<string | null>(null)
+    const [selectedOutfit, setSelectedOutfit] = useState<string>("off")
     const [selectedEmotes, setSelectedEmotes] = useState<string[]>([])
     const [selectedConfig, setSelectedConfig] = useState<string>("default")
     const [addToListOpen, setAddToListOpen] = useState(false)
+    const [avatarColor, setAvatarColor] = useState<string>("#ffffff")
     const [configName, setConfigName] = useState("")
     const [editModalOpen, setEditModalOpen] = useState(false)
     const [editingConfig, setEditingConfig] = useState<AvatarConfig | null>(null)
@@ -47,17 +66,21 @@ export default function Avatar() {
         { id: "config2", name: "Avatar 3", avatarId: "3", outfitId: "outfit2", emoteIds: ["emote1", "emote2"] }
     ])
     
-    // Mock data for avatars and their associated items
+    // Avatar and outfit data
     const avatarData: {
-        avatars: number[]
-        outfits: Record<string, number[]>
+        avatars: AvatarData[]
+        outfits: Record<string, OutfitData[]>
         emotes: Record<string, number[]>
     } = {
-        avatars: [1, 2, 3, 4, 5, 6],
+        avatars: [
+            { id: "1", name: "Triber Avatar", image: "/TriberAvi.png", modelPath: "/TriberCharacterOutfit.glb" },
+            { id: "2", name: "No Avatar", image: null, modelPath: "TriberCharacter.glb" },
+        ],
         outfits: {
-            "1": [1, 2, 3, 4],
-            "2": [1, 2, 3, 4, 5],
-            "3": [1, 2],
+            "1": [
+                { id: "off", name: "Outfit Off", image: "/OutfitOff.png" },
+                { id: "on", name: "Outfit On", image: "/OutfitOn.png" }
+            ]
         },
         emotes: {
             "1": [1, 2, 3],
@@ -65,8 +88,15 @@ export default function Avatar() {
             "3": [1, 2, 3, 4, 5, 6],
         }
     }
+
+    // Get current avatar model path
+    const currentAvatar = avatarData.avatars.find(a => a.id === selectedAvatar)
+    const modelPath = currentAvatar?.modelPath || "/TriberCharacter.glb"
     
-    const getGridItems = () => {
+    // Get selected outfits array for Avatar3D
+    const selectedOutfitsArray = selectedOutfit === "on" ? ["on"] : []
+    
+    const getGridItems = (): (AvatarData | OutfitData | number)[] => {
         switch(activeTab) {
             case "avatar":
                 return avatarData.avatars
@@ -138,7 +168,7 @@ export default function Avatar() {
         if (config) {
             // Load the saved selections from this configuration
             setSelectedAvatar(config.avatarId)
-            setSelectedOutfit(config.outfitId || null)
+            setSelectedOutfit(config.outfitId || "off")
             setSelectedEmotes(config.emoteIds || [])
             console.log("Loaded configuration:", config)
         }
@@ -151,18 +181,46 @@ export default function Avatar() {
             {/* Left Side - Avatar Display (50% desktop, full width mobile) */}
             <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-black/20 p-4 lg:p-8 min-h-[40vh] lg:min-h-full">
                 {/* Avatar Preview Area */}
-                <div className="relative flex h-full w-full items-center justify-center bg-white/0.5 border border-white/10 rounded-lg">
-                    {/* Avatar Configuration Dropdown */}
+                <div className="relative flex h-full w-full items-center justify-center bg-white/0.5 border border-white/15 rounded-lg">
+                    {/* Canvas Container */}
+                    <div className="absolute inset-0 rounded-lg overflow-hidden">
+                        <Canvas camera={{ position: [0, 3.5, 7] }}>
+                            <OrbitControls 
+                                enablePan={true} 
+                                enableZoom={true} 
+                                target={[0, 3.5, 0]}
+                                minPolarAngle={Math.PI / 2}
+                                maxPolarAngle={Math.PI / 2}
+                            />
+                            <ambientLight intensity={3} />
+                            <Avatar3D 
+                                color={avatarColor}
+                                modelPath={modelPath}
+                                selectedOutfits={selectedOutfitsArray}
+                            />
+                            <EffectComposer>
+                                <Bloom
+                                    intensity={1}
+                                    kernelSize={3}
+                                    luminanceThreshold={0.85}
+                                    luminanceSmoothing={0.05}
+                                    mipmapBlur={true}
+                                />
+                            </EffectComposer>
+                        </Canvas>
+                    </div>
+                    
+                    {/* Avatar Configuration Dropdown - Positioned above Canvas */}
                     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                         <DropdownMenuTrigger asChild>
-                            <button className="absolute top-2 right-2 lg:top-4 lg:right-4 flex w-40 lg:w-48 items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/40 px-3 lg:px-4 py-2 lg:py-3 text-white hover:bg-black/50 transition-colors cursor-pointer text-sm lg:text-base">
+                            <button className="absolute top-2 right-2 lg:top-4 lg:right-4 flex w-40 lg:w-48 items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/40 px-3 lg:px-4 py-2 lg:py-3 text-white hover:bg-black/50 transition-colors cursor-pointer text-sm lg:text-base z-10">
                                 <span className="truncate">
                                     {savedConfigs.find(c => c.id === selectedConfig)?.name || "Avatar name"}
                                 </span>
-                                <CaretDown className="h-4 w-4 flex-shrink-0" />
+                                <CaretDown className="h-4 w-4 flex-shrink-0 text-white" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-black/90 border-white/10 min-w-[200px] p-1">
+                        <DropdownMenuContent className="bg-black/90 border-white/10 min-w-[200px] p-1 z-50">
                             {savedConfigs.map((config) => (
                                 <div
                                     key={config.id}
@@ -185,7 +243,17 @@ export default function Avatar() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
-                    <p className="text-white/40">Avatar Preview</p>
+                    {/* Accent Color Overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm p-4 rounded-b-lg">
+                        <div className="flex items-center justify-center gap-3">
+                            <span className="text-white text-sm font-medium">Accent color:</span>
+                            <ColorPicker
+                                value={avatarColor}
+                                onChange={setAvatarColor}
+                                className=""
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -229,26 +297,49 @@ export default function Avatar() {
                 <div className="flex-1 min-h-0 overflow-x-auto lg:overflow-y-auto lg:overflow-x-visible custom-scrollbar">
                     {/* Mobile: Horizontal carousel, Desktop: Vertical grid */}
                     <div className="flex gap-3 lg:grid lg:grid-cols-3 lg:gap-4 pb-4 lg:pb-0">
-                        {getGridItems().map((item) => (
-                            <div
-                                key={`${activeTab}-${item}`}
-                                className="aspect-square cursor-pointer rounded-lg border border-white/10 bg-white/5 transition-all hover:border-white/20 hover:bg-white/10 min-h-[44px] w-44 lg:w-auto flex-shrink-0"
-                                onClick={() => {
-                                    if (activeTab === "avatar") {
-                                        setSelectedAvatar(item.toString())
-                                    } else if (activeTab === "outfit") {
-                                        setSelectedOutfit(item.toString())
-                                    } else if (activeTab === "emotes") {
-                                        const emoteId = item.toString()
-                                        setSelectedEmotes(prev => 
-                                            prev.includes(emoteId) 
-                                                ? prev.filter(id => id !== emoteId)
-                                                : [...prev, emoteId]
-                                        )
-                                    }
-                                }}
-                            />
-                        ))}
+                        {getGridItems().map((item: any, index: number) => {
+                            let isSelected = false
+                            let displayContent = null
+                            let clickHandler = () => {}
+
+                            if (activeTab === "avatar" && typeof item === "object" && "id" in item) {
+                                isSelected = selectedAvatar === item.id
+                                displayContent = item.image ? (
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                                ) : null
+                                clickHandler = () => setSelectedAvatar(item.id)
+                            } else if (activeTab === "outfit" && typeof item === "object" && "id" in item) {
+                                isSelected = selectedOutfit === item.id
+                                displayContent = item.image ? (
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                                ) : null
+                                clickHandler = () => setSelectedOutfit(item.id)
+                            } else if (activeTab === "emotes") {
+                                const emoteId = item.toString()
+                                isSelected = selectedEmotes.includes(emoteId)
+                                clickHandler = () => {
+                                    setSelectedEmotes(prev => 
+                                        prev.includes(emoteId) 
+                                            ? prev.filter(id => id !== emoteId)
+                                            : [...prev, emoteId]
+                                    )
+                                }
+                            }
+
+                            return (
+                                <div
+                                    key={`${activeTab}-${typeof item === "object" && "id" in item ? item.id : item}-${index}`}
+                                    className={`aspect-square cursor-pointer rounded-lg border transition-all hover:border-white/20 hover:bg-white/10 min-h-[44px] w-44 lg:w-auto flex-shrink-0 ${
+                                        isSelected 
+                                            ? 'border-white/40 bg-white/20' 
+                                            : 'border-white/10 bg-white/5'
+                                    }`}
+                                    onClick={clickHandler}
+                                >
+                                    {displayContent}
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
 
