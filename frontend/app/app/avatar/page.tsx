@@ -360,6 +360,34 @@ export default function Avatar() {
         
         setDropdownOpen(false)
     }
+    
+    const handleCreateNewLook = () => {
+        // Generate next sequential look name based on total count
+        const nextNumber = savedLooks.length + 1
+        const newLookName = `Look ${nextNumber}`
+        
+        const newLook: SavedLook = {
+            id: generateLookId(),
+            name: newLookName,
+            avatarId: selectedAvatar,
+            outfitId: selectedOutfit,
+            emoteIds: selectedEmotes,
+            color: avatarColor,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        }
+        
+        const updatedLooks = [...savedLooks, newLook]
+        setSavedLooks(updatedLooks)
+        saveLooksToStorage(updatedLooks)
+        
+        // Set this as the current look
+        setCurrentLookIdState(newLook.id)
+        setCurrentLookId(newLook.id)
+        setHasUnsavedChanges(false)
+        
+        setDropdownOpen(false)
+    }
 
     return (
         <div className="flex flex-col lg:flex-row h-full w-full">
@@ -415,7 +443,7 @@ export default function Avatar() {
                             <div className="px-2 py-2 text-xs font-medium text-white/60 border-b border-white/10 mb-1">
                                 Saved looks
                             </div>
-                            {savedLooks.length === 0 ? (
+{savedLooks.length === 0 ? (
                                 <div className="px-2 py-1.5 text-sm text-white/60">
                                     No saved looks
                                 </div>
@@ -442,6 +470,16 @@ export default function Avatar() {
                                     </div>
                                 ))
                             )}
+                            
+                            {/* Add New Look Button */}
+                            <div className="border-t border-white/10 mt-1 pt-1">
+                                <button
+                                    onClick={handleCreateNewLook}
+                                    className="w-full text-left px-2 py-1.5 text-sm text-white/90 hover:bg-white/10 rounded-sm cursor-pointer transition-colors"
+                                >
+                                    + New look
+                                </button>
+                            </div>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
