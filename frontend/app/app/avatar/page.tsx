@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { EffectComposer, Bloom } from "@react-three/postprocessing"
 import { Button } from "@/components/common/button"
-import { CaretDown, PencilSimple } from "@phosphor-icons/react"
+import { CaretDown, PencilSimple, Check } from "@phosphor-icons/react"
 import { Avatar3D } from "@/components/avatar/avatar-3d"
 import { ColorPicker } from "@/components/ui/color-picker"
 import {
@@ -32,6 +32,17 @@ interface AvatarConfig {
   emoteIds?: string[]
 }
 
+interface SavedLook {
+  id: string
+  name: string
+  avatarId: string
+  outfitId: string
+  emoteIds: string[]
+  color: string
+  createdAt: number
+  updatedAt: number
+}
+
 interface AvatarData {
   id: string
   name: string
@@ -44,6 +55,53 @@ interface OutfitData {
   name: string
   image: string
   modelPath: string | null
+}
+
+// localStorage utilities for look management
+const LOOKS_STORAGE_KEY = 'triberspace_avatar_looks'
+const CURRENT_LOOK_KEY = 'triberspace_current_look_id'
+
+function loadLooksFromStorage(): SavedLook[] {
+    try {
+        const stored = localStorage.getItem(LOOKS_STORAGE_KEY)
+        return stored ? JSON.parse(stored) : []
+    } catch (error) {
+        console.error('Failed to load looks from localStorage:', error)
+        return []
+    }
+}
+
+function saveLooksToStorage(looks: SavedLook[]): void {
+    try {
+        localStorage.setItem(LOOKS_STORAGE_KEY, JSON.stringify(looks))
+    } catch (error) {
+        console.error('Failed to save looks to localStorage:', error)
+    }
+}
+
+function getCurrentLookId(): string | null {
+    try {
+        return localStorage.getItem(CURRENT_LOOK_KEY)
+    } catch (error) {
+        console.error('Failed to get current look ID:', error)
+        return null
+    }
+}
+
+function setCurrentLookId(id: string | null): void {
+    try {
+        if (id) {
+            localStorage.setItem(CURRENT_LOOK_KEY, id)
+        } else {
+            localStorage.removeItem(CURRENT_LOOK_KEY)
+        }
+    } catch (error) {
+        console.error('Failed to set current look ID:', error)
+    }
+}
+
+function generateLookId(): string {
+    return `look_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
 // Helper function to get user's current state (would be from database in real app)
@@ -64,22 +122,87 @@ export default function Avatar() {
     const [selectedAvatar, setSelectedAvatar] = useState<string>(defaultState.avatarId)
     const [selectedOutfit, setSelectedOutfit] = useState<string>(defaultState.outfitId)
     const [selectedEmotes, setSelectedEmotes] = useState<string[]>([])
-    const [selectedConfig, setSelectedConfig] = useState<string>("default")
+    const [currentLookId, setCurrentLookIdState] = useState<string | null>(null)
     const [addToListOpen, setAddToListOpen] = useState(false)
     const [avatarColor, setAvatarColor] = useState<string>("#ffffff")
     const [configName, setConfigName] = useState("")
     const [editModalOpen, setEditModalOpen] = useState(false)
-    const [editingConfig, setEditingConfig] = useState<AvatarConfig | null>(null)
+    const [editingLook, setEditingLook] = useState<SavedLook | null>(null)
     const [editName, setEditName] = useState("")
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [outfitLoading, setOutfitLoading] = useState(false)
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
     
-    // Mock saved configurations
-    const [savedConfigs] = useState<AvatarConfig[]>([
-        { id: "default", name: "Avatar 1", avatarId: "1" },
-        { id: "config1", name: "Avatar 2", avatarId: "2", outfitId: "outfit1" },
-        { id: "config2", name: "Avatar 3", avatarId: "3", outfitId: "outfit2", emoteIds: ["emote1", "emote2"] }
-    ])
+    // localStorage-backed look management
+    const [savedLooks, setSavedLooks] = useState<SavedLook[]>([])
+    
+    // Initialize looks from localStorage on component mount
+    useEffect(() => {
+        let loadedLooks = loadLooksFromStorage()
+        
+        // Ensure there's always a default Avatar 1 look
+        const defaultLook: SavedLook = {
+            id: 'default-avatar-1',
+            name: 'Look 1',
+            avatarId: '1',
+            outfitId: 'off',
+            emoteIds: [],
+            color: '#ffffff',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        }
+        
+        const hasDefaultLook = loadedLooks.some(l => l.id === 'default-avatar-1')
+        if (!hasDefaultLook) {
+            loadedLooks = [defaultLook, ...loadedLooks]
+            saveLooksToStorage(loadedLooks)
+        }
+        
+        setSavedLooks(loadedLooks)
+        
+        const currentId = getCurrentLookId()
+        if (currentId && loadedLooks.some(l => l.id === currentId)) {
+            setCurrentLookIdState(currentId)
+            const currentLook = loadedLooks.find(l => l.id === currentId)
+            if (currentLook) {
+                setSelectedAvatar(currentLook.avatarId)
+                setSelectedOutfit(currentLook.outfitId)
+                setSelectedEmotes(currentLook.emoteIds)
+                setAvatarColor(currentLook.color)
+            }
+        } else {
+            // No valid current look, select the default Avatar 1
+            setCurrentLookIdState('default-avatar-1')
+            setCurrentLookId('default-avatar-1')
+            setSelectedAvatar('1')
+            setSelectedOutfit('off')
+            setSelectedEmotes([])
+            setAvatarColor('#ffffff')
+        }
+    }, [])
+    
+    // Track changes to detect unsaved modifications
+    useEffect(() => {
+        if (currentLookId) {
+            const currentLook = savedLooks.find(l => l.id === currentLookId)
+            if (currentLook) {
+                const hasChanges = 
+                    currentLook.avatarId !== selectedAvatar ||
+                    currentLook.outfitId !== selectedOutfit ||
+                    JSON.stringify(currentLook.emoteIds.sort()) !== JSON.stringify(selectedEmotes.sort()) ||
+                    currentLook.color !== avatarColor
+                setHasUnsavedChanges(hasChanges)
+            }
+        } else {
+            // No look selected, consider any non-default state as unsaved changes
+            const hasChanges = 
+                selectedAvatar !== "1" ||
+                selectedOutfit !== "off" ||
+                selectedEmotes.length > 0 ||
+                avatarColor !== "#ffffff"
+            setHasUnsavedChanges(hasChanges)
+        }
+    }, [currentLookId, savedLooks, selectedAvatar, selectedOutfit, selectedEmotes, avatarColor])
     
     // Avatar and outfit data
     const avatarData: {
@@ -130,69 +253,111 @@ export default function Avatar() {
     }
     
     const handleSave = () => {
-        // Save current selections to the selected configuration
-        const configToSave = {
-            configId: selectedConfig,
-            avatarId: selectedAvatar,
-            outfitId: selectedOutfit,
-            emoteIds: selectedEmotes
+        if (currentLookId) {
+            // Update existing look
+            const updatedLooks = savedLooks.map(look => 
+                look.id === currentLookId
+                    ? {
+                        ...look,
+                        avatarId: selectedAvatar,
+                        outfitId: selectedOutfit,
+                        emoteIds: selectedEmotes,
+                        color: avatarColor,
+                        updatedAt: Date.now()
+                    }
+                    : look
+            )
+            setSavedLooks(updatedLooks)
+            saveLooksToStorage(updatedLooks)
+            setHasUnsavedChanges(false)
+        } else {
+            // No current look - prompt to save as new
+            setAddToListOpen(true)
         }
-        console.log("Saving configuration:", configToSave)
-        // TODO: API call to save configuration
     }
     
     const handleAddToList = (e: React.FormEvent) => {
         e.preventDefault()
-        // Create new configuration with current selections
-        const newConfig = {
-            name: configName,
+        
+        const newLook: SavedLook = {
+            id: generateLookId(),
+            name: configName.trim(),
             avatarId: selectedAvatar,
             outfitId: selectedOutfit,
-            emoteIds: selectedEmotes
+            emoteIds: selectedEmotes,
+            color: avatarColor,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
         }
-        console.log("Adding new configuration:", newConfig)
-        // TODO: API call to create new configuration
-        // After creating, select the new configuration
-        // setSelectedConfig(newConfigId)
+        
+        const updatedLooks = [...savedLooks, newLook]
+        setSavedLooks(updatedLooks)
+        saveLooksToStorage(updatedLooks)
+        
+        // Set this as the current look
+        setCurrentLookIdState(newLook.id)
+        setCurrentLookId(newLook.id)
+        setHasUnsavedChanges(false)
+        
         setAddToListOpen(false)
         setConfigName("")
     }
     
-    const handleEditConfig = (config: AvatarConfig) => {
-        setEditingConfig(config)
-        setEditName(config.name)
+    const handleEditLook = (look: SavedLook) => {
+        setEditingLook(look)
+        setEditName(look.name)
         setEditModalOpen(true)
     }
     
     const handleSaveEdit = (e: React.FormEvent) => {
         e.preventDefault()
-        // Handle saving edited configuration name
-        console.log("Saving edited config name:", editingConfig?.id, editName)
-        // TODO: API call to update configuration name
-        setEditModalOpen(false)
-        setEditingConfig(null)
-        setEditName("")
-    }
-    
-    const handleDeleteConfig = () => {
-        console.log("Deleting configuration:", editingConfig?.id)
-        // TODO: API call to delete configuration
-        setEditModalOpen(false)
-        setEditingConfig(null)
-        setEditName("")
-    }
-    
-    const handleSelectConfig = (configId: string) => {
-        setSelectedConfig(configId)
-        const config = savedConfigs.find(c => c.id === configId)
-        if (config) {
-            // Load the saved selections from this configuration
-            setSelectedAvatar(config.avatarId)
-            setSelectedOutfit(config.outfitId || "off")
-            setSelectedEmotes(config.emoteIds || [])
-            console.log("Loaded configuration:", config)
+        
+        if (editingLook) {
+            const updatedLooks = savedLooks.map(look =>
+                look.id === editingLook.id
+                    ? { ...look, name: editName.trim(), updatedAt: Date.now() }
+                    : look
+            )
+            setSavedLooks(updatedLooks)
+            saveLooksToStorage(updatedLooks)
         }
-        // Close the dropdown after selection
+        
+        setEditModalOpen(false)
+        setEditingLook(null)
+        setEditName("")
+    }
+    
+    const handleDeleteLook = () => {
+        if (editingLook) {
+            const updatedLooks = savedLooks.filter(look => look.id !== editingLook.id)
+            setSavedLooks(updatedLooks)
+            saveLooksToStorage(updatedLooks)
+            
+            // If we're deleting the current look, clear the current selection
+            if (currentLookId === editingLook.id) {
+                setCurrentLookIdState(null)
+                setCurrentLookId(null)
+            }
+        }
+        
+        setEditModalOpen(false)
+        setEditingLook(null)
+        setEditName("")
+    }
+    
+    const handleSelectLook = (lookId: string) => {
+        const look = savedLooks.find(l => l.id === lookId)
+        if (look) {
+            setCurrentLookIdState(lookId)
+            setCurrentLookId(lookId)
+            
+            // Load the look's values
+            setSelectedAvatar(look.avatarId)
+            setSelectedOutfit(look.outfitId)
+            setSelectedEmotes(look.emoteIds)
+            setAvatarColor(look.color)
+        }
+        
         setDropdownOpen(false)
     }
 
@@ -237,31 +402,46 @@ export default function Avatar() {
                         <DropdownMenuTrigger asChild>
                             <button className="absolute top-2 right-2 lg:top-4 lg:right-4 flex w-40 lg:w-48 items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/40 px-3 lg:px-4 py-2 lg:py-3 text-white hover:bg-black/50 transition-colors cursor-pointer text-sm lg:text-base z-10">
                                 <span className="truncate">
-                                    {savedConfigs.find(c => c.id === selectedConfig)?.name || "Avatar name"}
+                                    {currentLookId 
+                                        ? savedLooks.find(l => l.id === currentLookId)?.name || "Unnamed look"
+                                        : "No look selected"
+                                    }
+                                    {hasUnsavedChanges && " *"}
                                 </span>
                                 <CaretDown className="h-4 w-4 flex-shrink-0 text-white" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="bg-black/90 border-white/10 min-w-[200px] p-1 z-50">
-                            {savedConfigs.map((config) => (
-                                <div
-                                    key={config.id}
-                                    className="flex items-center gap-1 rounded-sm"
-                                >
-                                    <button
-                                        onClick={() => handleSelectConfig(config.id)}
-                                        className="flex-1 text-left px-2 py-1.5 text-sm text-white hover:bg-white/10 rounded-sm cursor-pointer transition-colors"
-                                    >
-                                        {config.name}
-                                    </button>
-                                    <button
-                                        onClick={() => handleEditConfig(config)}
-                                        className="p-2 text-white/70 hover:text-white hover:bg-white/5 rounded-sm transition-colors cursor-pointer"
-                                    >
-                                        <PencilSimple className="h-3 w-3" />
-                                    </button>
+                            <div className="px-2 py-2 text-xs font-medium text-white/60 border-b border-white/10 mb-1">
+                                Saved looks
+                            </div>
+                            {savedLooks.length === 0 ? (
+                                <div className="px-2 py-1.5 text-sm text-white/60">
+                                    No saved looks
                                 </div>
-                            ))}
+                            ) : (
+                                savedLooks.map((look) => (
+                                    <div
+                                        key={look.id}
+                                        className="flex items-center gap-1 rounded-sm"
+                                    >
+                                        <button
+                                            onClick={() => handleSelectLook(look.id)}
+                                            className={`flex-1 text-left px-2 py-1.5 text-sm hover:bg-white/10 rounded-sm cursor-pointer transition-colors ${
+                                                look.id === currentLookId ? 'text-white bg-white/5' : 'text-white/90'
+                                            }`}
+                                        >
+                                            {look.name}
+                                        </button>
+                                        <button
+                                            onClick={() => handleEditLook(look)}
+                                            className="p-2 text-white/70 hover:text-white hover:bg-white/5 rounded-sm transition-colors cursor-pointer"
+                                        >
+                                            <PencilSimple className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
@@ -323,24 +503,24 @@ export default function Avatar() {
                     <div className="flex gap-3 lg:grid lg:grid-cols-3 lg:gap-4 pb-4 lg:pb-0">
                         {getGridItems().map((item: any, index: number) => {
                             let isSelected = false
-                            let displayContent = null
+                            let itemTitle = ""
+                            let backgroundImage = ""
                             let clickHandler = () => {}
 
                             if (activeTab === "avatar" && typeof item === "object" && "id" in item) {
                                 isSelected = selectedAvatar === item.id
-                                displayContent = item.image ? (
-                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
-                                ) : null
+                                itemTitle = item.name
+                                backgroundImage = item.image || ""
                                 clickHandler = () => setSelectedAvatar(item.id)
                             } else if (activeTab === "outfit" && typeof item === "object" && "id" in item) {
                                 isSelected = selectedOutfit === item.id
-                                displayContent = item.image ? (
-                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
-                                ) : null
+                                itemTitle = item.name
+                                backgroundImage = item.image || ""
                                 clickHandler = () => setSelectedOutfit(item.id)
                             } else if (activeTab === "emotes") {
                                 const emoteId = item.toString()
                                 isSelected = selectedEmotes.includes(emoteId)
+                                itemTitle = `Emote ${emoteId}`
                                 clickHandler = () => {
                                     setSelectedEmotes(prev => 
                                         prev.includes(emoteId) 
@@ -353,14 +533,55 @@ export default function Avatar() {
                             return (
                                 <div
                                     key={`${activeTab}-${typeof item === "object" && "id" in item ? item.id : item}-${index}`}
-                                    className={`aspect-square cursor-pointer rounded-lg border transition-all hover:border-white/20 hover:bg-white/10 min-h-[44px] w-44 lg:w-auto flex-shrink-0 ${
+                                    className={`relative aspect-square cursor-pointer rounded-lg border transition-all hover:border-white/20 hover:bg-white/10 min-h-[44px] w-44 lg:w-auto flex-shrink-0 overflow-hidden group ${
                                         isSelected 
                                             ? 'border-white/40 bg-white/20' 
                                             : 'border-white/10 bg-white/5'
                                     }`}
                                     onClick={clickHandler}
                                 >
-                                    {displayContent}
+                                    {/* Background Image or Pattern */}
+                                    {backgroundImage ? (
+                                        <div 
+                                            className="absolute inset-0 bg-cover bg-center"
+                                            style={{ backgroundImage: `url(${backgroundImage})` }}
+                                        />
+                                    ) : (
+                                        <div className="absolute inset-0 bg-white/5">
+                                            {/* Diagonal stripe pattern for empty items */}
+                                            <div 
+                                                className="absolute inset-0 opacity-20"
+                                                style={{
+                                                    backgroundImage: `repeating-linear-gradient(
+                                                        45deg,
+                                                        rgba(255, 255, 255, 0.1) 0px,
+                                                        rgba(255, 255, 255, 0.1) 8px,
+                                                        transparent 8px,
+                                                        transparent 16px
+                                                    )`
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Hover Overlay */}
+                                    <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20" />
+                                    
+                                    {/* Selected State Checkmark */}
+                                    {isSelected && (
+                                        <div className="absolute top-2 right-2 w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+                                            <Check className="w-4 h-4 text-white" weight="bold" />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Bottom Title Overlay */}
+                                    {itemTitle && (
+                                        <div className="absolute bottom-0 left-0 right-0 p-3 backdrop-blur-lg bg-black/30 border-t border-white/10">
+                                            <h3 className="text-white font-medium text-sm leading-tight truncate">
+                                                {itemTitle}
+                                            </h3>
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })}
@@ -373,6 +594,7 @@ export default function Avatar() {
                         className="flex-1 rounded-full"
                         variant="default"
                         onClick={handleSave}
+                        disabled={!hasUnsavedChanges}
                     >
                         Save
                     </Button>
@@ -380,8 +602,9 @@ export default function Avatar() {
                         className="flex-1 rounded-full"
                         variant="outline"
                         onClick={() => setAddToListOpen(true)}
+                        disabled={!hasUnsavedChanges}
                     >
-                        Save as new preset
+                        Save as new look
                     </Button>
                 </div>
             </div>
@@ -395,14 +618,14 @@ export default function Avatar() {
                     <div className="px-4 py-6 sm:px-8 sm:py-8">
                         <DialogHeader>
                             <DialogTitle className="text-xl sm:text-2xl font-semibold text-center mb-4 sm:mb-6">
-                                Save avatar preset
+                                Save avatar look
                             </DialogTitle>
                         </DialogHeader>
 
                         <form onSubmit={handleAddToList} className="flex flex-col gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="configName" className="text-sm font-medium">
-                                    Preset name
+                                    Look name
                                 </Label>
                                 <Input
                                     id="configName"
@@ -435,14 +658,14 @@ export default function Avatar() {
                     <div className="px-4 py-6 sm:px-8 sm:py-8">
                         <DialogHeader>
                             <DialogTitle className="text-xl sm:text-2xl font-semibold text-center mb-4 sm:mb-6">
-                                Edit preset
+                                Edit look
                             </DialogTitle>
                         </DialogHeader>
 
                         <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="editName" className="text-sm font-medium">
-                                    Preset Name
+                                    Look name
                                 </Label>
                                 <Input
                                     id="editName"
@@ -457,18 +680,18 @@ export default function Avatar() {
 
                             <div className="flex gap-4 mt-2">
                                 <Button 
+                                    type="button"
+                                    variant="destructive"
+                                    className="flex-1"
+                                    onClick={handleDeleteLook}
+                                >
+                                    Delete
+                                </Button>
+                                <Button 
                                     type="submit" 
                                     className="flex-1"
                                 >
                                     Save Changes
-                                </Button>
-                                <Button 
-                                    type="button"
-                                    variant="destructive"
-                                    className="flex-1"
-                                    onClick={handleDeleteConfig}
-                                >
-                                    Delete
                                 </Button>
                             </div>
                         </form>
