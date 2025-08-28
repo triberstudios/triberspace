@@ -43,12 +43,26 @@ interface OutfitData {
   id: string
   name: string
   image: string
+  modelPath: string | null
+}
+
+// Helper function to get user's current state (would be from database in real app)
+function getUserCurrentState() {
+    // TODO: Replace with actual database/API call
+    // For now, return default state
+    return {
+        avatarId: "1",
+        outfitId: "off"
+    }
 }
 
 export default function Avatar() {
+    // Get user's current equipped state for instant loading
+    const defaultState = getUserCurrentState()
+    
     const [activeTab, setActiveTab] = useState<TabType>("avatar")
-    const [selectedAvatar, setSelectedAvatar] = useState<string>("1")
-    const [selectedOutfit, setSelectedOutfit] = useState<string>("off")
+    const [selectedAvatar, setSelectedAvatar] = useState<string>(defaultState.avatarId)
+    const [selectedOutfit, setSelectedOutfit] = useState<string>(defaultState.outfitId)
     const [selectedEmotes, setSelectedEmotes] = useState<string[]>([])
     const [selectedConfig, setSelectedConfig] = useState<string>("default")
     const [addToListOpen, setAddToListOpen] = useState(false)
@@ -58,6 +72,7 @@ export default function Avatar() {
     const [editingConfig, setEditingConfig] = useState<AvatarConfig | null>(null)
     const [editName, setEditName] = useState("")
     const [dropdownOpen, setDropdownOpen] = useState(false)
+    const [outfitLoading, setOutfitLoading] = useState(false)
     
     // Mock saved configurations
     const [savedConfigs] = useState<AvatarConfig[]>([
@@ -73,13 +88,16 @@ export default function Avatar() {
         emotes: Record<string, number[]>
     } = {
         avatars: [
-            { id: "1", name: "Triber Avatar", image: "/TriberAvi.png", modelPath: "/TriberCharacterOutfit.glb" },
-            { id: "2", name: "No Avatar", image: null, modelPath: "TriberCharacter.glb" },
+            { id: "1", name: "Triber Avatar", image: "/TriberAvi.png", modelPath: "/TriberCharacterMod.glb" },
+            { id: "2", name: "Basic Avatar", image: null, modelPath: "/TriberTest2.glb" },
         ],
         outfits: {
             "1": [
-                { id: "off", name: "Outfit Off", image: "/OutfitOff.png" },
-                { id: "on", name: "Outfit On", image: "/OutfitOn.png" }
+                { id: "off", name: "No Outfit", image: "/OutfitOff.png", modelPath: null },
+                { id: "fit1", name: "Outfit 1", image: "/OutfitOn.png", modelPath: "/TriberFit1.glb" }
+            ],
+            "2": [
+                { id: "off", name: "No Outfit", image: "/OutfitOff.png", modelPath: null },
             ]
         },
         emotes: {
@@ -93,8 +111,10 @@ export default function Avatar() {
     const currentAvatar = avatarData.avatars.find(a => a.id === selectedAvatar)
     const modelPath = currentAvatar?.modelPath || "/TriberCharacter.glb"
     
-    // Get selected outfits array for Avatar3D
-    const selectedOutfitsArray = selectedOutfit === "on" ? ["on"] : []
+    // Get selected outfit data for Avatar3D
+    const currentOutfits = avatarData.outfits[selectedAvatar] || []
+    const selectedOutfitData = currentOutfits.find(o => o.id === selectedOutfit)
+    const outfitModelPath = selectedOutfitData?.modelPath || null
     
     const getGridItems = (): (AvatarData | OutfitData | number)[] => {
         switch(activeTab) {
@@ -195,8 +215,10 @@ export default function Avatar() {
                             <ambientLight intensity={3} />
                             <Avatar3D 
                                 color={avatarColor}
-                                modelPath={modelPath}
-                                selectedOutfits={selectedOutfitsArray}
+                                baseModelPath={modelPath}
+                                outfitModelPath={outfitModelPath}
+                                onOutfitLoading={setOutfitLoading}
+                                enableColorCustomization={selectedAvatar === "1"}
                             />
                             <EffectComposer>
                                 <Bloom
@@ -243,17 +265,19 @@ export default function Avatar() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
-                    {/* Accent Color Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm p-4 rounded-b-lg">
-                        <div className="flex items-center justify-center gap-3">
-                            <span className="text-white text-sm font-medium">Accent color:</span>
-                            <ColorPicker
-                                value={avatarColor}
-                                onChange={setAvatarColor}
-                                className=""
-                            />
+                    {/* Accent Color Overlay - Only show for avatars that support color customization */}
+                    {selectedAvatar === "1" && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm p-4 rounded-b-lg">
+                            <div className="flex items-center justify-center gap-3">
+                                <span className="text-white text-sm font-medium">Accent color:</span>
+                                <ColorPicker
+                                    value={avatarColor}
+                                    onChange={setAvatarColor}
+                                    className=""
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
