@@ -8,6 +8,7 @@ import { Button } from "@/components/common/button"
 import { CaretDown, PencilSimple, Check, Play } from "@phosphor-icons/react"
 import { Avatar3D } from "@/components/avatar/avatar-3d"
 import { ColorPicker } from "@/components/ui/color-picker"
+import { AvatarCard } from "@/components/ui/avatar-card"
 import {
   Dialog,
   DialogContent,
@@ -260,6 +261,40 @@ export default function Avatar() {
                 return avatarData.emotes[selectedAvatar] || []
             default:
                 return []
+        }
+    }
+    
+    const getIsSelected = (item: AvatarData | OutfitData | EmoteData): boolean => {
+        switch(activeTab) {
+            case "avatar":
+                return selectedAvatar === item.id
+            case "outfit":
+                return selectedOutfit === item.id
+            case "emotes":
+                return selectedEmotes.includes(item.id)
+            default:
+                return false
+        }
+    }
+    
+    const handleItemSelect = (item: AvatarData | OutfitData | EmoteData) => {
+        switch(activeTab) {
+            case "avatar":
+                setSelectedAvatar(item.id)
+                break
+            case "outfit":
+                setSelectedOutfit(item.id)
+                break
+            case "emotes":
+                const emote = item as EmoteData
+                if (selectedEmotes.includes(emote.id)) {
+                    // Deselect if already selected
+                    setSelectedEmotes(prev => prev.filter(id => id !== emote.id))
+                } else if (selectedEmotes.length < 4) {
+                    // Select if under limit
+                    setSelectedEmotes(prev => [...prev, emote.id])
+                }
+                break
         }
     }
     
@@ -615,121 +650,17 @@ export default function Avatar() {
                 <div className="flex-1 min-h-0 overflow-x-auto lg:overflow-y-auto lg:overflow-x-visible custom-scrollbar">
                     {/* Mobile: Horizontal carousel, Desktop: Vertical grid */}
                     <div className="flex gap-3 lg:grid lg:grid-cols-3 lg:gap-4 pb-4 lg:pb-0">
-                        {getGridItems().map((item: any, index: number) => {
-                            let isSelected = false
-                            let itemTitle = ""
-                            let backgroundImage = ""
-                            let clickHandler = () => {}
-
-                            if (activeTab === "avatar" && typeof item === "object" && "id" in item) {
-                                isSelected = selectedAvatar === item.id
-                                itemTitle = item.name
-                                backgroundImage = item.image || ""
-                                clickHandler = () => setSelectedAvatar(item.id)
-                            } else if (activeTab === "outfit" && typeof item === "object" && "id" in item) {
-                                isSelected = selectedOutfit === item.id
-                                itemTitle = item.name
-                                backgroundImage = item.image || ""
-                                clickHandler = () => setSelectedOutfit(item.id)
-                            } else if (activeTab === "emotes" && typeof item === "object" && "id" in item) {
-                                const emote = item as EmoteData
-                                isSelected = selectedEmotes.includes(emote.id)
-                                itemTitle = emote.name
-                                backgroundImage = emote.image || ""
-                                clickHandler = () => {
-                                    if (selectedEmotes.includes(emote.id)) {
-                                        // Deselect if already selected
-                                        setSelectedEmotes(prev => prev.filter(id => id !== emote.id))
-                                    } else if (selectedEmotes.length < 4) {
-                                        // Select if under limit
-                                        setSelectedEmotes(prev => [...prev, emote.id])
-                                    }
-                                    // If at limit and not selected, do nothing (just clicking won't add it)
-                                }
-                            }
-
-                            return (
-                                <div
-                                    key={`${activeTab}-${typeof item === "object" && "id" in item ? item.id : item}-${index}`}
-                                    className={`relative aspect-square cursor-pointer rounded-lg border transition-all hover:border-white/20 hover:bg-white/10 min-h-[44px] w-44 lg:w-auto flex-shrink-0 overflow-hidden group ${
-                                        isSelected 
-                                            ? 'border-white/40 bg-white/20' 
-                                            : 'border-white/10 bg-white/5'
-                                    }`}
-                                    onClick={clickHandler}
-                                >
-                                    {/* Background Image or Pattern */}
-                                    {backgroundImage ? (
-                                        <div 
-                                            className="absolute inset-0 bg-cover bg-center"
-                                            style={{ backgroundImage: `url(${backgroundImage})` }}
-                                        />
-                                    ) : (
-                                        <div className="absolute inset-0 bg-white/5">
-                                            {/* Diagonal stripe pattern for empty items */}
-                                            <div 
-                                                className="absolute inset-0 opacity-20"
-                                                style={{
-                                                    backgroundImage: `repeating-linear-gradient(
-                                                        45deg,
-                                                        rgba(255, 255, 255, 0.1) 0px,
-                                                        rgba(255, 255, 255, 0.1) 8px,
-                                                        transparent 8px,
-                                                        transparent 16px
-                                                    )`
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                    
-                                    {/* Hover Overlay */}
-                                    <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20" />
-                                    
-                                    {/* Selection Indicator - Empty circle or checkmark */}
-                                    {activeTab === "emotes" && (
-                                        <div className={`absolute top-2 right-2 w-6 h-6 backdrop-blur-sm rounded-full flex items-center justify-center border ${
-                                            isSelected ? 'bg-white/20 border-white/30' : 'bg-white/5 border-white/20'
-                                        }`}>
-                                            {isSelected && <Check className="w-4 h-4 text-white" weight="bold" />}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Selected State Checkmark for non-emotes */}
-                                    {activeTab !== "emotes" && isSelected && (
-                                        <div className="absolute top-2 right-2 w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
-                                            <Check className="w-4 h-4 text-white" weight="bold" />
-                                        </div>
-                                    )}
-                                    
-                                    {/* Bottom Title Overlay */}
-                                    {itemTitle && (
-                                        <div className="absolute bottom-0 left-0 right-0 p-3 backdrop-blur-lg bg-black/30 border-t border-white/10">
-                                            {activeTab === "emotes" ? (
-                                                <div className="flex items-center justify-between">
-                                                    <h3 className="text-white font-medium text-sm leading-tight truncate flex-1">
-                                                        {itemTitle}
-                                                    </h3>
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            const emote = item as EmoteData
-                                                            handlePlayEmote(emote.animationName)
-                                                        }}
-                                                        className="ml-2 p-1 hover:bg-white/10 rounded transition-colors"
-                                                    >
-                                                        <Play className="w-4 h-4 text-white" weight="fill" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <h3 className="text-white font-medium text-sm leading-tight truncate">
-                                                    {itemTitle}
-                                                </h3>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
+                        {getGridItems().map((item, index) => (
+                            <AvatarCard
+                                key={`${activeTab}-${item.id}-${index}`}
+                                item={item}
+                                type={activeTab}
+                                isSelected={getIsSelected(item)}
+                                onSelect={() => handleItemSelect(item)}
+                                onPlayEmote={activeTab === 'emotes' ? handlePlayEmote : undefined}
+                                selectionLimit={activeTab === 'emotes' && selectedEmotes.length >= 4}
+                            />
+                        ))}
                     </div>
                 </div>
 
