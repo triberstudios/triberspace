@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { EffectComposer, Bloom } from "@react-three/postprocessing"
 import { Button } from "@/components/common/button"
-import { CaretDown, PencilSimple, Check } from "@phosphor-icons/react"
+import { CaretDown, PencilSimple, Check, Play } from "@phosphor-icons/react"
 import { Avatar3D } from "@/components/avatar/avatar-3d"
 import { ColorPicker } from "@/components/ui/color-picker"
 import {
@@ -55,6 +55,13 @@ interface OutfitData {
   name: string
   image: string
   modelPath: string | null
+}
+
+interface EmoteData {
+  id: string
+  name: string
+  animationName: string
+  image?: string | null
 }
 
 // localStorage utilities for look management
@@ -132,6 +139,7 @@ export default function Avatar() {
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [outfitLoading, setOutfitLoading] = useState(false)
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+    const [playingEmote, setPlayingEmote] = useState<string | null>(null)
     
     // localStorage-backed look management
     const [savedLooks, setSavedLooks] = useState<SavedLook[]>([])
@@ -208,7 +216,7 @@ export default function Avatar() {
     const avatarData: {
         avatars: AvatarData[]
         outfits: Record<string, OutfitData[]>
-        emotes: Record<string, number[]>
+        emotes: Record<string, EmoteData[]>
     } = {
         avatars: [
             { id: "1", name: "Triber Avatar", image: "/TriberAvi.png", modelPath: "/TriberCharacterMod.glb" },
@@ -224,9 +232,12 @@ export default function Avatar() {
             ]
         },
         emotes: {
-            "1": [1, 2, 3],
-            "2": [1, 2, 3, 4],
-            "3": [1, 2, 3, 4, 5, 6],
+            "1": [
+                { id: "twerk", name: "Twerk", animationName: "twerk.001", image: null },
+                { id: "poplocking", name: "Pop-lock", animationName: "poplocking", image: null }
+            ],
+            "2": [],
+            "3": []
         }
     }
 
@@ -239,7 +250,7 @@ export default function Avatar() {
     const selectedOutfitData = currentOutfits.find(o => o.id === selectedOutfit)
     const outfitModelPath = selectedOutfitData?.modelPath || null
     
-    const getGridItems = (): (AvatarData | OutfitData | number)[] => {
+    const getGridItems = (): (AvatarData | OutfitData | EmoteData)[] => {
         switch(activeTab) {
             case "avatar":
                 return avatarData.avatars
@@ -278,6 +289,11 @@ export default function Avatar() {
     
     const handleAddToList = (e: React.FormEvent) => {
         e.preventDefault()
+        
+        // Check 6-look limit
+        if (savedLooks.length >= 6) {
+            return
+        }
         
         const newLook: SavedLook = {
             id: generateLookId(),
@@ -361,7 +377,40 @@ export default function Avatar() {
         setDropdownOpen(false)
     }
     
+    const handlePlayEmote = (animationName: string) => {
+        setPlayingEmote(animationName)
+    }
+    
+    const handleEmoteComplete = () => {
+        setPlayingEmote(null)
+    }
+    
+    const handleDiscardChanges = () => {
+        if (currentLookId) {
+            // Revert to current saved look values
+            const currentLook = savedLooks.find(l => l.id === currentLookId)
+            if (currentLook) {
+                setSelectedAvatar(currentLook.avatarId)
+                setSelectedOutfit(currentLook.outfitId)
+                setSelectedEmotes(currentLook.emoteIds)
+                setAvatarColor(currentLook.color)
+            }
+        } else {
+            // No current look, revert to default state
+            setSelectedAvatar("1")
+            setSelectedOutfit("off")
+            setSelectedEmotes([])
+            setAvatarColor("#ffffff")
+        }
+        setHasUnsavedChanges(false)
+    }
+    
     const handleCreateNewLook = () => {
+        // Check 6-look limit
+        if (savedLooks.length >= 6) {
+            return
+        }
+        
         // Generate next sequential look name based on total count
         const nextNumber = savedLooks.length + 1
         const newLookName = `Look ${nextNumber}`
@@ -412,6 +461,8 @@ export default function Avatar() {
                                 outfitModelPath={outfitModelPath}
                                 onOutfitLoading={setOutfitLoading}
                                 enableColorCustomization={selectedAvatar === "1"}
+                                currentEmote={playingEmote}
+                                onEmoteComplete={handleEmoteComplete}
                             />
                             <EffectComposer>
                                 <Bloom
@@ -475,9 +526,14 @@ export default function Avatar() {
                             <div className="border-t border-white/10 mt-1 pt-1">
                                 <button
                                     onClick={handleCreateNewLook}
-                                    className="w-full text-left px-2 py-1.5 text-sm text-white/90 hover:bg-white/10 rounded-sm cursor-pointer transition-colors"
+                                    disabled={savedLooks.length >= 6}
+                                    className={`w-full text-left px-2 py-1.5 text-sm rounded-sm transition-colors ${
+                                        savedLooks.length >= 6 
+                                            ? 'text-white/40 cursor-not-allowed' 
+                                            : 'text-white/90 hover:bg-white/10 cursor-pointer'
+                                    }`}
                                 >
-                                    + New look
+                                    {savedLooks.length >= 6 ? "Limit reached (6/6)" : "+ New look"}
                                 </button>
                             </div>
                         </DropdownMenuContent>
@@ -502,7 +558,7 @@ export default function Avatar() {
             {/* Right Side - Avatar Selection (50% desktop, full width mobile) */}
             <div className="flex w-full lg:w-1/2 flex-col bg-background p-4 lg:p-8 h-full">
                 {/* Tab Navigation */}
-                <div className="mb-6 lg:mb-8 flex gap-4 lg:gap-8 border-b border-white/10">
+                <div className="mb-4 lg:mb-4 flex gap-4 lg:gap-8 border-b border-white/10">
                     <button
                         onClick={() => setActiveTab("avatar")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center ${
@@ -525,14 +581,34 @@ export default function Avatar() {
                     </button>
                     <button
                         onClick={() => setActiveTab("emotes")}
-                        className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center ${
+                        className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center gap-2 ${
                             activeTab === "emotes" 
                                 ? "border-b-2 border-white text-white" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >
                         Emotes
+                        {activeTab === "emotes" && selectedEmotes.length > 0 && (
+                            <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                                {selectedEmotes.length}/4
+                            </span>
+                        )}
                     </button>
+                </div>
+
+                {/* Subtle Discard Changes Banner */}
+                <div className={`overflow-hidden transition-all duration-300 ease-out ${
+                    hasUnsavedChanges ? 'max-h-12 mb-4' : 'max-h-0 mb-0'
+                }`}>
+                    <div className="px-3 py-2 bg-yellow-500/5 border border-white/5 rounded-lg text-xs text-white/60 flex items-center justify-between">
+                        <span>* Unsaved changes</span>
+                        <button 
+                            onClick={handleDiscardChanges}
+                            className="text-white/60 hover:text-white text-xs underline cursor-pointer transition-colors"
+                        >
+                            Discard
+                        </button>
+                    </div>
                 </div>
 
                 {/* Grid Content */}
@@ -555,16 +631,20 @@ export default function Avatar() {
                                 itemTitle = item.name
                                 backgroundImage = item.image || ""
                                 clickHandler = () => setSelectedOutfit(item.id)
-                            } else if (activeTab === "emotes") {
-                                const emoteId = item.toString()
-                                isSelected = selectedEmotes.includes(emoteId)
-                                itemTitle = `Emote ${emoteId}`
+                            } else if (activeTab === "emotes" && typeof item === "object" && "id" in item) {
+                                const emote = item as EmoteData
+                                isSelected = selectedEmotes.includes(emote.id)
+                                itemTitle = emote.name
+                                backgroundImage = emote.image || ""
                                 clickHandler = () => {
-                                    setSelectedEmotes(prev => 
-                                        prev.includes(emoteId) 
-                                            ? prev.filter(id => id !== emoteId)
-                                            : [...prev, emoteId]
-                                    )
+                                    if (selectedEmotes.includes(emote.id)) {
+                                        // Deselect if already selected
+                                        setSelectedEmotes(prev => prev.filter(id => id !== emote.id))
+                                    } else if (selectedEmotes.length < 4) {
+                                        // Select if under limit
+                                        setSelectedEmotes(prev => [...prev, emote.id])
+                                    }
+                                    // If at limit and not selected, do nothing (just clicking won't add it)
                                 }
                             }
 
@@ -605,8 +685,17 @@ export default function Avatar() {
                                     {/* Hover Overlay */}
                                     <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20" />
                                     
-                                    {/* Selected State Checkmark */}
-                                    {isSelected && (
+                                    {/* Selection Indicator - Empty circle or checkmark */}
+                                    {activeTab === "emotes" && (
+                                        <div className={`absolute top-2 right-2 w-6 h-6 backdrop-blur-sm rounded-full flex items-center justify-center border ${
+                                            isSelected ? 'bg-white/20 border-white/30' : 'bg-white/5 border-white/20'
+                                        }`}>
+                                            {isSelected && <Check className="w-4 h-4 text-white" weight="bold" />}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Selected State Checkmark for non-emotes */}
+                                    {activeTab !== "emotes" && isSelected && (
                                         <div className="absolute top-2 right-2 w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
                                             <Check className="w-4 h-4 text-white" weight="bold" />
                                         </div>
@@ -615,9 +704,27 @@ export default function Avatar() {
                                     {/* Bottom Title Overlay */}
                                     {itemTitle && (
                                         <div className="absolute bottom-0 left-0 right-0 p-3 backdrop-blur-lg bg-black/30 border-t border-white/10">
-                                            <h3 className="text-white font-medium text-sm leading-tight truncate">
-                                                {itemTitle}
-                                            </h3>
+                                            {activeTab === "emotes" ? (
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-white font-medium text-sm leading-tight truncate flex-1">
+                                                        {itemTitle}
+                                                    </h3>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            const emote = item as EmoteData
+                                                            handlePlayEmote(emote.animationName)
+                                                        }}
+                                                        className="ml-2 p-1 hover:bg-white/10 rounded transition-colors"
+                                                    >
+                                                        <Play className="w-4 h-4 text-white" weight="fill" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <h3 className="text-white font-medium text-sm leading-tight truncate">
+                                                    {itemTitle}
+                                                </h3>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -640,7 +747,7 @@ export default function Avatar() {
                         className="flex-1 rounded-full"
                         variant="outline"
                         onClick={() => setAddToListOpen(true)}
-                        disabled={!hasUnsavedChanges}
+                        disabled={!hasUnsavedChanges || savedLooks.length >= 6}
                     >
                         Save as new look
                     </Button>

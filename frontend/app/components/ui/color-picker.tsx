@@ -174,11 +174,23 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     if (!triggerRef.current) return
 
     const triggerRect = triggerRef.current.getBoundingClientRect()
+    const pickerWidth = 240 // Picker width
     const pickerHeight = 240 // Approximate picker height
+    const viewport = { width: window.innerWidth, height: window.innerHeight }
     
-    // Position above the trigger, left-aligned
+    // Center the picker horizontally relative to the trigger
+    let left = triggerRect.left + (triggerRect.width / 2) - (pickerWidth / 2)
+    
+    // Ensure picker doesn't go off-screen horizontally
+    const margin = 16 // Minimum margin from screen edge
+    if (left < margin) {
+      left = margin
+    } else if (left + pickerWidth > viewport.width - margin) {
+      left = viewport.width - pickerWidth - margin
+    }
+    
+    // Position above the trigger
     const top = triggerRect.top - pickerHeight - 8
-    const left = triggerRect.left
 
     setPosition({ top, left })
   }, [])
