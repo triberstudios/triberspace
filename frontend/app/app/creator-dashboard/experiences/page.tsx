@@ -1,78 +1,63 @@
 "use client"
 
 import { Button } from "@/components/common/button"
-import { Plus, Globe, Eye, Users, Clock, DotsThree } from "@phosphor-icons/react"
+import { useState } from "react"
+import { Plus, Globe, Eye, Users, Clock, DotsThree, Play, Edit, Archive } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function ExperiencesPage() {
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all')
+  
   return (
     <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="w-full">
           <ExitDashboardButton />
           <div className="space-y-6">
-          {/* Stats Overview */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-blue-500/20 p-2">
-                  <Globe className="h-5 w-5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Experiences</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-green-500/20 p-2">
-                  <Eye className="h-5 w-5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Views</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-purple-500/20 p-2">
-                  <Users className="h-5 w-5 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Users</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
+
+          {/* Experience Status Filter */}
+          <div className="flex items-center gap-4 border-b border-sidebar-border">
+            {['all', 'published', 'draft', 'archived'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status as any)}
+                className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors capitalize ${
+                  statusFilter === status
+                    ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
           </div>
 
-          {/* Experiences List */}
+          {/* Experience Grid */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Your Experiences</h2>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm">
-                  Filter
+                  Grid View
                 </Button>
                 <Button variant="outline" size="sm">
-                  Sort
+                  List View
                 </Button>
               </div>
             </div>
             
-            {/* Empty State */}
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-8">
-              <div className="text-center text-muted-foreground">
-                <Globe className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No experiences yet</h3>
-                <p className="text-sm mb-4">Create your first immersive experience to get started</p>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create Your First Experience
-                </Button>
+            {/* Experience Cards Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Empty State Card */}
+              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                <div className="text-center text-muted-foreground">
+                  <Globe className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No experiences yet</h3>
+                  <p className="text-sm mb-4">Create your first immersive experience</p>
+                  <Button size="sm" className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create Experience
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

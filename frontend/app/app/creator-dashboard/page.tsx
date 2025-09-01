@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/common/button"
-import { Crown, Plus, TrendUp, Users, Sparkle, Eye, Heart, Clock } from "@phosphor-icons/react"
+import { Crown, Plus, TrendUp, Users, Sparkle, Eye, Heart, Clock, Globe, Package, Star } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function CreatorDashboard() {
@@ -10,28 +10,16 @@ export default function CreatorDashboard() {
         <div className="w-full">
           <ExitDashboardButton />
           <div className="space-y-6">
-          {/* Performance Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
+          {/* Key Metrics */}
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-500/20 p-2">
                   <Eye className="h-5 w-5 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Views</p>
+                  <p className="text-sm text-muted-foreground">Total Visits</p>
                   <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-red-500/20 p-2">
-                  <Heart className="h-5 w-5 text-red-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Engagement</p>
-                  <p className="text-2xl font-bold text-foreground">0%</p>
                 </div>
               </div>
             </div>
@@ -61,14 +49,22 @@ export default function CreatorDashboard() {
             </div>
           </div>
 
-          {/* Latest Experience Performance */}
+          {/* Recent Activity Feed */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Latest Experience Performance</h2>
+            <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
             <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="text-center text-muted-foreground">
-                <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                <p>No experiences published yet</p>
-                <p className="text-sm">Create your first experience to see performance data</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-black/20">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div>
+                    <p className="text-sm text-foreground">Welcome to your Creator Dashboard!</p>
+                    <p className="text-xs text-muted-foreground">Start by creating your first experience</p>
+                  </div>
+                </div>
+                <div className="text-center text-muted-foreground pt-4">
+                  <Clock className="mx-auto h-6 w-6 mb-2 opacity-50" />
+                  <p className="text-sm">Your activity feed will appear here</p>
+                </div>
               </div>
             </div>
           </div>
@@ -94,30 +90,42 @@ export default function CreatorDashboard() {
             </div>
           </div>
 
-          {/* Tips for You */}
+          {/* Quick Actions */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Tips for You</h2>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Sparkle className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+            <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-lg border border-sidebar-border bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-6 cursor-pointer hover:from-blue-500/20 hover:to-purple-500/20 transition-all">
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <Globe className="h-6 w-6 text-blue-400" />
+                  </div>
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Create your first experience</h3>
-                    <p className="text-sm text-muted-foreground">Start building immersive experiences for your tribe</p>
+                    <h3 className="text-base font-medium text-foreground">Create Experience</h3>
+                    <p className="text-sm text-muted-foreground">Build immersive worlds for your tribe</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Sparkle className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+              </div>
+              
+              <div className="rounded-lg border border-sidebar-border bg-gradient-to-br from-green-500/10 to-emerald-500/10 p-6 cursor-pointer hover:from-green-500/20 hover:to-emerald-500/20 transition-all">
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <Package className="h-6 w-6 text-green-400" />
+                  </div>
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Upload your first products</h3>
-                    <p className="text-sm text-muted-foreground">Add avatars, outfits, and emotes to your store</p>
+                    <h3 className="text-base font-medium text-foreground">Upload Products</h3>
+                    <p className="text-sm text-muted-foreground">Add avatars, outfits, and emotes</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Sparkle className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+              </div>
+              
+              <div className="rounded-lg border border-sidebar-border bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-6 cursor-pointer hover:from-yellow-500/20 hover:to-orange-500/20 transition-all">
+                <div className="space-y-3">
+                  <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <Star className="h-6 w-6 text-yellow-400" />
+                  </div>
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Engage with your community</h3>
-                    <p className="text-sm text-muted-foreground">Build relationships with your tribe to increase engagement</p>
+                    <h3 className="text-base font-medium text-foreground">Create Point Pack</h3>
+                    <p className="text-sm text-muted-foreground">Set up monetization tiers</p>
                   </div>
                 </div>
               </div>

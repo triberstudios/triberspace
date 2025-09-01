@@ -1,14 +1,41 @@
 "use client"
 
-import { TrendUp, Eye, Users, Clock, CalendarBlank } from "@phosphor-icons/react"
+import { useState } from "react"
+import { TrendUp, Eye, Users, Clock, CalendarBlank, ChartBar, ChartPie } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function AnalyticsPage() {
+  const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d'>('30d')
+  
   return (
     <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="w-full">
           <ExitDashboardButton />
           <div className="space-y-6">
+          {/* Time Period Selector */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold text-foreground">Analytics Overview</h1>
+            <div className="flex items-center gap-2 bg-sidebar border border-sidebar-border rounded-lg p-1">
+              {[
+                { value: '7d', label: '7 days' },
+                { value: '30d', label: '30 days' },
+                { value: '90d', label: '90 days' }
+              ].map((period) => (
+                <button
+                  key={period.value}
+                  onClick={() => setTimePeriod(period.value as any)}
+                  className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
+                    timePeriod === period.value
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {period.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Overview Stats */}
           <div className="grid gap-4 md:grid-cols-4">
             <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
@@ -60,35 +87,73 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Performance Chart */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Performance Overview</h2>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-8">
-              <div className="text-center text-muted-foreground">
-                <TrendUp className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No analytics data yet</h3>
-                <p className="text-sm">Start creating content to see your performance metrics</p>
+          {/* Performance Charts */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Views Over Time</h2>
+              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                <div className="h-48 flex items-end justify-center gap-2">
+                  {/* Mock bar chart */}
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="bg-blue-400/20 w-8 rounded-t" style={{ height: `${Math.random() * 80 + 20}%` }} />
+                  ))}
+                </div>
+                <div className="text-center text-muted-foreground mt-4">
+                  <p className="text-sm">Chart will show when you have view data</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Engagement Breakdown</h2>
+              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                <div className="h-48 flex items-center justify-center">
+                  {/* Mock pie chart */}
+                  <div className="w-32 h-32 rounded-full border-8 border-purple-400/20 border-t-purple-400 border-r-blue-400 opacity-50"></div>
+                </div>
+                <div className="text-center text-muted-foreground mt-4">
+                  <p className="text-sm">Engagement breakdown will appear here</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Content Performance */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Top Performing Content</h2>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar">
-              <div className="p-4 border-b border-sidebar-border">
-                <div className="grid grid-cols-4 gap-4 text-sm font-medium text-muted-foreground">
-                  <span>Content</span>
-                  <span>Views</span>
-                  <span>Engagement</span>
-                  <span>Revenue</span>
+          {/* Performance Tables */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Top Experiences</h2>
+              <div className="rounded-lg border border-sidebar-border bg-sidebar">
+                <div className="p-4 border-b border-sidebar-border">
+                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
+                    <span>Experience</span>
+                    <span>Views</span>
+                    <span>Users</span>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    <ChartBar className="mx-auto h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm">No experience data available</p>
+                  </div>
                 </div>
               </div>
-              <div className="p-8">
-                <div className="text-center text-muted-foreground">
-                  <Eye className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p>No content data available</p>
-                  <p className="text-sm">Publish experiences and products to see performance data</p>
+            </div>
+            
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Top Products</h2>
+              <div className="rounded-lg border border-sidebar-border bg-sidebar">
+                <div className="p-4 border-b border-sidebar-border">
+                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
+                    <span>Product</span>
+                    <span>Sales</span>
+                    <span>Points</span>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    <ChartPie className="mx-auto h-6 w-6 mb-2 opacity-50" />
+                    <p className="text-sm">No product data available</p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -7,7 +7,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/common/button"
 import { useSession, authClient } from "@/lib/auth-client"
-import { UserCircle, User, Gear, SignOut, UserFocus, Crown, Plus, Bank } from "@phosphor-icons/react"
+import { UserCircle, User, Gear, SignOut, UserFocus, Crown, Plus, Bank, Star } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -73,6 +73,10 @@ export function GlobalNav() {
               <DropdownMenuItem className="cursor-pointer">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                <Star className="mr-2 h-4 w-4" />
+                Create Point Pack
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,122 +1,131 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/common/button"
-import { Plus, ShoppingCartSimple, Package, CurrencyDollar, TrendUp, Eye } from "@phosphor-icons/react"
+import { Plus, ShoppingCartSimple, Package, CurrencyDollar, TrendUp, Eye, Sparkle, Star } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function StorePage() {
+  const [activeTab, setActiveTab] = useState<'products' | 'point-packs'>('products')
+  
   return (
     <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
         <div className="w-full">
           <ExitDashboardButton />
           <div className="space-y-6">
-          {/* Store Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-blue-500/20 p-2">
-                  <Package className="h-5 w-5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Products</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-green-500/20 p-2">
-                  <CurrencyDollar className="h-5 w-5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Sales</p>
-                  <p className="text-2xl font-bold text-foreground">$0</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-purple-500/20 p-2">
-                  <TrendUp className="h-5 w-5 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Orders</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-orange-500/20 p-2">
-                  <Eye className="h-5 w-5 text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Views</p>
-                  <p className="text-2xl font-bold text-foreground">0</p>
-                </div>
-              </div>
-            </div>
+          {/* Store Tabs */}
+          <div className="flex items-center gap-4 border-b border-sidebar-border">
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'products'
+                  ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Products
+            </button>
+            <button
+              onClick={() => setActiveTab('point-packs')}
+              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'point-packs'
+                  ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Point Packs
+            </button>
           </div>
 
-          {/* Products Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Products</h2>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  Filter
-                </Button>
-                <Button variant="outline" size="sm">
-                  Sort
-                </Button>
+
+          {activeTab === 'products' ? (
+            <>
+              {/* Product Categories */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-foreground">Product Categories</h2>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">
+                      Filter
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Sort
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-medium text-foreground">Avatars</h3>
+                      <Button variant="ghost" size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-center text-muted-foreground">
+                      <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                      <p className="text-sm">No avatars uploaded</p>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-medium text-foreground">Outfits</h3>
+                      <Button variant="ghost" size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-center text-muted-foreground">
+                      <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                      <p className="text-sm">No outfits uploaded</p>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-medium text-foreground">Emotes</h3>
+                      <Button variant="ghost" size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-center text-muted-foreground">
+                      <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                      <p className="text-sm">No emotes uploaded</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            {/* Product Categories */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-medium text-foreground">Avatars</h3>
-                  <Button variant="ghost" size="sm">
+            </>
+          ) : (
+            <>
+              {/* Point Packs Management */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-foreground">Point Pack Tiers</h2>
+                  <Button className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
+                    Create Point Pack
                   </Button>
                 </div>
-                <div className="text-center text-muted-foreground">
-                  <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">No avatars uploaded</p>
+                
+                {/* Point Pack Grid */}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Example Point Pack Cards */}
+                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                    <div className="text-center text-muted-foreground">
+                      <Star className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">No point packs created</h3>
+                      <p className="text-sm mb-4">Create your first point pack to start monetizing</p>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Create First Pack
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-medium text-foreground">Outfits</h3>
-                  <Button variant="ghost" size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="text-center text-muted-foreground">
-                  <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">No outfits uploaded</p>
-                </div>
-              </div>
-              
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-medium text-foreground">Emotes</h3>
-                  <Button variant="ghost" size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="text-center text-muted-foreground">
-                  <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">No emotes uploaded</p>
-                </div>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
 
           {/* Recent Orders */}
           <div className="space-y-4">

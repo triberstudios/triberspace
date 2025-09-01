@@ -40,9 +40,19 @@ const items: MenuItem[] = [
     href: "/creator-dashboard/store",
   },
   {
+    title: "Your Tribe",
+    icon: Users,
+    href: "/creator-dashboard/tribe",
+  },
+  {
     title: "Analytics",
     icon: TrendUp,
     href: "/creator-dashboard/analytics",
+  },
+  {
+    title: "Earnings",
+    icon: CurrencyDollar,
+    href: "/creator-dashboard/earnings",
   },
 ]
 
@@ -115,16 +125,16 @@ export function CreatorSidebar() {
               <div
                 key={item.title}
                 className={cn(
-                  "flex items-center rounded-lg transition-all duration-200 h-16 opacity-50 cursor-not-allowed",
-                  isCollapsed ? "justify-center px-0" : "gap-4 px-4"
+                  "flex items-center rounded-lg transition-all duration-200 h-12 opacity-50 cursor-not-allowed",
+                  isCollapsed ? "justify-center px-0" : "gap-3 px-3"
                 )}
               >
                 <IconComponent 
-                  className="h-6 w-6 flex-shrink-0" 
+                  className="h-5 w-5 flex-shrink-0" 
                   weight="regular"
                 />
                 {!isCollapsed && (
-                  <span className="text-2xl font-medium">
+                  <span className="text-base font-medium">
                     {item.title}
                   </span>
                 )}
@@ -137,19 +147,19 @@ export function CreatorSidebar() {
               key={item.title}
               href={item.href}
               className={cn(
-                "flex items-center rounded-lg transition-all duration-200 h-16",
-                isCollapsed ? "justify-center px-0" : "gap-4 px-4",
+                "flex items-center rounded-lg transition-all duration-200 h-12",
+                isCollapsed ? "justify-center px-0" : "gap-3 px-3",
                 isActive 
                   ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                   : "hover:bg-sidebar-accent/25 hover:text-sidebar-accent-foreground"
               )}
             >
               <IconComponent 
-                className="h-6 w-6 flex-shrink-0" 
+                className="h-5 w-5 flex-shrink-0" 
                 weight={isActive ? "fill" : "regular"}
               />
               {!isCollapsed && (
-                <span className="text-2xl font-medium">
+                <span className="text-base font-medium">
                   {item.title}
                 </span>
               )}
