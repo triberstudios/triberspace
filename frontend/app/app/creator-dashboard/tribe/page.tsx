@@ -1,16 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { Users, Crown, Clock, ChatCircle, TrendUp, UserPlus, Fire, Heart, Calendar, DotsThree } from "@phosphor-icons/react"
+import { Users, Crown, Clock, ChatCircle, TrendUp, UserPlus, Fire, Heart, Calendar, DotsThree, CurrencyDollar, Gear, ChevronDown, ChevronUp } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
+import Link from "next/link"
 import { Button } from "@/components/common/button"
 
 export default function TribePage() {
   const [memberFilter, setMemberFilter] = useState<'all' | 'active' | 'new' | 'inactive'>('all')
+  const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({})
   
   return (
-    <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-        <div className="w-full">
+    <div className="flex min-h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
+        <div className="w-full pb-8">
           <ExitDashboardButton />
           <div className="space-y-6">
 
@@ -88,6 +90,29 @@ export default function TribePage() {
             </div>
           </div>
 
+          {/* Membership Tiers */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Membership Tiers</h2>
+              <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
+                <Link href="/creator-dashboard/store?tab=membership-tiers">
+                  <CurrencyDollar className="h-4 w-4" />
+                  Edit Pricing
+                </Link>
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                <div className="text-center text-muted-foreground">
+                  <Crown className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No membership tiers created</h3>
+                  <p className="text-sm">Create membership tiers in the Store to manage perks here</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Member Management */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -102,7 +127,7 @@ export default function TribePage() {
                   <button
                     key={filter.value}
                     onClick={() => setMemberFilter(filter.value as any)}
-                    className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
+                    className={`px-3 py-2 text-sm font-medium rounded transition-colors cursor-pointer ${
                       memberFilter === filter.value
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                         : 'text-muted-foreground hover:text-foreground'
@@ -130,21 +155,6 @@ export default function TribePage() {
                   <p>No tribe members yet</p>
                   <p className="text-sm">Your tribe members will appear here when people join</p>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tribe Growth Chart */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Tribe Growth</h2>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
-              <div className="h-48 flex items-end justify-center gap-2">
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="bg-blue-400/20 w-6 rounded-t" style={{ height: `${Math.random() * 80 + 20}%` }} />
-                ))}
-              </div>
-              <div className="text-center text-muted-foreground mt-4">
-                <p className="text-sm">Member growth chart will show when you have tribe members</p>
               </div>
             </div>
           </div>

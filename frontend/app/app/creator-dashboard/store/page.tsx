@@ -1,23 +1,33 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/common/button"
-import { Plus, ShoppingCartSimple, Package, CurrencyDollar, TrendUp, Eye, Sparkle, Star } from "@phosphor-icons/react"
+import { Plus, ShoppingCartSimple, Package, CurrencyDollar, TrendUp, Eye, Sparkle, Star, Users, Crown, Gear } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function StorePage() {
-  const [activeTab, setActiveTab] = useState<'products' | 'point-packs'>('products')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<'products' | 'point-packs' | 'membership-tiers'>('products')
+  
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'membership-tiers') {
+      setActiveTab('membership-tiers')
+    }
+  }, [searchParams])
   
   return (
     <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-        <div className="w-full">
+        <div className="w-full pb-8">
           <ExitDashboardButton />
           <div className="space-y-6">
           {/* Store Tabs */}
           <div className="flex items-center gap-4 border-b border-sidebar-border">
             <button
               onClick={() => setActiveTab('products')}
-              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'products'
                   ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -27,13 +37,23 @@ export default function StorePage() {
             </button>
             <button
               onClick={() => setActiveTab('point-packs')}
-              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'point-packs'
                   ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Point Packs
+            </button>
+            <button
+              onClick={() => setActiveTab('membership-tiers')}
+              className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                activeTab === 'membership-tiers'
+                  ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Membership Tiers
             </button>
           </div>
 
@@ -96,17 +116,11 @@ export default function StorePage() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : activeTab === 'point-packs' ? (
             <>
               {/* Point Packs Management */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-foreground">Point Pack Tiers</h2>
-                  <Button className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Create Point Pack
-                  </Button>
-                </div>
+                <h2 className="text-lg font-semibold text-foreground">Point Pack Tiers</h2>
                 
                 {/* Point Pack Grid */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -119,6 +133,35 @@ export default function StorePage() {
                       <Button variant="outline" size="sm" className="flex items-center gap-2">
                         <Plus className="h-4 w-4" />
                         Create First Pack
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Membership Tiers Management */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-foreground">Membership Tiers</h2>
+                  <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
+                    <Link href="/creator-dashboard/tribe">
+                      <Gear className="h-4 w-4" />
+                      Tier Settings
+                    </Link>
+                  </Button>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                    <div className="text-center text-muted-foreground">
+                      <Crown className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">No membership tiers created</h3>
+                      <p className="text-sm mb-4">Create your first membership tier to start subscriptions</p>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Create First Tier
                       </Button>
                     </div>
                   </div>

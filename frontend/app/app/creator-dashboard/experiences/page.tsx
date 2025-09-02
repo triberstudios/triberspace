@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/common/button"
 import { useState } from "react"
-import { Plus, Globe, Eye, Users, Clock, DotsThree, Play, Edit, Archive } from "@phosphor-icons/react"
+import { Plus, Globe, Eye, Users, Clock, DotsThree, Play, Edit, Archive, ArrowRight } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function ExperiencesPage() {
@@ -10,7 +10,7 @@ export default function ExperiencesPage() {
   
   return (
     <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-        <div className="w-full">
+        <div className="w-full pb-8">
           <ExitDashboardButton />
           <div className="space-y-6">
 
@@ -20,7 +20,7 @@ export default function ExperiencesPage() {
               <button
                 key={status}
                 onClick={() => setStatusFilter(status as any)}
-                className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors capitalize ${
+                className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors capitalize cursor-pointer ${
                   statusFilter === status
                     ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -62,47 +62,6 @@ export default function ExperiencesPage() {
             </div>
           </div>
 
-          {/* Experience Template Ideas */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Experience Templates</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6 cursor-pointer hover:bg-sidebar-accent/10 transition-colors">
-                <div className="space-y-3">
-                  <div className="w-full h-24 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Globe className="h-8 w-8 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">Virtual Showcase</h3>
-                    <p className="text-xs text-muted-foreground">Display and sell your digital products</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6 cursor-pointer hover:bg-sidebar-accent/10 transition-colors">
-                <div className="space-y-3">
-                  <div className="w-full h-24 bg-gradient-to-br from-green-500/20 to-blue-500/20 rounded-lg flex items-center justify-center">
-                    <Users className="h-8 w-8 text-green-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">Community Hub</h3>
-                    <p className="text-xs text-muted-foreground">Build a space for your community</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6 cursor-pointer hover:bg-sidebar-accent/10 transition-colors">
-                <div className="space-y-3">
-                  <div className="w-full h-24 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg flex items-center justify-center">
-                    <Clock className="h-8 w-8 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground">Event Space</h3>
-                    <p className="text-xs text-muted-foreground">Host live events and meetups</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
           </div>
         </div>
     </div>

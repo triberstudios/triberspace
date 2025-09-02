@@ -9,8 +9,8 @@ export default function EarningsPage() {
   const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
   
   return (
-    <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-        <div className="w-full">
+    <div className="flex min-h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
+        <div className="w-full pb-8">
           <ExitDashboardButton />
           <div className="space-y-6">
           {/* Header with Time Period Selector */}
@@ -26,7 +26,7 @@ export default function EarningsPage() {
                 <button
                   key={period.value}
                   onClick={() => setTimePeriod(period.value as any)}
-                  className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
+                  className={`px-3 py-2 text-sm font-medium rounded transition-colors cursor-pointer ${
                     timePeriod === period.value
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                       : 'text-muted-foreground hover:text-foreground'
