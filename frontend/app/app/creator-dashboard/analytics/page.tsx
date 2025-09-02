@@ -1,11 +1,25 @@
 "use client"
 
 import { useState } from "react"
-import { TrendUp, Eye, Users, Clock, CalendarBlank, ChartBar, ChartPie } from "@phosphor-icons/react"
+import { TrendUp, Eye, Users, Clock, CalendarBlank, ChartBar, ChartPie, CaretDown } from "@phosphor-icons/react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/common/button"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function AnalyticsPage() {
-  const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d'>('30d')
+  const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
+  
+  const timeOptions = {
+    '7d': '7 days',
+    '30d': '30 days',
+    '90d': '90 days',
+    'all': 'All time'
+  }
   
   return (
     <div className="flex min-h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
@@ -15,25 +29,26 @@ export default function AnalyticsPage() {
           {/* Time Period Selector */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-foreground">Analytics Overview</h1>
-            <div className="flex items-center gap-2 bg-sidebar border border-sidebar-border rounded-lg p-1">
-              {[
-                { value: '7d', label: '7 days' },
-                { value: '30d', label: '30 days' },
-                { value: '90d', label: '90 days' }
-              ].map((period) => (
-                <button
-                  key={period.value}
-                  onClick={() => setTimePeriod(period.value as any)}
-                  className={`px-3 py-2 text-sm font-medium rounded transition-colors cursor-pointer ${
-                    timePeriod === period.value
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <CalendarBlank className="h-4 w-4" />
+                  {timeOptions[timePeriod]}
+                  <CaretDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {Object.entries(timeOptions).map(([value, label]) => (
+                  <DropdownMenuItem
+                    key={value}
+                    onClick={() => setTimePeriod(value as typeof timePeriod)}
+                    className="cursor-pointer"
+                  >
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Overview Stats */}
