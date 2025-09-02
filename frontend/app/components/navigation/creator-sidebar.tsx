@@ -12,8 +12,10 @@ import {
   TrendUp,
   CurrencyDollar,
   Sidebar,
+  ArrowLeft,
   type Icon
 } from "@phosphor-icons/react"
+import { Button } from "@/components/common/button"
 
 interface MenuItem {
   title: string
@@ -40,20 +42,21 @@ const items: MenuItem[] = [
     href: "/creator-dashboard/store",
   },
   {
-    title: "Your Tribe",
-    icon: Users,
-    href: "/creator-dashboard/tribe",
-  },
-  {
-    title: "Analytics",
-    icon: TrendUp,
-    href: "/creator-dashboard/analytics",
-  },
-  {
     title: "Earnings",
     icon: CurrencyDollar,
     href: "/creator-dashboard/earnings",
   },
+  // Hidden for now - uncomment to show
+  // {
+  //   title: "Your Tribe",
+  //   icon: Users,
+  //   href: "/creator-dashboard/tribe",
+  // },
+  // {
+  //   title: "Analytics",
+  //   icon: TrendUp,
+  //   href: "/creator-dashboard/analytics",
+  // },
 ]
 
 export function CreatorSidebar() {
@@ -166,6 +169,24 @@ export function CreatorSidebar() {
             </Link>
           )
         })}
+        
+        {/* Exit Dashboard Button */}
+        <div className={cn(
+          "mt-auto border-t border-sidebar-border pt-4 pb-4 transition-all duration-300"
+        )}>
+          <Button 
+            variant="outline" 
+            className="w-full flex items-center justify-center gap-3 h-10" 
+            asChild
+          >
+            <Link href="/" className="flex items-center gap-3 w-full justify-center">
+              <ArrowLeft className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-sm font-medium">Exit Dashboard</span>
+              )}
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   )

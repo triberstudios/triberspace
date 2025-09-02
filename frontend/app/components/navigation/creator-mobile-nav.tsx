@@ -7,7 +7,7 @@ import {
   ChartBar,
   Globe,
   ShoppingCartSimple,
-  TrendUp,
+  CurrencyDollar,
   type Icon
 } from "@phosphor-icons/react"
 
@@ -34,9 +34,9 @@ const items: MenuItem[] = [
     href: "/creator-dashboard/store",
   },
   {
-    title: "Analytics",
-    icon: TrendUp,
-    href: "/creator-dashboard/analytics",
+    title: "Earnings",
+    icon: CurrencyDollar,
+    href: "/creator-dashboard/earnings",
   },
 ]
 

@@ -10,8 +10,11 @@ import {
   ShoppingCartSimple,
   User,
   Sidebar,
+  MagicWand,
   type Icon
 } from "@phosphor-icons/react"
+import { Button } from "@/components/common/button"
+import { useSession } from "@/lib/auth-client"
 
 interface MenuItem {
   title: string
@@ -47,6 +50,7 @@ export function AppSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
@@ -113,25 +117,58 @@ export function AppSidebar() {
               key={item.title}
               href={item.href}
               className={cn(
-                "flex items-center rounded-lg transition-all duration-200 h-16",
-                isCollapsed ? "justify-center px-0" : "gap-4 px-4",
+                "flex items-center rounded-lg transition-all duration-200 h-12",
+                isCollapsed ? "justify-center px-0" : "gap-3 px-3",
                 isActive 
                   ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                   : "hover:bg-sidebar-accent/25 hover:text-sidebar-accent-foreground"
               )}
             >
               <IconComponent 
-                className="h-6 w-6 flex-shrink-0" 
+                className="h-5 w-5 flex-shrink-0" 
                 weight={isActive ? "fill" : "regular"}
               />
               {!isCollapsed && (
-                <span className="text-2xl font-medium">
+                <span className="text-base font-medium">
                   {item.title}
                 </span>
               )}
             </Link>
           )
         })}
+        
+        {/* Creator Button */}
+        <div className={cn(
+          "mt-auto border-t border-sidebar-border pt-4 pb-4 transition-all duration-300"
+        )}>
+          {session ? (
+            <Button 
+              variant="outline" 
+              className="w-full flex items-center gap-3 h-10" 
+              asChild
+            >
+              <Link href="/creator-dashboard">
+                <MagicWand className="h-4 w-4 flex-shrink-0" />
+                {!isCollapsed && (
+                  <span className="text-sm font-medium">Creator Dashboard</span>
+                )}
+              </Link>
+            </Button>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="w-full flex items-center justify-center gap-3 h-10" 
+              asChild
+            >
+              <Link href="/auth/sign-up" className="flex items-center gap-3 w-full justify-center">
+                <MagicWand className="h-4 w-4 flex-shrink-0" />
+                {!isCollapsed && (
+                  <span className="text-sm font-medium">Become a Creator</span>
+                )}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -6,7 +6,7 @@ import { Button } from "@/components/common/button"
 
 export function ExitDashboardButton() {
   return (
-    <div className="mb-4">
+    <div className="mb-4 md:hidden">
       <Button 
         variant="outline" 
         size="sm" 

@@ -7,7 +7,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/common/button"
 import { useSession, authClient } from "@/lib/auth-client"
-import { UserCircle, User, Gear, SignOut, UserFocus, Crown, Plus, Bank, Star, Globe, Package } from "@phosphor-icons/react"
+import { UserCircle, User, Gear, SignOut, UserFocus, MagicWand, Plus, Bank, Star, Globe, Package } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -47,9 +47,9 @@ export function GlobalNav() {
         <Image
           src="/TriberspaceLogo2025.svg"
           alt="Triberspace"
-          width={150}
-          height={40}
-          className="h-8 w-auto"
+          width={145}
+          height={38}
+          className="h-7.5 w-auto mt-1"
           priority
         />
       </Link>
@@ -132,7 +132,7 @@ export function GlobalNav() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="py-3">
                       <Link href="/creator-dashboard" className="cursor-pointer text-base">
-                        <Crown className="mr-3 h-5 w-5" />
+                        <MagicWand className="mr-3 h-5 w-5" />
                         <span>Creator Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
