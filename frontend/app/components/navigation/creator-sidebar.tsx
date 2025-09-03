@@ -37,7 +37,7 @@ const items: MenuItem[] = [
     href: "/creator-dashboard/experiences",
   },
   {
-    title: "Store", 
+    title: "Your Store", 
     icon: ShoppingCartSimple,
     href: "/creator-dashboard/store",
   },
