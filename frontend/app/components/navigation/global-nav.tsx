@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/common/button"
 import { useSession, authClient } from "@/lib/auth-client"
-import { UserCircle, User, Gear, SignOut, UserFocus } from "@phosphor-icons/react"
+import { UserCircle, User, Gear, SignOut, UserFocus, MagicWand, Plus, Bank, Star, Globe, Package } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ export function GlobalNav() {
   const { data: session, isPending } = useSession()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -36,6 +37,9 @@ export function GlobalNav() {
     }
   }
 
+  // Show create dropdown only in creator dashboard
+  const showCreateDropdown = pathname.startsWith('/creator-dashboard')
+
   return (
     <nav className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 md:px-8">
       {/* Logo Section */}
@@ -43,15 +47,37 @@ export function GlobalNav() {
         <Image
           src="/TriberspaceLogo2025.svg"
           alt="Triberspace"
-          width={150}
-          height={40}
-          className="h-8 w-auto"
+          width={145}
+          height={38}
+          className="h-7.5 w-auto mt-1"
           priority
         />
       </Link>
 
       {/* Auth Section */}
       <div className="flex items-center gap-4">
+        {/* Creator Create Dropdown */}
+        {session && showCreateDropdown && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline">Create</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="cursor-pointer">
+                <Globe className="mr-2 h-4 w-4" />
+                Create Experience
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                <Package className="mr-2 h-4 w-4" />
+                Add Product
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        
         {/* Desktop Auth Buttons */}
         {!isPending && !session && (
           <div className="hidden md:flex items-center gap-4">
@@ -102,6 +128,12 @@ export function GlobalNav() {
                       <Link href="/avatar" className="cursor-pointer text-base">
                         <UserFocus className="mr-3 h-5 w-5" />
                         <span>Edit avatar</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="py-3">
+                      <Link href="/creator-dashboard" className="cursor-pointer text-base">
+                        <MagicWand className="mr-3 h-5 w-5" />
+                        <span>Creator Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="py-3">

@@ -136,7 +136,7 @@
   }
 
   .sidebar-expanded {
-    --sidebar-width: clamp(228px, 25vw, 298px);
+    --sidebar-width: clamp(200px, 22vw, 250px);
   }
 
   .bg-cover {
@@ -171,19 +171,19 @@
 
   @media (min-width: 768px) and (max-width: 1024px) {
     .sidebar-expanded {
-      --sidebar-width: 228px;
+      --sidebar-width: 200px;
     }
   }
 
   @media (min-width: 1024px) and (max-width: 1280px) {
     .sidebar-expanded {
-      --sidebar-width: 260px;
+      --sidebar-width: 220px;
     }
   }
 
   @media (min-width: 1280px) {
     .sidebar-expanded {
-      --sidebar-width: 298px;
+      --sidebar-width: 250px;
     }
   }
 }

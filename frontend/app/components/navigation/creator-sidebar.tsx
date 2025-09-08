@@ -5,59 +5,70 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { 
-  House,
+  ChartBar,
   Globe,
   ShoppingCartSimple,
-  User,
+  Users,
+  TrendUp,
+  CurrencyDollar,
   Sidebar,
-  MagicWand,
+  ArrowLeft,
   type Icon
 } from "@phosphor-icons/react"
 import { Button } from "@/components/common/button"
-import { useSession } from "@/lib/auth-client"
 
 interface MenuItem {
   title: string
   icon: Icon
   href: string
   weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone"
+  disabled?: boolean
 }
 
 const items: MenuItem[] = [
   {
-    title: "Home",
-    icon: House,
-    href: "/",
+    title: "Dashboard",
+    icon: ChartBar,
+    href: "/creator-dashboard",
   },
   {
-    title: "Explore",
+    title: "Experiences",
     icon: Globe,
-    href: "/explore",
+    href: "/creator-dashboard/experiences",
   },
   {
-    title: "Store", 
+    title: "Your Store", 
     icon: ShoppingCartSimple,
-    href: "/store",
+    href: "/creator-dashboard/store",
   },
   {
-    title: "Avatar",
-    icon: User,
-    href: "/avatar",
+    title: "Earnings",
+    icon: CurrencyDollar,
+    href: "/creator-dashboard/earnings",
   },
+  // Hidden for now - uncomment to show
+  // {
+  //   title: "Your Tribe",
+  //   icon: Users,
+  //   href: "/creator-dashboard/tribe",
+  // },
+  // {
+  //   title: "Analytics",
+  //   icon: TrendUp,
+  //   href: "/creator-dashboard/analytics",
+  // },
 ]
 
-export function AppSidebar() {
+export function CreatorSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
   const pathname = usePathname()
-  const { data: session } = useSession()
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
-    setShowTooltip(false) // Hide tooltip when toggling
+    setShowTooltip(false)
   }
 
-  // Hide tooltip when sidebar state changes
   useEffect(() => {
     setShowTooltip(false)
   }, [isCollapsed])
@@ -76,7 +87,7 @@ export function AppSidebar() {
       )}>
         {!isCollapsed && (
           <h2 className="text-lg font-medium text-sidebar-foreground">
-            Navigate
+            Creator Tools
           </h2>
         )}
         <div 
@@ -109,8 +120,30 @@ export function AppSidebar() {
         isCollapsed ? "px-2" : "px-4"
       )}>
         {items.map((item) => {
-          const isActive = pathname === item.href || (item.href === "/" && pathname === "/")
+          const isActive = pathname === item.href
           const IconComponent = item.icon
+          
+          if (item.disabled) {
+            return (
+              <div
+                key={item.title}
+                className={cn(
+                  "flex items-center rounded-lg transition-all duration-200 h-14 opacity-50 cursor-not-allowed",
+                  isCollapsed ? "justify-center px-0" : "gap-3 px-3"
+                )}
+              >
+                <IconComponent 
+                  className="h-5 w-5 flex-shrink-0" 
+                  weight="regular"
+                />
+                {!isCollapsed && (
+                  <span className="text-lg font-medium">
+                    {item.title}
+                  </span>
+                )}
+              </div>
+            )
+          }
           
           return (
             <Link
@@ -129,7 +162,7 @@ export function AppSidebar() {
                 weight={isActive ? "fill" : "regular"}
               />
               {!isCollapsed && (
-                <span className="text-lg font-medium">
+                <span className="text-base font-medium">
                   {item.title}
                 </span>
               )}
@@ -137,37 +170,22 @@ export function AppSidebar() {
           )
         })}
         
-        {/* Creator Button */}
+        {/* Exit Dashboard Button */}
         <div className={cn(
           "mt-auto border-t border-sidebar-border pt-4 pb-4 transition-all duration-300"
         )}>
-          {session ? (
-            <Button 
-              variant="ghost" 
-              className="w-full flex items-center gap-3 h-10 border border-sidebar-border hover:bg-sidebar-accent/25" 
-              asChild
-            >
-              <Link href="/creator-dashboard">
-                <MagicWand className="h-4 w-4 flex-shrink-0" />
-                {!isCollapsed && (
-                  <span className="text-sm font-medium">Creator Dashboard</span>
-                )}
-              </Link>
-            </Button>
-          ) : (
-            <Button 
-              variant="ghost" 
-              className="w-full flex items-center justify-center gap-3 h-10 border border-sidebar-border hover:bg-sidebar-accent/25" 
-              asChild
-            >
-              <Link href="/auth/sign-up" className="flex items-center gap-3 w-full justify-center">
-                <MagicWand className="h-4 w-4 flex-shrink-0" />
-                {!isCollapsed && (
-                  <span className="text-sm font-medium">Become a Creator</span>
-                )}
-              </Link>
-            </Button>
-          )}
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-center gap-3 h-10 border border-sidebar-border hover:bg-sidebar-accent/25" 
+            asChild
+          >
+            <Link href="/" className="flex items-center gap-3 w-full justify-center">
+              <ArrowLeft className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-sm font-medium">Exit Dashboard</span>
+              )}
+            </Link>
+          </Button>
         </div>
       </div>
     </div>
