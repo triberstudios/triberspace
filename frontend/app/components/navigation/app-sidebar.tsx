@@ -117,7 +117,7 @@ export function AppSidebar() {
               key={item.title}
               href={item.href}
               className={cn(
-                "flex items-center rounded-lg transition-all duration-200 h-12",
+                "flex items-center rounded-lg transition-all duration-200 h-14",
                 isCollapsed ? "justify-center px-0" : "gap-3 px-3",
                 isActive 
                   ? "bg-sidebar-accent text-sidebar-accent-foreground" 
@@ -129,7 +129,7 @@ export function AppSidebar() {
                 weight={isActive ? "fill" : "regular"}
               />
               {!isCollapsed && (
-                <span className="text-base font-medium">
+                <span className="text-lg font-medium">
                   {item.title}
                 </span>
               )}
@@ -143,8 +143,8 @@ export function AppSidebar() {
         )}>
           {session ? (
             <Button 
-              variant="outline" 
-              className="w-full flex items-center gap-3 h-10" 
+              variant="ghost" 
+              className="w-full flex items-center gap-3 h-10 border border-sidebar-border hover:bg-sidebar-accent/25" 
               asChild
             >
               <Link href="/creator-dashboard">
@@ -156,8 +156,8 @@ export function AppSidebar() {
             </Button>
           ) : (
             <Button 
-              variant="outline" 
-              className="w-full flex items-center justify-center gap-3 h-10" 
+              variant="ghost" 
+              className="w-full flex items-center justify-center gap-3 h-10 border border-sidebar-border hover:bg-sidebar-accent/25" 
               asChild
             >
               <Link href="/auth/sign-up" className="flex items-center gap-3 w-full justify-center">
