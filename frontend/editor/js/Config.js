@@ -23,9 +23,9 @@ function Config() {
 
 		'settings/history': false,
 
-		'settings/shortcuts/translate': 'w',
-		'settings/shortcuts/rotate': 'e',
-		'settings/shortcuts/scale': 'r',
+		'settings/shortcuts/translate': 'g',
+		'settings/shortcuts/rotate': 'r',
+		'settings/shortcuts/scale': 's',
 		'settings/shortcuts/undo': 'z',
 		'settings/shortcuts/focus': 'f'
 	};

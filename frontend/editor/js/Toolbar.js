@@ -50,14 +50,15 @@ function Toolbar( editor ) {
 	} );
 	container.add( scale );
 
-	const local = new UICheckbox( false );
-	local.dom.title = strings.getKey( 'toolbar/local' );
-	local.onChange( function () {
-
-		signals.spaceChanged.dispatch( this.getValue() === true ? 'local' : 'world' );
-
-	} );
-	container.add( local );
+	// Local/World checkbox - commented out, now handled by viewport controls dropdown
+	// const local = new UICheckbox( false );
+	// local.dom.title = strings.getKey( 'toolbar/local' );
+	// local.onChange( function () {
+	//
+	//	signals.spaceChanged.dispatch( this.getValue() === true ? 'local' : 'world' );
+	//
+	// } );
+	// container.add( local );
 
 	//
 
