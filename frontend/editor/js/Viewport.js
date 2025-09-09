@@ -11,6 +11,7 @@ import { ViewportInfo } from './Viewport.Info.js';
 
 import { ViewHelper } from './Viewport.ViewHelper.js';
 import { XR } from './Viewport.XR.js';
+import { InfiniteGridHelper } from './InfiniteGridHelper.js';
 
 import { SetPositionCommand } from './commands/SetPositionCommand.js';
 import { SetRotationCommand } from './commands/SetRotationCommand.js';
@@ -43,20 +44,12 @@ function Viewport( editor ) {
 
 	// helpers
 
-	const GRID_COLORS_LIGHT = [ 0x999999, 0x777777 ];
-	const GRID_COLORS_DARK = [ 0x555555, 0x888888 ];
+	// Lighter colors for better visibility
+	const GRID_COLORS_LIGHT = [ 0xcccccc, 0xaaaaaa ];
+	const GRID_COLORS_DARK = [ 0x888888, 0xaaaaaa ];
 
-	const grid = new THREE.Group();
-
-	const grid1 = new THREE.GridHelper( 30, 30 );
-	grid1.material.color.setHex( GRID_COLORS_LIGHT[ 0 ] );
-	grid1.material.vertexColors = false;
-	grid.add( grid1 );
-
-	const grid2 = new THREE.GridHelper( 30, 6 );
-	grid2.material.color.setHex( GRID_COLORS_LIGHT[ 1 ] );
-	grid2.material.vertexColors = false;
-	grid.add( grid2 );
+	// Create infinite grid with fading
+	const grid = new InfiniteGridHelper(1, 5, GRID_COLORS_LIGHT[0], GRID_COLORS_LIGHT[1]);
 
 	const viewHelper = new ViewHelper( camera, container );
 
@@ -339,15 +332,21 @@ function Viewport( editor ) {
 			const mediaQuery = window.matchMedia( '(prefers-color-scheme: dark)' );
 			mediaQuery.addEventListener( 'change', function ( event ) {
 
-				renderer.setClearColor( event.matches ? 0x333333 : 0xaaaaaa );
-				updateGridColors( grid1, grid2, event.matches ? GRID_COLORS_DARK : GRID_COLORS_LIGHT );
+				renderer.setClearColor( event.matches ? 0x333333 : 0x808080 );
+				grid.updateColors(
+					event.matches ? GRID_COLORS_DARK[ 0 ] : GRID_COLORS_LIGHT[ 0 ],
+					event.matches ? GRID_COLORS_DARK[ 1 ] : GRID_COLORS_LIGHT[ 1 ]
+				);
 
 				render();
 
 			} );
 
-			renderer.setClearColor( mediaQuery.matches ? 0x333333 : 0xaaaaaa );
-			updateGridColors( grid1, grid2, mediaQuery.matches ? GRID_COLORS_DARK : GRID_COLORS_LIGHT );
+			renderer.setClearColor( mediaQuery.matches ? 0x333333 : 0x808080 );
+			grid.updateColors(
+				mediaQuery.matches ? GRID_COLORS_DARK[ 0 ] : GRID_COLORS_LIGHT[ 0 ],
+				mediaQuery.matches ? GRID_COLORS_DARK[ 1 ] : GRID_COLORS_LIGHT[ 1 ]
+			);
 
 		}
 
@@ -879,11 +878,7 @@ function Viewport( editor ) {
 
 }
 
-function updateGridColors( grid1, grid2, colors ) {
-
-	grid1.material.color.setHex( colors[ 0 ] );
-	grid2.material.color.setHex( colors[ 1 ] );
-
-}
+// Function no longer needed with InfiniteGrid
+// updateGridColors was used for the old GridHelper implementation
 
 export { Viewport };
