@@ -13,9 +13,10 @@ class InfiniteGridHelper extends THREE.Object3D {
             uniforms: {
                 uSize1: { value: size1 },
                 uSize2: { value: size2 },
+                uSize3: { value: size1 / 5 },  // Even finer grid at 0.2 units
                 uColor1: { value: new THREE.Color(color1) },
                 uColor2: { value: new THREE.Color(color2) },
-                uDistance: { value: 1000 }
+                uDistance: { value: 5000 }  // Much larger grid area
             },
             vertexShader: `
                 varying vec3 worldPosition;
@@ -31,6 +32,7 @@ class InfiniteGridHelper extends THREE.Object3D {
                 varying vec3 worldPosition;
                 uniform float uSize1;
                 uniform float uSize2;
+                uniform float uSize3;
                 uniform vec3 uColor1;
                 uniform vec3 uColor2;
                 
@@ -43,17 +45,17 @@ class InfiniteGridHelper extends THREE.Object3D {
                 }
                 
                 float getVisibility() {
-                    // Calculate distance-based fading
-                    vec2 distanceToCamera = worldPosition.xz - cameraPosition.xz;
+                    // Calculate distance from camera to grid point (like Blender)
+                    vec3 distanceToCamera = worldPosition - cameraPosition;
                     float dist = length(distanceToCamera);
                     
-                    // Fade out beyond 100 units
-                    float maxDistance = 100.0;
-                    float fadeDistance = 50.0;
+                    // Shorter fade distances
+                    float maxDistance = 750.0;   // Grid completely faded at 750 units from camera
+                    float fadeDistance = 250.0;  // Start fading at 500 units
                     float fadeFactor = 1.0 - smoothstep(maxDistance - fadeDistance, maxDistance, dist);
                     
                     // Also fade based on view angle (fade when looking parallel to grid)
-                    float angleToGrid = abs(dot(normalize(cameraPosition - worldPosition), vec3(0.0, 1.0, 0.0)));
+                    float angleToGrid = abs(dot(normalize(distanceToCamera), vec3(0.0, 1.0, 0.0)));
                     float angleFade = smoothstep(0.0, 0.1, angleToGrid);
                     
                     return fadeFactor * angleFade;
@@ -62,11 +64,12 @@ class InfiniteGridHelper extends THREE.Object3D {
                 void main() {
                     float g1 = getGrid(uSize1);
                     float g2 = getGrid(uSize2);
+                    float g3 = getGrid(uSize3);  // Ultra-fine grid
                     
                     vec3 color = mix(uColor1, uColor2, g2);
                     
-                    // Combine the grid lines - fine grid more opaque, coarse grid thinner
-                    float alpha = max(g1 * 0.85, g2 * 0.9);
+                    // Combine the grid lines - make g1 (1-unit lines) more visible
+                    float alpha = max(max(g3 * 0.6, g1 * 1.0), g2 * 0.9);
                     
                     // Apply fading
                     alpha *= getVisibility();
