@@ -1,0 +1,22 @@
+{
+  "name": "@triberspace/editor",
+  "version": "1.0.0",
+  "description": "Triber Editor - Create immersive 3D experiences",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 3001 || python -m SimpleHTTPServer 3001",
+    "build": "echo 'Editor is static - no build needed'",
+    "serve": "python3 -m http.server 3001 || python -m SimpleHTTPServer 3001"
+  },
+  "keywords": [
+    "3d",
+    "editor",
+    "threejs",
+    "webgl",
+    "experiences"
+  ],
+  "author": "Triber Studios",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

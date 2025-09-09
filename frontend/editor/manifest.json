@@ -1,0 +1,17 @@
+{
+  "name": "Triber Editor",
+  "short_name": "Triber",
+  "description": "Create immersive 3D experiences with the Triber Editor",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "icons": [
+    {
+      "src": "./images/icon.png",
+      "type": "image/png",
+      "sizes": "144x144"
+    }
+  ]
+}
