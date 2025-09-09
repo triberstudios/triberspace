@@ -75,7 +75,7 @@ class InfiniteGridHelper extends THREE.Object3D {
                     alpha *= getVisibility();
                     
                     // Highlight axes
-                    float axisLineWidth = 0.05;
+                    float axisLineWidth = 0.02;
                     if (abs(worldPosition.x) < axisLineWidth || abs(worldPosition.z) < axisLineWidth) {
                         alpha = max(alpha, getVisibility());
                         color = uColor2;
