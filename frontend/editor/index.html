@@ -80,23 +80,45 @@
 			window.editor = editor; // Expose editor to Console
 			window.THREE = THREE; // Expose THREE to APP Scripts and Console
 
+			// Create main container wrapper
+			const editorContainer = document.createElement( 'div' );
+			editorContainer.className = 'editor-container';
+			document.body.appendChild( editorContainer );
+
+			// Create menubar (spans full width at top)
+			const menubar = new Menubar( editor );
+			editorContainer.appendChild( menubar.dom );
+
+			// Create main content wrapper for grid layout
+			const mainContent = document.createElement( 'div' );
+			mainContent.className = 'main-content';
+			editorContainer.appendChild( mainContent );
+
+			// Create viewport with container wrapper
+			const viewportWrapper = document.createElement( 'div' );
+			viewportWrapper.className = 'viewport-wrapper panel-container';
 			const viewport = new Viewport( editor );
-			document.body.appendChild( viewport.dom );
-
+			viewportWrapper.appendChild( viewport.dom );
+			
+			// Add toolbar inside viewport wrapper
 			const toolbar = new Toolbar( editor );
-			document.body.appendChild( toolbar.dom );
+			viewportWrapper.appendChild( toolbar.dom );
+			
+			mainContent.appendChild( viewportWrapper );
 
+			// Create sidebar with container wrapper
+			const sidebarWrapper = document.createElement( 'div' );
+			sidebarWrapper.className = 'sidebar-wrapper panel-container';
+			const sidebar = new Sidebar( editor );
+			sidebarWrapper.appendChild( sidebar.dom );
+			mainContent.appendChild( sidebarWrapper );
+
+			// Hidden panels
 			const script = new Script( editor );
 			document.body.appendChild( script.dom );
 
 			const player = new Player( editor );
 			document.body.appendChild( player.dom );
-
-			const sidebar = new Sidebar( editor );
-			document.body.appendChild( sidebar.dom );
-
-			const menubar = new Menubar( editor );
-			document.body.appendChild( menubar.dom );
 
 			const resizer = new Resizer( editor );
 			document.body.appendChild( resizer.dom );

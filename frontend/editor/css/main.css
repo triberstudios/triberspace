@@ -11,6 +11,49 @@ body {
 	font-size: 14px;
 	margin: 0;
 	overflow: hidden;
+	background-color: #1a1a1a; /* Dark background like Blender */
+}
+
+/* Blender-style modular container system */
+.editor-container {
+	width: 100vw;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	background-color: #1a1a1a;
+}
+
+.main-content {
+	flex: 1;
+	display: grid;
+	grid-template-columns: 1fr 350px;
+	gap: 8px;
+	padding: 8px;
+	padding-top: 0;
+	background-color: #1a1a1a;
+	overflow: hidden;
+}
+
+.panel-container {
+	background-color: #2e2e2e;
+	border-radius: 8px;
+	border: 1px solid #3a3a3a;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	overflow: hidden;
+	position: relative;
+}
+
+.viewport-wrapper {
+	grid-column: 1;
+	position: relative;
+	min-width: 0;
+}
+
+.sidebar-wrapper {
+	grid-column: 2;
+	position: relative;
+	min-width: 350px;
+	max-width: 450px;
 }
 
 hr {
@@ -312,14 +355,7 @@ select {
 /* UI */
 
 #resizer {
-	position: absolute;
-	z-index: 2; /* Above #sidebar */
-	top: 32px;
-	right: 350px;
-	width: 5px;
-	bottom: 0px;
-	transform: translatex(2.5px);
-	cursor: col-resize;
+	display: none; /* Not needed with new grid layout */
 }
 
 	#resizer:hover {
@@ -335,10 +371,11 @@ select {
 
 #viewport {
 	position: absolute;
-	top: 32px;
+	top: 0;
 	left: 0;
-	right: 350px;
+	right: 0;
 	bottom: 0;
+	background: transparent;
 }
 
 	#viewport .Text {
@@ -364,14 +401,13 @@ select {
 }
 
 #menubar {
-	position: absolute;
+	position: relative;
 	width: 100%;
 	height: 32px;
-	background: #eee;
+	background: #1a1a1a;
 	padding: 0;
 	margin: 0;
-	right: 0;
-	top: 0;
+	border-bottom: none;
 }
 
 	#menubar .menu {
@@ -389,10 +425,14 @@ select {
 
 		#menubar .menu .title {
 			display: inline-block;
-			color: #888;
+			color: #aaa;
 			margin: 0;
 			padding: 8px;
 			line-height: 16px;
+		}
+		
+		#menubar .menu .title:hover {
+			color: #fff;
 		}
 
 		#menubar .menu .key {
@@ -409,13 +449,16 @@ select {
 
 		#menubar .menu .options {
 			position: fixed;
-			z-index: 1; /* higher than resizer */
+			z-index: 100;
 			display: none;
 			padding: 5px 0;
-			background: #eee;
+			background: #2a2a2a;
+			border: 1px solid #3a3a3a;
+			border-radius: 4px;
 			min-width: 150px;
 			max-height: calc(100vh - 80px);
 			overflow: auto;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 		}
 
 		#menubar .menu:hover .options {
@@ -424,11 +467,11 @@ select {
 		}
 
 			#menubar .menu .options hr {
-				border-color: #ddd;
+				border-color: #3a3a3a;
 			}
 
 			#menubar .menu .options .option {
-				color: #666;
+				color: #aaa;
 				background-color: transparent;
 				padding: 5px 10px;
 				margin: 0 !important;
@@ -476,19 +519,21 @@ select {
 
 #sidebar {
 	position: absolute;
+	top: 0;
+	left: 0;
 	right: 0;
-	top: 32px;
 	bottom: 0;
-	width: 350px;
-	background: #eee;
+	width: 100%;
+	background: transparent;
 	overflow: auto;
 	overflow-x: hidden;
 }
 
 	#sidebar .Panel {
-		color: #888;
+		color: #aaa;
 		padding: 10px;
-		border-top: 1px solid #ccc;
+		border-top: 1px solid #3a3a3a;
+		background: transparent;
 	}
 
 	#sidebar .Panel.collapsed {
@@ -527,19 +572,42 @@ select {
 #toolbar {
 	position: absolute;
 	left: 10px;
-	top: 42px;
+	top: 10px;
 	width: 32px;
-	background: #eee;
+	background: rgba(46, 46, 46, 0.9);
 	text-align: center;
+	border-radius: 4px;
+	padding: 4px;
+	z-index: 10;
 }
 
-	#toolbar button, #toolbar input {
+	#toolbar button {
 		height: 32px;
+		width: 32px;
+		border-radius: 2px;
+		border: none;
+		background: transparent;
+		margin: 2px 0;
 	}
+	
+	#toolbar input[type="checkbox"] {
+		width: 14px;
+		height: 14px;
+		margin: 4px 0;
+		cursor: pointer;
+	}
+
+		#toolbar button:hover {
+			background: rgba(255, 255, 255, 0.1);
+		}
+		
+		#toolbar button.selected {
+			background: rgba(8, 136, 255, 0.5);
+		}
 
 		#toolbar button img {
 			width: 16px;
-			opacity: 0.5;
+			opacity: 0.7;
 		}
 
 .Outliner {
@@ -677,9 +745,7 @@ select {
 
 	/* UI */
 
-	#menubar {
-		background: #111;
-	}
+	/* Menubar already styled above */
 
 			#menubar .menu .key {
 				color: #444;
@@ -702,13 +768,7 @@ select {
 				color: #444;
 			}
 
-	#sidebar {
-		background-color: #111;
-	}
-
-		#sidebar .Panel {
-			border-top: 1px solid #222;
-		}
+	/* Sidebar styling handled by container system */
 
 		#sidebar .Panel.Material canvas {
 			border: solid 1px #5A5A5A;
