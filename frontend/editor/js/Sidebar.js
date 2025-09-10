@@ -24,9 +24,9 @@ function Sidebar( editor ) {
 	const ai = new SidebarAI( editor );
 
 	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
+	container.addTab( 'ai', 'Chat', ai );
 	container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );
 	container.addTab( 'settings', strings.getKey( 'sidebar/settings' ), settings );
-	container.addTab( 'ai', 'Chat', ai );
 	container.select( 'scene' );
 
 	const sidebarPropertiesResizeObserver = new ResizeObserver( function () {
