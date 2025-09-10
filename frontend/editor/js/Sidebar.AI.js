@@ -10,7 +10,7 @@ function SidebarAI( editor ) {
 	
 	// Basic positioning works! The issue must be in the content structure.
 	
-	// Fix the TabbedPanel Panels to use flexbox layout
+	// Fix the TabbedPanel Panels layout and prevent whole-panel scrolling
 	const style = document.createElement('style');
 	style.textContent = `
 		.TabbedPanel .Panels {
@@ -21,6 +21,10 @@ function SidebarAI( editor ) {
 			flex-direction: column;
 			width: 100%;
 			height: calc(100% - 40px);
+			overflow: hidden;
+		}
+		#ai-panel {
+			overflow: hidden !important;
 		}
 	`;
 	document.head.appendChild(style);
@@ -32,23 +36,22 @@ function SidebarAI( editor ) {
 	let isInitializing = false;
 	let currentProvider = 'mock';
 
-	// Create a scrollable wrapper
+	// Create a scrollable wrapper - leaves room for input at bottom
 	const scrollWrapper = document.createElement('div');
 	scrollWrapper.className = 'ai-scroll-wrapper';
 	scrollWrapper.style.cssText = `
-		height: 100%;
+		height: calc(100% - 80px);
 		overflow: hidden;
 		position: relative;
 	`;
 	
-	// Messages area - content that scrolls
+	// Messages area - content that scrolls within the wrapper
 	const messagesArea = document.createElement('div');
 	messagesArea.className = 'ai-messages-area';
 	messagesArea.style.cssText = `
 		height: 100%;
 		overflow-y: auto;
 		padding: 16px;
-		padding-bottom: 80px;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
