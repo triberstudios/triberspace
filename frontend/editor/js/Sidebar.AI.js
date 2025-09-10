@@ -8,6 +8,8 @@ function SidebarAI( editor ) {
 	const container = new UIPanel();
 	container.setId( 'ai-panel' );
 	
+	// Basic positioning works! The issue must be in the content structure.
+	
 	// Fix the TabbedPanel Panels to use flexbox layout
 	const style = document.createElement('style');
 	style.textContent = `
@@ -30,37 +32,38 @@ function SidebarAI( editor ) {
 	let isInitializing = false;
 	let currentProvider = 'mock';
 
-	// Chat container - pure DOM implementation
-	const chatContainer = document.createElement('div');
-	chatContainer.className = 'ai-chat-container';
-	chatContainer.style.cssText = `
-		flex: 1;
-		display: flex;
-		flex-direction: column;
+	// Create a scrollable wrapper
+	const scrollWrapper = document.createElement('div');
+	scrollWrapper.className = 'ai-scroll-wrapper';
+	scrollWrapper.style.cssText = `
+		height: 100%;
 		overflow: hidden;
 		position: relative;
-		min-height: 0;
 	`;
 	
-	// Messages area - scrollable
+	// Messages area - content that scrolls
 	const messagesArea = document.createElement('div');
+	messagesArea.className = 'ai-messages-area';
 	messagesArea.style.cssText = `
-		flex: 1 1 auto;
+		height: 100%;
 		overflow-y: auto;
 		padding: 16px;
+		padding-bottom: 80px;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-		min-height: 0;
-		justify-content: flex-start;
 	`;
 	
-	// Input area - flexbox positioned at bottom
+	// Input area - positioned at bottom (same as working red test div)
 	const inputContainer = document.createElement('div');
+	inputContainer.className = 'ai-input-container';
 	inputContainer.style.cssText = `
-		flex-shrink: 0;
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
 		padding: 12px;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		z-index: 10;
 	`;
 	
 	const inputWrapper = document.createElement('div');
@@ -120,10 +123,9 @@ function SidebarAI( editor ) {
 	inputWrapper.appendChild(sendButton);
 	inputContainer.appendChild(inputWrapper);
 	
-	chatContainer.appendChild(messagesArea);
-	chatContainer.appendChild(inputContainer);
-	flexWrapper.appendChild(chatContainer);
-	container.dom.appendChild(flexWrapper);
+	scrollWrapper.appendChild(messagesArea);
+	container.dom.appendChild(scrollWrapper);
+	container.dom.appendChild(inputContainer);
 	
 	// Focus effects on input wrapper
 	messageInput.addEventListener('focus', () => {
@@ -268,7 +270,7 @@ function SidebarAI( editor ) {
 		
 		messagesArea.appendChild(messageContainer);
 
-		// Scroll to bottom
+		// Auto-scroll to show latest messages (scroll to bottom)
 		setTimeout(() => {
 			messagesArea.scrollTop = messagesArea.scrollHeight;
 		}, 10);
@@ -293,7 +295,7 @@ function SidebarAI( editor ) {
 		
 		messagesArea.appendChild(indicator);
 
-		// Scroll to bottom
+		// Auto-scroll to show latest messages (scroll to bottom)
 		setTimeout(() => {
 			messagesArea.scrollTop = messagesArea.scrollHeight;
 		}, 10);
