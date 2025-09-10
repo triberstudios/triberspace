@@ -876,6 +876,7 @@ function Viewport( editor ) {
 
 	// Floating chat input system
 	let isExpanded = true; // Default to open state
+	let isManualToggle = false; // Flag to prevent observer from overriding manual toggles
 	
 	// Main container - always centered
 	const floatingChatContainer = document.createElement('div');
@@ -976,6 +977,7 @@ function Viewport( editor ) {
 
 	// Toggle function
 	function toggleChatInput() {
+		isManualToggle = true; // Set flag to prevent observer interference
 		isExpanded = !isExpanded;
 		
 		if (isExpanded) {
@@ -1004,6 +1006,11 @@ function Viewport( editor ) {
 			textInput.value = '';
 			textInput.blur();
 		}
+		
+		// Reset flag after animation completes
+		setTimeout(() => {
+			isManualToggle = false;
+		}, 350);
 	}
 
 	// Input focus/blur effects
@@ -1041,7 +1048,12 @@ function Viewport( editor ) {
 	}
 
 	// Event listeners
-	toggleButton.addEventListener('click', toggleChatInput);
+	toggleButton.addEventListener('click', function(event) {
+		event.preventDefault();
+		event.stopPropagation();
+		console.log('Toggle button clicked, isExpanded:', isExpanded);
+		toggleChatInput();
+	});
 	sendButton.addEventListener('click', sendMessage);
 	textInput.addEventListener('keydown', (event) => {
 		if (event.key === 'Enter') {
@@ -1051,31 +1063,45 @@ function Viewport( editor ) {
 		}
 	});
 
-	// Hide floating input when chat tab is active
+	// Collapse floating input when chat tab is active (don't hide it)
 	function updateFloatingInputVisibility() {
+		// Don't interfere if user is manually toggling
+		if (isManualToggle) {
+			console.log('Manual toggle in progress, skipping automatic update');
+			return;
+		}
+		
 		const sidebar = document.getElementById('sidebar');
 		const activeTab = sidebar?.querySelector('.Tab.selected');
 		const isChatActive = activeTab?.textContent === 'Chat';
-		floatingChatContainer.style.display = isChatActive ? 'none' : 'flex';
 		
-		// Auto-collapse if chat becomes active
+		// Always keep the container visible, just change its state
+		floatingChatContainer.style.display = 'flex';
+		
+		// Force specific states based on chat tab
 		if (isChatActive && isExpanded) {
+			console.log('AI tab opened, forcing collapse');
+			// Directly set to collapsed state
 			isExpanded = false;
 			floatingChatContainer.style.width = '48px';
 			floatingChatContainer.style.height = '48px';
 			floatingChatContainer.style.borderRadius = '50px';
+			floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
 			toggleButton.innerHTML = '<i class="ph ph-sparkle" style="color: #FCFDE8 !important; font-size: 22px; display: inline-block;"></i>';
 			toggleButton.style.left = '50%';
 			toggleButton.style.transform = 'translate(-50%, -50%)';
 			textInput.style.opacity = '0';
 			sendButton.style.opacity = '0';
 			textInput.value = '';
+			textInput.blur();
 		} else if (!isChatActive && !isExpanded) {
-			// Re-expand when chat tab is closed
+			console.log('AI tab closed, forcing expand');
+			// Directly set to expanded state
 			isExpanded = true;
 			floatingChatContainer.style.width = '480px';
 			floatingChatContainer.style.height = '48px';
 			floatingChatContainer.style.borderRadius = '24px';
+			floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
 			toggleButton.innerHTML = '<i class="ph ph-x"></i>';
 			toggleButton.style.left = '24px';
 			toggleButton.style.transform = 'translate(-50%, -50%)';

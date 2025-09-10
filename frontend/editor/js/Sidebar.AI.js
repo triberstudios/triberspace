@@ -36,22 +36,15 @@ function SidebarAI( editor ) {
 	let isInitializing = false;
 	let currentProvider = 'mock';
 
-	// Create a scrollable wrapper - leaves room for input at bottom
-	const scrollWrapper = document.createElement('div');
-	scrollWrapper.className = 'ai-scroll-wrapper';
-	scrollWrapper.style.cssText = `
-		height: calc(100% - 80px);
-		overflow: hidden;
-		position: relative;
-	`;
-	
-	// Messages area - content that scrolls within the wrapper
+	// Messages area - use viewport height for reliable calculation
 	const messagesArea = document.createElement('div');
 	messagesArea.className = 'ai-messages-area';
 	messagesArea.style.cssText = `
-		height: 100%;
+		height: calc(100vh - 140px);
 		overflow-y: auto;
+		overflow-x: hidden;
 		padding: 16px;
+		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
@@ -126,8 +119,7 @@ function SidebarAI( editor ) {
 	inputWrapper.appendChild(sendButton);
 	inputContainer.appendChild(inputWrapper);
 	
-	scrollWrapper.appendChild(messagesArea);
-	container.dom.appendChild(scrollWrapper);
+	container.dom.appendChild(messagesArea);
 	container.dom.appendChild(inputContainer);
 	
 	// Focus effects on input wrapper
