@@ -874,6 +874,225 @@ function Viewport( editor ) {
 
 	}
 
+	// Floating chat input system
+	let isExpanded = true; // Default to open state
+	
+	// Main container - always centered
+	const floatingChatContainer = document.createElement('div');
+	floatingChatContainer.style.cssText = `
+		position: absolute;
+		bottom: 30px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 480px;
+		height: 48px;
+		border-radius: 24px;
+		background: rgba(0, 0, 0, 0.5);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(8px);
+		transition: all 0.3s ease;
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		overflow: visible;
+	`;
+
+	// Toggle button (left) - shows sparkle when closed, X when open
+	const toggleButton = document.createElement('button');
+	toggleButton.innerHTML = '<i class="ph ph-x"></i>'; // Start with X since we're expanded
+	toggleButton.style.cssText = `
+		position: absolute;
+		width: 40px;
+		height: 40px;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		background: rgba(255, 255, 255, 0.1);
+		color: #f8f8f2;
+		border-radius: 50%;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 18px;
+		transition: all 0.2s ease;
+		top: 50%;
+		left: 24px;
+		transform: translate(-50%, -50%);
+		z-index: 101;
+	`;
+
+	// Text input (center) - hidden when collapsed
+	const textInput = document.createElement('input');
+	textInput.type = 'text';
+	textInput.placeholder = 'Ask AI to create or modify objects...';
+	textInput.style.cssText = `
+		width: 100%;
+		border: none;
+		background: transparent;
+		color: #f8f8f2;
+		font-size: 14px;
+		outline: none;
+		padding: 0 60px 0 56px;
+		opacity: 1;
+		transition: opacity 0.3s ease;
+		box-sizing: border-box;
+	`;
+
+	// Send button (right) - hidden when collapsed
+	const sendButton = document.createElement('button');
+	sendButton.innerHTML = '<i class="ph ph-paper-plane-tilt"></i>';
+	sendButton.style.cssText = `
+		width: 32px;
+		height: 32px;
+		border: none;
+		background: transparent;
+		color: #f8f8f2;
+		border-radius: 50%;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 16px;
+		margin-right: 8px;
+		flex-shrink: 0;
+		opacity: 1;
+		transition: all 0.2s ease;
+	`;
+
+	// Send button hover effects
+	sendButton.addEventListener('mouseenter', () => {
+		if (isExpanded) {
+			sendButton.style.background = 'rgba(255, 255, 255, 0.1)';
+		}
+	});
+	sendButton.addEventListener('mouseleave', () => {
+		sendButton.style.background = 'transparent';
+	});
+
+	// Assemble container
+	floatingChatContainer.appendChild(toggleButton);
+	floatingChatContainer.appendChild(textInput);
+	floatingChatContainer.appendChild(sendButton);
+
+	// Toggle function
+	function toggleChatInput() {
+		isExpanded = !isExpanded;
+		
+		if (isExpanded) {
+			// Expand
+			floatingChatContainer.style.width = '480px';
+			floatingChatContainer.style.height = '48px';
+			floatingChatContainer.style.borderRadius = '24px';
+			floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
+			toggleButton.innerHTML = '<i class="ph ph-x"></i>';
+			toggleButton.style.left = '24px';
+			toggleButton.style.transform = 'translate(-50%, -50%)';
+			textInput.style.opacity = '1';
+			sendButton.style.opacity = '1';
+			setTimeout(() => textInput.focus(), 300);
+		} else {
+			// Collapse
+			floatingChatContainer.style.width = '48px';
+			floatingChatContainer.style.height = '48px';
+			floatingChatContainer.style.borderRadius = '50px';
+			floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
+			toggleButton.innerHTML = '<i class="ph ph-sparkle" style="color: #FCFDE8 !important; font-size: 22px; display: inline-block;"></i>';
+			toggleButton.style.left = '50%';
+			toggleButton.style.transform = 'translate(-50%, -50%)';
+			textInput.style.opacity = '0';
+			sendButton.style.opacity = '0';
+			textInput.value = '';
+			textInput.blur();
+		}
+	}
+
+	// Input focus/blur effects
+	textInput.addEventListener('focus', () => {
+		floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.7)';
+		floatingChatContainer.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+		floatingChatContainer.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.1)';
+	});
+
+	textInput.addEventListener('blur', () => {
+		floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
+		floatingChatContainer.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+		floatingChatContainer.style.boxShadow = 'none';
+	});
+
+	// Send message function
+	function sendMessage() {
+		if (textInput.value.trim()) {
+			// Switch to chat tab and focus the main chat input
+			const sidebar = document.getElementById('sidebar');
+			const chatTab = sidebar.querySelector('[data-tab="ai"]');
+			if (chatTab) chatTab.click();
+			
+			// Wait for tab to switch, then focus chat input and set value
+			setTimeout(() => {
+				const chatInput = document.querySelector('#ai-panel input[type="text"]');
+				if (chatInput) {
+					chatInput.value = textInput.value;
+					chatInput.focus();
+					textInput.value = '';
+					toggleChatInput(); // Close the floating input
+				}
+			}, 100);
+		}
+	}
+
+	// Event listeners
+	toggleButton.addEventListener('click', toggleChatInput);
+	sendButton.addEventListener('click', sendMessage);
+	textInput.addEventListener('keydown', (event) => {
+		if (event.key === 'Enter') {
+			sendMessage();
+		} else if (event.key === 'Escape') {
+			toggleChatInput();
+		}
+	});
+
+	// Hide floating input when chat tab is active
+	function updateFloatingInputVisibility() {
+		const sidebar = document.getElementById('sidebar');
+		const activeTab = sidebar?.querySelector('.Tab.selected');
+		const isChatActive = activeTab?.textContent === 'Chat';
+		floatingChatContainer.style.display = isChatActive ? 'none' : 'flex';
+		
+		// Auto-collapse if chat becomes active
+		if (isChatActive && isExpanded) {
+			isExpanded = false;
+			floatingChatContainer.style.width = '48px';
+			floatingChatContainer.style.height = '48px';
+			floatingChatContainer.style.borderRadius = '50px';
+			toggleButton.innerHTML = '<i class="ph ph-sparkle" style="color: #FCFDE8 !important; font-size: 22px; display: inline-block;"></i>';
+			toggleButton.style.left = '50%';
+			toggleButton.style.transform = 'translate(-50%, -50%)';
+			textInput.style.opacity = '0';
+			sendButton.style.opacity = '0';
+			textInput.value = '';
+		} else if (!isChatActive && !isExpanded) {
+			// Re-expand when chat tab is closed
+			isExpanded = true;
+			floatingChatContainer.style.width = '480px';
+			floatingChatContainer.style.height = '48px';
+			floatingChatContainer.style.borderRadius = '24px';
+			toggleButton.innerHTML = '<i class="ph ph-x"></i>';
+			toggleButton.style.left = '24px';
+			toggleButton.style.transform = 'translate(-50%, -50%)';
+			textInput.style.opacity = '1';
+			sendButton.style.opacity = '1';
+		}
+	}
+
+	// Monitor tab changes
+	const observer = new MutationObserver(updateFloatingInputVisibility);
+	observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+	
+	// Initial visibility check
+	setTimeout(updateFloatingInputVisibility, 100);
+
+	container.dom.appendChild(floatingChatContainer);
+
 	return container;
 
 }
