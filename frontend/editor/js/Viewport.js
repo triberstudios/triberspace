@@ -1063,7 +1063,7 @@ function Viewport( editor ) {
 		}
 	});
 
-	// Collapse floating input when chat tab is active (don't hide it)
+	// Hide floating input when chat tab is active with smooth fade
 	function updateFloatingInputVisibility() {
 		// Don't interfere if user is manually toggling
 		if (isManualToggle) {
@@ -1075,38 +1075,23 @@ function Viewport( editor ) {
 		const activeTab = sidebar?.querySelector('.Tab.selected');
 		const isChatActive = activeTab?.textContent === 'Chat';
 		
-		// Always keep the container visible, just change its state
-		floatingChatContainer.style.display = 'flex';
-		
-		// Force specific states based on chat tab
-		if (isChatActive && isExpanded) {
-			console.log('AI tab opened, forcing collapse');
-			// Directly set to collapsed state
-			isExpanded = false;
-			floatingChatContainer.style.width = '48px';
-			floatingChatContainer.style.height = '48px';
-			floatingChatContainer.style.borderRadius = '50px';
-			floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
-			toggleButton.innerHTML = '<i class="ph ph-sparkle" style="color: #FCFDE8 !important; font-size: 22px; display: inline-block;"></i>';
-			toggleButton.style.left = '50%';
-			toggleButton.style.transform = 'translate(-50%, -50%)';
-			textInput.style.opacity = '0';
-			sendButton.style.opacity = '0';
-			textInput.value = '';
-			textInput.blur();
-		} else if (!isChatActive && !isExpanded) {
-			console.log('AI tab closed, forcing expand');
-			// Directly set to expanded state
-			isExpanded = true;
-			floatingChatContainer.style.width = '480px';
-			floatingChatContainer.style.height = '48px';
-			floatingChatContainer.style.borderRadius = '24px';
-			floatingChatContainer.style.background = 'rgba(0, 0, 0, 0.5)';
-			toggleButton.innerHTML = '<i class="ph ph-x"></i>';
-			toggleButton.style.left = '24px';
-			toggleButton.style.transform = 'translate(-50%, -50%)';
-			textInput.style.opacity = '1';
-			sendButton.style.opacity = '1';
+		if (isChatActive) {
+			console.log('AI tab opened, hiding floating input');
+			// Fade out and hide the floating input
+			floatingChatContainer.style.opacity = '0';
+			floatingChatContainer.style.pointerEvents = 'none';
+			setTimeout(() => {
+				floatingChatContainer.style.display = 'none';
+			}, 300); // Wait for fade animation
+		} else {
+			console.log('AI tab closed, showing floating input');
+			// Show and fade in the floating input
+			floatingChatContainer.style.display = 'flex';
+			floatingChatContainer.style.pointerEvents = 'auto';
+			// Small delay to ensure display change is processed
+			setTimeout(() => {
+				floatingChatContainer.style.opacity = '1';
+			}, 10);
 		}
 	}
 
