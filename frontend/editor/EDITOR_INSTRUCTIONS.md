@@ -119,3 +119,525 @@ scrollableArea.style.cssText = `
 ```
 
 This foundation will make future advanced features much smoother to implement!
+
+## **11. Advanced Architecture Patterns**
+
+### **Signal System Architecture**
+The editor uses a centralized signal system with 30+ signals for inter-component communication:
+
+**Signal Categories:**
+- **Scene Management**: `sceneChanged`, `objectAdded`, `objectRemoved`
+- **Selection**: `objectSelected`, `objectDeselected`, `objectFocused`  
+- **Property Changes**: `materialChanged`, `geometryChanged`, `scriptChanged`
+- **Editor State**: `transformModeChanged`, `cameraChanged`
+- **Rendering**: `sceneRendered`, `viewportCameraChanged`
+
+**Integration Pattern**: Listen → React → Dispatch
+```javascript
+// Listen to signals
+editor.signals.objectSelected.add(function(object) {
+    // React to selection change
+    updatePropertiesPanel(object);
+    
+    // Dispatch related signals if needed
+    editor.signals.selectionChanged.dispatch(object);
+});
+```
+
+### **Component Architecture Patterns**
+Components follow a consistent function-based pattern:
+
+```javascript
+function SidebarFeatureName(editor) {
+    // Access editor systems
+    const signals = editor.signals;
+    const strings = editor.strings;
+    
+    // Create UI container
+    const container = new UI.Panel();
+    
+    // Add signal listeners
+    signals.objectSelected.add(onObjectSelected);
+    
+    // Create component UI
+    function onObjectSelected(object) {
+        // Update component based on selection
+    }
+    
+    return container;
+}
+```
+
+**Key Integration Points:**
+- **Sidebar Integration**: Add tabs to `Sidebar.js` with `container.addTab(id, label, component)`
+- **Viewport Integration**: Add components to `Viewport.js` for 3D-related features
+- **Command Integration**: Export commands from `commands/Commands.js`
+
+### **Command System & History**
+All operations that modify editor state should use the command pattern:
+
+**Command Structure:**
+```javascript
+class MyFeatureCommand extends Command {
+    constructor(editor, object, newValue, oldValue) {
+        super(editor);
+        this.object = object;
+        this.newValue = newValue;
+        this.oldValue = oldValue;
+    }
+    
+    execute() {
+        this.object.property = this.newValue;
+        this.editor.signals.objectChanged.dispatch(this.object);
+    }
+    
+    undo() {
+        this.object.property = this.oldValue;
+        this.editor.signals.objectChanged.dispatch(this.object);
+    }
+    
+    toJSON() {
+        return {
+            type: 'MyFeatureCommand',
+            object: this.object.uuid,
+            newValue: this.newValue,
+            oldValue: this.oldValue
+        };
+    }
+}
+
+// Usage
+const command = new MyFeatureCommand(editor, object, newValue, oldValue);
+editor.history.execute(command); // Auto-integrates with undo/redo
+```
+
+### **Three.js Scene Management Patterns**
+The editor maintains multiple scenes and resource registries:
+
+**Scene Structure:**
+- `editor.scene`: Main scene for 3D objects
+- `editor.sceneHelpers`: Helper objects (grids, transform controls)
+
+**Resource Management:**
+```javascript
+// Always use editor methods for scene operations
+editor.addObject(object);        // NOT scene.add(object)
+editor.removeObject(object);     // NOT scene.remove(object)
+editor.select(object);          // NOT direct selection
+
+// Access resource registries
+const material = editor.materials.get(uuid);
+const geometry = editor.geometries.get(uuid);
+const script = editor.scripts.get(uuid);
+```
+
+### **Event Handling Architecture**
+Multi-level event hierarchy with proper precedence:
+
+**Event Priority Order:**
+1. Transform Controls (highest priority)
+2. Object Selection
+3. Camera Controls (lowest priority)
+
+**Event Handling Pattern:**
+```javascript
+function onPointerDown(event) {
+    // 1. Prevent conflicts
+    if (transformControls.dragging) return;
+    
+    // 2. Perform action
+    const intersects = getIntersects(event);
+    if (intersects.length > 0) {
+        editor.select(intersects[0].object);
+    }
+    
+    // 3. Update state
+    // 4. Dispatch signals
+}
+```
+
+### **Common Integration Pitfalls & Solutions**
+
+**1. Signal Conflicts**
+- **Problem**: Multiple components updating the same property simultaneously
+- **Solution**: Use debouncing and state flags
+```javascript
+let isUpdating = false;
+function updateProperty(value) {
+    if (isUpdating) return;
+    isUpdating = true;
+    // Update logic
+    setTimeout(() => isUpdating = false, 100);
+}
+```
+
+**2. UI Library Limitations**
+- **Problem**: UI library can't handle modern styled components
+- **Solution**: Switch to pure DOM for complex interfaces
+```javascript
+// Instead of UI library for complex components
+const container = document.createElement('div');
+container.style.cssText = 'display: flex; flex-direction: column; gap: 16px;';
+```
+
+**3. Transform Control Conflicts**
+- **Problem**: Camera controls interfere with transform controls
+- **Solution**: Always check transform control state
+```javascript
+if (editor.transformControls.dragging) return;
+```
+
+**4. History System Integration**
+- **Problem**: Direct modifications bypass undo/redo
+- **Solution**: Always use commands for state changes
+```javascript
+// Wrong
+object.position.set(x, y, z);
+
+// Right  
+const command = new SetPositionCommand(editor, object, newPosition);
+editor.history.execute(command);
+```
+
+### **File Organization Strategy**
+The editor follows clear organizational patterns:
+
+**Directory Structure:**
+- **Root**: Core files (`Editor.js`, `Sidebar.js`, `Viewport.js`)
+- **`commands/`**: All command classes + Commands.js registry
+- **`libs/`**: External libraries and utilities
+- **`ai/`**: AI-related functionality
+
+**Naming Conventions:**
+- **Components**: `Sidebar.*.js`, `Viewport.*.js` 
+- **Commands**: `*Command.js`
+- **Libraries**: Descriptive names in `libs/`
+
+### **Performance Considerations**
+
+**Signal Performance:**
+- Avoid creating new signals - reuse existing ones
+- Use `signals.objectChanged.dispatch()` instead of multiple specific signals
+- Debounce frequent updates (resize, mouse move)
+
+**Scene Traversal:**
+```javascript
+// Efficient object finding
+const object = editor.objectByUuid(uuid);  // Fast lookup
+
+// Avoid frequent scene.traverse()
+// Cache results when possible
+```
+
+**UI Update Batching:**
+```javascript
+// Batch DOM updates
+requestAnimationFrame(() => {
+    // All DOM updates here
+    updatePanel1();
+    updatePanel2();
+    updatePanel3();
+});
+```
+
+This architectural foundation ensures new features integrate seamlessly with the editor's established patterns!
+
+The following sections document the core architectural patterns of the Three.js editor that are essential for building complex features correctly.
+
+### **Signal System Architecture**
+
+The editor uses a comprehensive signal/event system for inter-component communication:
+
+**Core Signal Pattern:**
+```javascript
+// In Editor.js - signals are defined centrally
+this.signals = {
+    objectSelected: new Signal(),
+    objectAdded: new Signal(),
+    sceneGraphChanged: new Signal(),
+    // ... 30+ other signals
+};
+
+// Components listen to signals
+editor.signals.objectSelected.add(function(object) {
+    // React to object selection
+});
+
+// Components dispatch signals
+editor.signals.objectSelected.dispatch(selectedObject);
+```
+
+**Key Signal Categories:**
+- **Scene Management**: `sceneGraphChanged`, `objectAdded`, `objectRemoved`
+- **Selection**: `objectSelected`, `objectFocused`
+- **Property Changes**: `materialChanged`, `geometryChanged`, `cameraChanged`
+- **Editor State**: `transformModeChanged`, `viewportShadingChanged`
+- **Rendering**: `sceneRendered`, `rendererUpdated`
+
+**Integration Pattern for New Features:**
+1. **Listen** to relevant signals in your component constructor
+2. **Dispatch** signals when your feature changes editor state
+3. **Use existing signals** rather than creating new ones when possible
+
+### **Component Architecture Patterns**
+
+**Sidebar Component Structure:**
+```javascript
+// Standard sidebar component pattern
+function SidebarFeatureName( editor ) {
+    const signals = editor.signals;        // Access signal system
+    const strings = editor.strings;        // Access localization
+    const container = new UIPanel();       // Root UI container
+    
+    // UI setup with the UI library or pure DOM
+    
+    // Signal listeners
+    signals.objectSelected.add(refreshUI);
+    
+    // Internal functions
+    function refreshUI() { /* ... */ }
+    
+    return container; // Return UI container
+}
+
+// Integration in Sidebar.js
+import { SidebarFeatureName } from './Sidebar.FeatureName.js';
+const feature = new SidebarFeatureName( editor );
+container.addTab( 'feature', 'Display Name', feature );
+```
+
+**Key Component Patterns:**
+- **Single Function Export**: Each component is a single function, not a class
+- **Editor Instance**: Always pass `editor` as the first parameter
+- **UI Container Return**: Return a UI library element or DOM element
+- **Signal Integration**: Components communicate through the signal system
+- **Resource Management**: Components manage their own UI state and cleanup
+
+### **Command System & History**
+
+The editor implements a robust command pattern for undo/redo functionality:
+
+**Command Structure:**
+```javascript
+// All commands extend the base Command class
+class CustomCommand extends Command {
+    constructor(editor, ...params) {
+        super(editor);
+        this.type = 'CustomCommand';
+        this.name = 'Display Name';
+        // Store command parameters
+    }
+    
+    execute() {
+        // Perform the action
+        // Update editor state
+        // Dispatch relevant signals
+    }
+    
+    undo() {
+        // Reverse the action
+        // Restore previous state
+    }
+    
+    toJSON() { /* Serialization for history */ }
+    fromJSON(json) { /* Deserialization */ }
+}
+```
+
+**Command Execution Pattern:**
+```javascript
+// Execute command through history system
+const command = new AddObjectCommand(editor, object);
+editor.history.execute(command);
+
+// Commands automatically:
+// 1. Get added to undo stack
+// 2. Execute their action
+// 3. Update UI through signals
+// 4. Enable undo/redo functionality
+```
+
+**Available Command Types:**
+- **Object Operations**: `AddObjectCommand`, `RemoveObjectCommand`, `MoveObjectCommand`
+- **Property Changes**: `SetPositionCommand`, `SetMaterialCommand`, `SetValueCommand`
+- **Scene Operations**: `SetSceneCommand`
+- **Batch Operations**: `MultiCmdsCommand`
+
+### **Three.js Scene Management**
+
+The editor maintains multiple scenes and objects:
+
+**Core Scene Structure:**
+```javascript
+// In Editor.js
+this.scene = new THREE.Scene();              // Main 3D scene
+this.sceneHelpers = new THREE.Scene();       // Helper objects (gizmos, etc.)
+this.camera = camera;                         // Active camera
+this.selected = null;                         // Currently selected object
+
+// Resource management
+this.object = {};                             // Scene objects by uuid
+this.geometries = {};                         // Shared geometries
+this.materials = {};                          // Shared materials
+this.scripts = {};                           // Object scripts
+```
+
+**Scene Integration Patterns:**
+```javascript
+// Adding objects properly
+editor.addObject( object );                  // Handles geometry/material registration
+editor.signals.objectAdded.dispatch( object );
+
+// Selection management
+editor.select( object );                     // Updates selection state
+editor.signals.objectSelected.dispatch( object );
+
+// Resource tracking
+editor.addGeometry( geometry );              // Registers shared resources
+editor.addMaterial( material );              // Tracks usage counts
+```
+
+### **Event Handling Architecture**
+
+The editor handles events at multiple levels:
+
+**Event Hierarchy:**
+1. **Browser Events**: Mouse, keyboard, resize events
+2. **Three.js Events**: Raycasting, object intersection
+3. **Transform Events**: Gizmo interactions, object manipulation
+4. **Editor Events**: Selection, focus, state changes
+
+**Event Handling Pattern:**
+```javascript
+// Viewport event handling example
+container.dom.addEventListener('mousedown', onMouseDown);
+container.dom.addEventListener('mousemove', onMouseMove);
+
+function onMouseDown(event) {
+    // 1. Prevent conflicts with other systems
+    if (transformControls.dragging) return;
+    
+    // 2. Perform raycasting
+    const intersects = raycaster.intersectObjects(scene.children);
+    
+    // 3. Update editor state
+    if (intersects.length > 0) {
+        editor.select(intersects[0].object);
+    }
+    
+    // 4. Let signals notify other components
+    // (selection signal dispatched automatically)
+}
+```
+
+**Transform Controls Integration:**
+- **TransformControls**: Provides gizmos for moving/rotating/scaling objects
+- **EditorControls**: Handles camera navigation when not transforming
+- **Event Priority**: Transform interactions take precedence over camera controls
+
+### **File Organization Strategy**
+
+The editor follows a clear organizational pattern:
+
+```
+editor/js/
+├── Editor.js                    # Core editor class
+├── History.js                   # Command history system
+├── Config.js                    # Configuration management
+├── Loader.js                    # File loading utilities
+├── Sidebar.js                   # Main sidebar container
+├── Sidebar.*.js                 # Individual sidebar panels
+├── Viewport.js                  # 3D viewport container
+├── Viewport.*.js                # Viewport components
+├── Menubar.js                   # Main menubar
+├── Menubar.*.js                 # Individual menu sections
+├── commands/                    # Command pattern implementations
+│   ├── Command.js              # Base command class
+│   └── *Command.js             # Specific command types
+├── libs/                       # UI library and utilities
+│   ├── ui.js                   # Core UI components
+│   └── ui.three.js            # Three.js specific UI components
+└── ai/                         # AI-specific features
+    ├── AIManager.js            # AI system management
+    └── *.js                    # AI components
+```
+
+**Naming Conventions:**
+- **Sidebar panels**: `Sidebar.FeatureName.js`
+- **Viewport components**: `Viewport.FeatureName.js`
+- **Commands**: `FeatureNameCommand.js`
+- **UI components**: Descriptive names in `libs/`
+
+### **Integration Points for New Features**
+
+When building new features, integrate at these key points:
+
+**1. Sidebar Integration** (`Sidebar.js`):
+```javascript
+import { SidebarNewFeature } from './Sidebar.NewFeature.js';
+const newFeature = new SidebarNewFeature( editor );
+container.addTab( 'newfeature', 'Feature Name', newFeature );
+```
+
+**2. Viewport Integration** (`Viewport.js`):
+```javascript
+// Add viewport components like controls or overlays
+container.add( new ViewportNewFeature( editor ) );
+```
+
+**3. Command Integration** (`commands/Commands.js`):
+```javascript
+// Export new commands for use throughout the editor
+export { NewFeatureCommand } from './NewFeatureCommand.js';
+```
+
+**4. Signal Integration**:
+- Listen to existing signals for editor state changes
+- Dispatch existing signals when your feature changes state
+- Only add new signals if no existing signal fits your use case
+
+### **Common Pitfalls & Solutions**
+
+**1. Signal Conflicts**:
+- **Problem**: Multiple listeners modifying the same state
+- **Solution**: Use debouncing and state flags to prevent conflicts
+
+**2. UI Library Limitations**:
+- **Problem**: UI library doesn't support modern CSS features
+- **Solution**: Switch to pure DOM with `document.createElement()` and `style.cssText`
+
+**3. Scene Resource Management**:
+- **Problem**: Memory leaks from orphaned geometries/materials
+- **Solution**: Use editor's resource management methods (`addGeometry`, `addMaterial`)
+
+**4. Transform Control Conflicts**:
+- **Problem**: Camera controls interfering with object transformation
+- **Solution**: Check `transformControls.dragging` before handling camera events
+
+**5. History System Integration**:
+- **Problem**: Actions not appearing in undo stack
+- **Solution**: Always execute changes through `editor.history.execute(command)`
+
+**6. Cross-Component Communication**:
+- **Problem**: Components directly accessing each other
+- **Solution**: Use the signal system for loose coupling
+
+### **Performance Considerations**
+
+**1. Signal Performance**:
+- Signals are lightweight but avoid excessive dispatching in render loops
+- Use debouncing for high-frequency events (mouse move, scroll)
+
+**2. Scene Traversal**:
+- Cache scene traversals when possible
+- Use `object.traverse()` efficiently for scene operations
+
+**3. UI Updates**:
+- Batch UI updates to avoid excessive DOM manipulation
+- Use `requestAnimationFrame` for smooth animations
+
+**4. Memory Management**:
+- Clean up event listeners when components are destroyed
+- Dispose of Three.js objects properly (geometries, materials, textures)
+
+This architectural foundation ensures that new features integrate seamlessly with the editor's existing systems and maintain the performance and reliability standards of the codebase.
