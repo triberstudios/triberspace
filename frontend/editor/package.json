@@ -4,9 +4,11 @@
   "description": "Triber Editor - Create immersive 3D experiences",
   "main": "index.html",
   "scripts": {
-    "dev": "python3 -m http.server 3001 || python -m SimpleHTTPServer 3001",
-    "build": "echo 'Editor is static - no build needed'",
-    "serve": "python3 -m http.server 3001 || python -m SimpleHTTPServer 3001"
+    "dev": "vite --port 3001",
+    "dev:python": "python3 -m http.server 3001 || python -m SimpleHTTPServer 3001",
+    "build": "vite build",
+    "preview": "vite preview --port 3001",
+    "serve": "vite preview --port 3001"
   },
   "keywords": [
     "3d",
@@ -17,6 +19,12 @@
   ],
   "author": "Triber Studios",
   "license": "MIT",
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "vite": "^7.1.5"
+  },
+  "dependencies": {
+    "three": "^0.180.0",
+    "three-gpu-pathtracer": "^0.0.23",
+    "three-mesh-bvh": "^0.9.1"
+  }
 }

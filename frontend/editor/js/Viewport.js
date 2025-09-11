@@ -222,7 +222,9 @@ function Viewport( editor ) {
 
 	signals.transformModeChanged.add( function ( mode ) {
 
-		transformControls.setMode( mode );
+		if ( transformControls ) {
+			transformControls.setMode( mode );
+		}
 
 		render();
 
@@ -230,13 +232,17 @@ function Viewport( editor ) {
 
 	signals.snapChanged.add( function ( dist ) {
 
-		transformControls.setTranslationSnap( dist );
+		if ( transformControls ) {
+			transformControls.setTranslationSnap( dist );
+		}
 
 	} );
 
 	signals.spaceChanged.add( function ( space ) {
 
-		transformControls.setSpace( space );
+		if ( transformControls ) {
+			transformControls.setSpace( space );
+		}
 
 		render();
 
@@ -388,7 +394,9 @@ function Viewport( editor ) {
 	signals.objectSelected.add( function ( object ) {
 
 		selectionBox.visible = false;
-		transformControls.detach();
+		if ( transformControls ) {
+			transformControls.detach();
+		}
 
 		if ( object !== null && object !== scene && object !== camera ) {
 
@@ -400,7 +408,9 @@ function Viewport( editor ) {
 
 			}
 
-			transformControls.attach( object );
+			if ( transformControls ) {
+				transformControls.attach( object );
+			}
 
 		}
 
@@ -458,7 +468,7 @@ function Viewport( editor ) {
 
 		controls.enabled = true; // see #14180
 
-		if ( object === transformControls.object ) {
+		if ( transformControls && object === transformControls.object ) {
 
 			transformControls.detach();
 

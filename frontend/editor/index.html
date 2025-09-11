@@ -7,6 +7,9 @@
 		<link rel="apple-touch-icon" href="images/icon.png">
 		<link rel="manifest" href="manifest.json">
 		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.0.3/src/regular/style.css">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.0.3/src/fill/style.css">
 	</head>
@@ -91,7 +94,7 @@
 			const menubar = new Menubar( editor );
 			editorContainer.appendChild( menubar.dom );
 
-			// Create main content wrapper for grid layout
+			// Create main content wrapper for flex layout
 			const mainContent = document.createElement( 'div' );
 			mainContent.className = 'main-content';
 			editorContainer.appendChild( mainContent );
@@ -99,6 +102,7 @@
 			// Create viewport with container wrapper
 			const viewportWrapper = document.createElement( 'div' );
 			viewportWrapper.className = 'viewport-wrapper panel-container';
+			viewportWrapper.style.flex = '1';
 			const viewport = new Viewport( editor );
 			viewportWrapper.appendChild( viewport.dom );
 			
@@ -108,12 +112,51 @@
 			
 			mainContent.appendChild( viewportWrapper );
 
+			// Create resizer handle
+			const resizerHandle = document.createElement( 'div' );
+			resizerHandle.className = 'panel-resizer';
+			mainContent.appendChild( resizerHandle );
+
 			// Create sidebar with container wrapper
 			const sidebarWrapper = document.createElement( 'div' );
 			sidebarWrapper.className = 'sidebar-wrapper panel-container';
+			sidebarWrapper.style.width = '350px';
 			const sidebar = new Sidebar( editor );
 			sidebarWrapper.appendChild( sidebar.dom );
 			mainContent.appendChild( sidebarWrapper );
+			
+			// Add resize functionality
+			let isResizing = false;
+			let startX = 0;
+			let startWidth = 0;
+			
+			resizerHandle.addEventListener( 'pointerdown', function( event ) {
+				if ( event.isPrimary === false ) return;
+				isResizing = true;
+				startX = event.clientX;
+				startWidth = sidebarWrapper.offsetWidth;
+				document.body.style.cursor = 'col-resize';
+				event.preventDefault();
+			});
+			
+			document.addEventListener( 'pointermove', function( event ) {
+				if ( !isResizing ) return;
+				if ( event.isPrimary === false ) return;
+				
+				const deltaX = startX - event.clientX;
+				const newWidth = Math.min( Math.max( startWidth + deltaX, 250 ), 600 );
+				sidebarWrapper.style.width = newWidth + 'px';
+				
+				editor.signals.windowResize.dispatch();
+			});
+			
+			document.addEventListener( 'pointerup', function( event ) {
+				if ( !isResizing ) return;
+				if ( event.isPrimary === false ) return;
+				
+				isResizing = false;
+				document.body.style.cursor = '';
+			});
 
 			// Hidden panels
 			const script = new Script( editor );

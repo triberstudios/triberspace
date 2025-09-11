@@ -2,7 +2,7 @@ import { UITabbedPanel, UISpan } from './libs/ui.js';
 
 import { SidebarScene } from './Sidebar.Scene.js';
 import { SidebarProperties } from './Sidebar.Properties.js';
-import { SidebarProject } from './Sidebar.Project.js';
+// import { SidebarProject } from './Sidebar.Project.js';
 import { SidebarSettings } from './Sidebar.Settings.js';
 import { SidebarAI } from './Sidebar.AI.js';
 
@@ -19,15 +19,15 @@ function Sidebar( editor ) {
 		new SidebarScene( editor ),
 		sidebarProperties
 	);
-	const project = new SidebarProject( editor );
+	// const project = new SidebarProject( editor );
 	const settings = new SidebarSettings( editor );
 	const ai = new SidebarAI( editor );
 
-	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
 	container.addTab( 'ai', 'Chat', ai );
-	container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );
+	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
+	// container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );
 	container.addTab( 'settings', strings.getKey( 'sidebar/settings' ), settings );
-	container.select( 'scene' );
+	container.select( 'ai' );
 
 	const sidebarPropertiesResizeObserver = new ResizeObserver( function () {
 

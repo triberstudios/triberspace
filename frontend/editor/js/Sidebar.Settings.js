@@ -2,6 +2,8 @@ import { UIPanel, UIRow, UISelect, UISpan, UIText } from './libs/ui.js';
 
 import { SidebarSettingsShortcuts } from './Sidebar.Settings.Shortcuts.js';
 import { SidebarSettingsHistory } from './Sidebar.Settings.History.js';
+import { SidebarProjectRenderer } from './Sidebar.Project.Renderer.js';
+import { SidebarProjectVideo } from './Sidebar.Project.Video.js';
 
 function SidebarSettings( editor ) {
 
@@ -50,6 +52,13 @@ function SidebarSettings( editor ) {
 
 	container.add( new SidebarSettingsShortcuts( editor ) );
 	container.add( new SidebarSettingsHistory( editor ) );
+
+	// Project sections moved from Project tab
+	container.add( new SidebarProjectRenderer( editor ) );
+	
+	if ( 'SharedArrayBuffer' in window ) {
+		container.add( new SidebarProjectVideo( editor ) );
+	}
 
 	return container;
 
