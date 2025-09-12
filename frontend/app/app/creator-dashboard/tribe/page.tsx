@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Users, Crown, Clock, ChatCircle, TrendUp, UserPlus, Fire, Heart, Calendar, DotsThree, CurrencyDollar, Gear, ChevronDown, ChevronUp } from "@phosphor-icons/react"
+import { Users, Crown, Clock, ChatCircle, TrendUp, UserPlus, Fire, Heart, Calendar, DotsThree, CurrencyDollar, Gear } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 import Link from "next/link"
 import { Button } from "@/components/common/button"
