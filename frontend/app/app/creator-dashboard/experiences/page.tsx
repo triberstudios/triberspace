@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/common/button"
 import { useState } from "react"
-import { Plus, Globe, Eye, Users, Clock, DotsThree, Play, Edit, Archive, ArrowRight } from "@phosphor-icons/react"
+import { Plus, Globe, Eye, Users, Clock, DotsThree, Play, PencilSimple, Archive, ArrowRight } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function ExperiencesPage() {

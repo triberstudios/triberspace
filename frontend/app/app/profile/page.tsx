@@ -67,7 +67,7 @@ export default function Profile() {
           <div className="h-20 w-20 rounded-full bg-gray-300" />
 
           <div className="flex flex-1 items-center flex-col gap-2">
-            <h1 className="text-2xl font-semibold text-white">
+            <h1 className="text-2xl font-semibold text-sidebar-foreground">
               {profileData?.firstName} {profileData?.lastName}
             </h1>
             <p className="text-base text-gray-200">
@@ -102,7 +102,7 @@ export default function Profile() {
 
         {/* About Section */}
         <div className="flex flex-col gap-2">
-          <h2 className="text-base font-semibold text-white">About</h2>
+          <h2 className="text-base font-semibold text-sidebar-foreground">About</h2>
           <div className="rounded-lg border border-white/10 p-4">
             <p className="text-sm text-gray-200">
               Lorem ipsum dolor sit amet consectetur. Ipsum ridiculus hendrerit
@@ -124,7 +124,7 @@ export default function Profile() {
                     : "flex-1 min-w-0 lg:w-auto"
                 }`}
               >
-                <h3 className="text-base font-semibold text-white capitalize">
+                <h3 className="text-base font-semibold text-sidebar-foreground capitalize">
                   {platform}
                 </h3>
                 <div className="rounded-lg border border-white/10 px-4 py-3">
@@ -137,7 +137,7 @@ export default function Profile() {
 
         {/* Inventory Section */}
         <div className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold text-white">Inventory</h2>
+          <h2 className="text-base font-semibold text-sidebar-foreground">Inventory</h2>
 
           {/* Inventory Grid - responsive columns */}
           <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">

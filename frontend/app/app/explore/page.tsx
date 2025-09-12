@@ -84,7 +84,7 @@ export default function ExplorePage() {
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent text-white outline-none placeholder:text-white/50"
+            className="flex-1 bg-transparent text-sidebar-foreground outline-none placeholder:text-white/50"
           />
           <MagnifyingGlass className="h-5 w-5 text-white/50" />
         </div>
@@ -97,7 +97,7 @@ export default function ExplorePage() {
             <div key={category.title} className="flex flex-col gap-4">
               {/* Category Header */}
               <div className="flex items-center justify-between px-2">
-                <h2 className="text-2xl font-semibold text-white tracking-tight">
+                <h2 className="text-2xl font-semibold text-sidebar-foreground tracking-tight">
                   {category.title}
                 </h2>
               </div>

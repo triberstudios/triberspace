@@ -3,17 +3,24 @@
 ```text
 ├── node_modules                # Workspace dependencies
 │
-├── frontend                   # Next.js app
-│   └── app
-│       ├── README.md
-│       ├── app                # App Router pages and layouts
-│       ├── eslint.config.mjs
-│       ├── next-env.d.ts
-│       ├── next.config.ts
-│       ├── package.json
-│       ├── postcss.config.mjs
-│       ├── public             # Static assets
-│       └── tsconfig.json
+├── frontend                   
+│   ├── app                    # Main application (triber.space)
+│   │   ├── README.md
+│   │   ├── app                # App Router pages and layouts
+│   │   ├── components         # UI components
+│   │   ├── eslint.config.mjs
+│   │   ├── next-env.d.ts
+│   │   ├── next.config.ts
+│   │   ├── package.json
+│   │   ├── postcss.config.mjs
+│   │   ├── public             # Static assets
+│   │   └── tsconfig.json
+│   │
+│   └── editor                 # Triber Editor (editor.triber.space)
+│       ├── index.html         # Three.js editor entry
+│       ├── js/                # Editor JavaScript modules
+│       ├── css/               # Editor styles
+│       └── package.json
 │
 ├── backend
 │   ├── api                    # Fastify API server
@@ -26,8 +33,13 @@
 │   └── utils                  # Shared helpers and types
 │
 ├── docs                       # Project documentation
+│   ├── architecture.md        # System architecture diagram
+│   ├── documentation.md       # Main project documentation
+│   ├── backend-docs.md        # API documentation
+│   └── schema-docs.md         # Database schema
 │
 ├── package-lock.json
 ├── package.json
 ├── turbo.json                # Turbo pipeline config
+├── CLAUDE.md                  # AI assistant instructions
 └── README.md

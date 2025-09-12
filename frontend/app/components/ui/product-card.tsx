@@ -63,11 +63,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
       <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-1 p-4 backdrop-blur-lg bg-black/20 border-t border-white/10">
         {/* Product title and price */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-white font-medium text-lg leading-tight flex-1">
+          <h3 className="text-sidebar-foreground font-medium text-lg leading-tight flex-1">
             {product.title}
           </h3>
           {(product.price || product.points) && (
-            <span className="text-white font-medium text-base whitespace-nowrap">
+            <span className="text-sidebar-foreground font-medium text-base whitespace-nowrap">
               {product.points ? `${product.points} points` : `$${product.price}`}
             </span>
           )}

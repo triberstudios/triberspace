@@ -598,7 +598,7 @@ export default function Avatar() {
                         onClick={() => setActiveTab("avatar")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center ${
                             activeTab === "avatar" 
-                                ? "border-b-2 border-white text-white" 
+                                ? "border-b-2 border-sidebar-foreground text-sidebar-foreground" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >
@@ -608,7 +608,7 @@ export default function Avatar() {
                         onClick={() => setActiveTab("outfit")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center ${
                             activeTab === "outfit" 
-                                ? "border-b-2 border-white text-white" 
+                                ? "border-b-2 border-sidebar-foreground text-sidebar-foreground" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >
@@ -618,7 +618,7 @@ export default function Avatar() {
                         onClick={() => setActiveTab("emotes")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center gap-2 ${
                             activeTab === "emotes" 
-                                ? "border-b-2 border-white text-white" 
+                                ? "border-b-2 border-sidebar-foreground text-sidebar-foreground" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >

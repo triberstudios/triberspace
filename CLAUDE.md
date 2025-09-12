@@ -6,17 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Triberspace is an immersive art and entertainment platform that makes it easy to create immersive environments and shows around digital content. When fans attend these experiences, they can unlock exclusive content, collectibles, and merch by exploring, connecting, and earning points within them.
 
+The platform consists of two main applications:
+- **Triber Editor** (editor.triber.space) - Creation platform for building 3D experiences using a forked Three.js editor
+- **Triber App** (triber.space) - Runtime platform where users experience published content
+
 ## Common Development Commands
 
 ### Monorepo Commands (run from root)
 - `npm run dev` - Start all workspaces in development mode
 - `npm run build` - Build all workspaces
 
-### Frontend Commands (from frontend/app/)
+### Main App Commands (from frontend/app/)
 - `npm run dev` - Start Next.js development server with Turbopack
 - `npm run build` - Build the Next.js application
 - `npm run lint` - Run Next.js linting
 - `npm start` - Start the production server
+
+### Editor Commands (from frontend/editor/)
+- `npm run dev` - Start editor on port 3001 (Python HTTP server)
+- `npm run serve` - Alternative command to start editor
 
 ### Backend Commands (from backend/api/)
 - `npm run dev` - Start Fastify API server with Better Auth
@@ -63,17 +71,28 @@ Triberspace is an immersive art and entertainment platform that makes it easy to
 
 This is a Turborepo monorepo with the following structure:
 
-### Frontend (`frontend/app/`)
-- **Next.js 15.4.4** with App Router
+### Frontend Applications
+
+#### Main App (`frontend/app/`)
+- **Next.js 15.4.4** with App Router - Runtime platform at triber.space
 - **React 19.1.0** with TypeScript
 - **Tailwind CSS v4** for styling
 - **Custom UI Components**: Built from scratch with shadcn/ui utilities
-- **Three.js** and **@react-three/fiber** for 3D graphics
+- **Three.js** and **@react-three/fiber** for 3D graphics runtime
 - **Better Auth UI** for authentication forms with shadcn/ui styling
 - Components structure:
   - `components/ui/` - Reusable UI components (buttons, sidebar, etc.)
   - `components/` - App-specific composed components
 - Path aliases configured: `@/components`, `@/lib`, `@/ui`
+
+#### Triber Editor (`frontend/editor/`)
+- **Three.js Editor** - Forked and customized for Triber platform at editor.triber.space
+- **WebGL** for 3D scene composition and editing
+- **Planned interaction paradigms**:
+  1. Natural language driven (AI-powered)
+  2. Timeline + node-based editor
+  3. Template driven
+  4. Direct manipulation (existing)
 
 ### Backend Services
 - **`backend/api/`**: Fastify API server with Better Auth integration and Cloudflare R2 upload system

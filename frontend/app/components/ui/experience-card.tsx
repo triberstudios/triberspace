@@ -27,7 +27,7 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
       {/* Hover background overlay */}
       <div className="absolute -inset-2 rounded-xl bg-white/0 transition-all duration-400 ease-out group-hover:bg-sidebar/50 -z-10" />
       {/* Card Image - 16:9 aspect ratio */}
-      <div className="relative w-full aspect-video rounded-lg cursor-pointer overflow-hidden bg-sidebar">
+      <div className="relative w-full aspect-video rounded-lg cursor-pointer overflow-hidden bg-sidebar border border-white/1">
         {/* Background image when available */}
         {experience.image && (
           <div 
@@ -49,7 +49,7 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
 
       {/* Content Box */}
       <div className="flex flex-col gap-0">
-        <div className="text-white font-medium text-xl cursor-pointer mb-0 leading-tight">
+        <div className="text-sidebar-foreground font-medium text-xl cursor-pointer mb-0 leading-tight">
           {experience.title}
         </div>
         <div className="text-gray-500 font-medium text-base cursor-pointer">
@@ -59,8 +59,8 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
     </div>
   )
 
-  // If there's a URL, wrap in a link, otherwise just return the content
-  if (experience.url) {
+  // If there's a valid URL (not empty, not "#"), wrap in a link, otherwise just return the content
+  if (experience.url && experience.url !== "#") {
     return (
       <a href={experience.url} target="_blank" rel="noopener noreferrer" className="block w-full">
         {CardContent}
