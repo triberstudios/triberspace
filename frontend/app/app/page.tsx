@@ -117,7 +117,7 @@ export default function Home() {
 
       {/* For You Section */}
       <div className="px-8">
-        <h3 className="text-3xl my-6 font-semibold">For You</h3>
+        <h2 className="text-2xl my-6 font-semibold text-sidebar-foreground tracking-tight">For You</h2>
         <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
           {categories
             .flatMap((category) => category.experiences)

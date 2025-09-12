@@ -60,7 +60,7 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
     <div className={cn("w-full", className)}>
       {/* Header with title and navigation */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-3xl font-semibold text-sidebar-foreground">Calendar</h3>
+        <h2 className="text-2xl font-semibold text-sidebar-foreground tracking-tight">Calendar</h2>
         
         <div className="flex items-center gap-4">
           {/* Previous week button */}
