@@ -19,5 +19,6 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "globalDependencies": ["package-lock.json"]
 }
