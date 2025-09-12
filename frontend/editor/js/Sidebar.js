@@ -23,11 +23,11 @@ function Sidebar( editor ) {
 	const settings = new SidebarSettings( editor );
 	const ai = new SidebarAI( editor );
 
-	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
 	container.addTab( 'ai', 'Chat', ai );
+	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
 	container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );
 	container.addTab( 'settings', strings.getKey( 'sidebar/settings' ), settings );
-	container.select( 'scene' );
+	container.select( 'ai' );
 
 	const sidebarPropertiesResizeObserver = new ResizeObserver( function () {
 

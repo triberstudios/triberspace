@@ -29,6 +29,7 @@ function SidebarSettingsShortcuts( editor ) {
 
 		const configName = 'settings/shortcuts/' + name;
 		const shortcutRow = new UIRow();
+	shortcutRow.setClass('shortcut-row');
 
 		const shortcutInput = new UIInput().setWidth( '15px' ).setFontSize( '12px' );
 		shortcutInput.setTextAlign( 'center' );

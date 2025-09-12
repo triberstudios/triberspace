@@ -7,7 +7,7 @@
 }
 
 body {
-	font-family: Helvetica, Arial, sans-serif;
+	font-family: 'Work Sans', sans-serif;
 	font-size: 14px;
 	margin: 0;
 	overflow: hidden;
@@ -25,8 +25,7 @@ body {
 
 .main-content {
 	flex: 1;
-	display: grid;
-	grid-template-columns: 1fr 350px;
+	display: flex;
 	gap: 8px;
 	padding: 8px;
 	padding-top: 0;
@@ -50,9 +49,10 @@ body {
 }
 
 .sidebar-wrapper {
-	grid-column: 2;
+	flex-shrink: 0;
 	position: relative;
-	min-width: 350px;
+	min-width: 250px;
+	container-type: inline-size;
 	max-width: 450px;
 }
 
@@ -141,8 +141,7 @@ textarea, input { outline: none; } /* osx */
 
 	.TabbedPanel .Tabs .Tab {
 		padding: 10px 9px;
-		text-transform: uppercase;
-	}
+		}
 
 	.TabbedPanel .Panels {
 		position: absolute;
@@ -314,7 +313,6 @@ button {
 	margin: 0px; /* GNOME Web */
 	padding: 5px 8px;
 	font-size: 12px;
-	text-transform: uppercase;
 	cursor: pointer;
 	outline: none;
 }
@@ -343,7 +341,6 @@ select {
 	color: #666;
 	background-color: #ddd;
 	border: 0px;
-	text-transform: uppercase;
 	cursor: pointer;
 	outline: none;
 }
@@ -940,4 +937,77 @@ select {
 [draggable="true"] {
 	transform: translate(0, 0);
 	z-index: 0;
+}
+
+/* Panel resizer handle - completely invisible */
+.panel-resizer {
+	width: 0px;
+	background: transparent;
+	cursor: col-resize;
+	flex-shrink: 0;
+	position: relative;
+	margin-left: -4px;
+	margin-right: -4px;
+	padding-left: 4px;
+	padding-right: 4px;
+}
+
+.panel-resizer:hover {
+	background: transparent;
+}
+
+.panel-resizer:active {
+	background: transparent;
+}
+
+/* Responsive sidebar content */
+@container (max-width: 300px) {
+	#sidebar .TabbedPanel-tabs {
+		font-size: 10px;
+	}
+	
+	#sidebar .TabbedPanel-tabText {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
+
+/* Fix shortcuts row layout issue caused by flexbox conversion */
+.shortcut-row {
+	display: flex !important;
+	flex-wrap: nowrap !important;
+	align-items: center;
+	justify-content: space-between;
+}
+
+/* Ensure sidebar content resizes properly */
+#sidebar {
+	width: 100% !important;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+#sidebar .TabbedPanel-tabs {
+	flex-shrink: 0;
+}
+
+#sidebar .TabbedPanel-tab-content {
+	flex: 1;
+	overflow: auto;
+	width: 100%;
+	min-width: 0;
+}
+
+/* Force sidebar panels to use full available width */
+#sidebar .Panel {
+	width: 100% !important;
+	min-width: 0;
+}
+
+/* Ensure AI chat and other panels fill the space */
+#ai, #scene, #project, #settings {
+	width: 100% !important;
+	height: 100% !important;
+	min-width: 0;
 }
