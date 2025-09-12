@@ -1,22 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState } from "react"
+// TODO: Re-enable when adding real functionality
+// import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/common/button"
 import { Plus, ShoppingCartSimple, Package, CurrencyDollar, TrendUp, Eye, Sparkle, Star, Users, Crown, Gear } from "@phosphor-icons/react"
 import { ExitDashboardButton } from "@/components/navigation/exit-dashboard-button"
 
 export default function StorePage() {
-  const searchParams = useSearchParams()
+  // TODO: Re-enable search params when adding real functionality
+  // const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<'products' | 'point-packs' | 'membership-tiers'>('products')
   
-  useEffect(() => {
-    const tab = searchParams.get('tab')
-    if (tab === 'membership-tiers') {
-      setActiveTab('membership-tiers')
-    }
-  }, [searchParams])
+  // TODO: Re-enable when adding real functionality
+  // useEffect(() => {
+  //   const tab = searchParams.get('tab')
+  //   if (tab === 'membership-tiers') {
+  //     setActiveTab('membership-tiers')
+  //   }
+  // }, [searchParams])
   
   return (
     <div className="flex h-full w-full bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">

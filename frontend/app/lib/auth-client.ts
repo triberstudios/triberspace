@@ -46,10 +46,11 @@ export async function signInWithEmailOrUsername(identifier: string, password: st
   }
 }
 
-console.log('Auth Client Config:', {
-    baseURL: process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3001",
-    basePath: "/api/auth",
-    fullURL: (process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3001") + "/api/auth"
-  });
+// TODO: Remove console.log for production
+// console.log('Auth Client Config:', {
+//     baseURL: process.env.NEXT_PUBLIC_API_URL ||
+//   "http://localhost:3001",
+//     basePath: "/api/auth",
+//     fullURL: (process.env.NEXT_PUBLIC_API_URL ||
+//   "http://localhost:3001") + "/api/auth"
+//   });
