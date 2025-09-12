@@ -42,7 +42,7 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
   // Format month and year for display
   const formatMonthYear = (date: Date) => {
     return date.toLocaleDateString('en-US', { 
-      month: 'long', 
+      month: 'short', 
       year: 'numeric' 
     })
   }
@@ -75,7 +75,7 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
           </button>
 
           {/* Month/Year display */}
-          <span className="text-sidebar-foreground font-medium min-w-[140px] text-center">
+          <span className="text-sidebar-foreground font-medium min-w-[80px] text-center">
             {formatMonthYear(currentDate)}
           </span>
 

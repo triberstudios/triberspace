@@ -99,12 +99,11 @@ export default function Home() {
       <div className="px-8 pt-8">
         <Banner 
           variant="fullBackground"
-          title="Welcome to Triberspace (Coming soon)"
-          subtitle="Triberspace is an immersive art and entertainment platform, where you can discover experiences from your favorite brands and artists. Earn points and unlock exclusive products by exploring and connecting deeply."
-          backgroundImage="/bgGif.gif"
+          title="Welcome to Triberspace"
+          subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform, where you can discover experiences from your favorite brands and artists. Earn points and unlock exclusive products by exploring and connecting deeply."
+          backgroundVideo="/TestBGVideoHB.mp4"
           showOverlay={true}
-          overlayOpacity={88}
-          rightImage="/TransparentImg.png"
+          overlayOpacity={70}
           primaryAction={{
             label: "Get Started",
             onClick: () => console.log("Get started clicked")
