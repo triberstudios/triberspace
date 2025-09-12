@@ -19,6 +19,8 @@ interface BannerProps {
   backgroundImage?: string;
   rightImage?: string;
   className?: string;
+  showOverlay?: boolean;
+  overlayOpacity?: number;
 }
 
 function Banner({
@@ -31,13 +33,15 @@ function Banner({
   backgroundImage,
   rightImage,
   className,
+  showOverlay = false,
+  overlayOpacity = 80,
 }: BannerProps) {
   const content = (
     <div className="flex flex-col gap-6">
       {/* Text Content */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold">{title}</h1>
-        {subtitle && <span>{subtitle}</span>}
+        <h1 className="text-3xl font-semibold text-sidebar-foreground">{title}</h1>
+        {subtitle && <span className="text-sidebar-foreground">{subtitle}</span>}
         {description && <p className="text-gray-300">{description}</p>}
       </div>
 
@@ -102,9 +106,18 @@ function Banner({
   // Default: fullBackground variant
   return (
     <div>
-      <div className={cn("bg-cover w-full h-[30vh] lg:h-[50vh] border rounded-lg flex items-center", className)}
-           style={{ backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined }}>
-        <div className="px-8 lg:px-16">
+      <div className={cn("relative bg-cover w-full h-[30vh] lg:h-[50vh] rounded-lg flex items-center overflow-hidden border-5 border-sidebar", className)}
+           style={{ 
+             backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined
+           }}>
+        {/* Dark overlay for dimming background */}
+        {showOverlay && backgroundImage && (
+          <div 
+            className="absolute inset-0" 
+            style={{ backgroundColor: `rgba(0, 0, 0, ${overlayOpacity / 100})` }}
+          />
+        )}
+        <div className="relative z-10 px-8 lg:px-16">
           {content}
         </div>
       </div>

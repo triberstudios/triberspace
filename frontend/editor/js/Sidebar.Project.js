@@ -10,19 +10,8 @@ function SidebarProject( editor ) {
 
 	const container = new UISpan();
 
-	container.add( new SidebarProjectRenderer( editor ) );
-
-	/* container.add( new SidebarProjectMaterials( editor ) ); */
-
-	container.add( new SidebarProjectApp( editor ) );
-
-	container.add( new SidebarProjectImage( editor ) );
-
-	if ( 'SharedArrayBuffer' in window ) {
-
-		container.add( new SidebarProjectVideo( editor ) );
-
-	}
+	// Project content moved to Settings tab
+	// App and Image sections hidden as requested
 
 	return container;
 

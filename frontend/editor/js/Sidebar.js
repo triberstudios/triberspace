@@ -19,13 +19,11 @@ function Sidebar( editor ) {
 		new SidebarScene( editor ),
 		sidebarProperties
 	);
-	const project = new SidebarProject( editor );
 	const settings = new SidebarSettings( editor );
 	const ai = new SidebarAI( editor );
 
 	container.addTab( 'ai', 'Chat', ai );
 	container.addTab( 'scene', strings.getKey( 'sidebar/scene' ), scene );
-	container.addTab( 'project', strings.getKey( 'sidebar/project' ), project );
 	container.addTab( 'settings', strings.getKey( 'sidebar/settings' ), settings );
 	container.select( 'ai' );
 

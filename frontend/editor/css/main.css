@@ -26,11 +26,12 @@ body {
 .main-content {
 	flex: 1;
 	display: flex;
-	gap: 8px;
+	flex-direction: row;
 	padding: 8px;
 	padding-top: 0;
 	background-color: #1a1a1a;
 	overflow: hidden;
+	gap: 0;
 }
 
 .panel-container {
@@ -43,17 +44,24 @@ body {
 }
 
 .viewport-wrapper {
-	grid-column: 1;
+	display: flex;
+	flex-direction: column;
 	position: relative;
 	min-width: 0;
+	overflow: hidden;
+	margin-right: 8px;
 }
 
 .sidebar-wrapper {
-	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
 	position: relative;
-	min-width: 250px;
+	min-width: 320px;
+	max-width: 50vw;
+	overflow: hidden;
+	flex-shrink: 0;
 	container-type: inline-size;
-	max-width: 450px;
+	container-name: sidebar-wrapper;
 }
 
 hr {
@@ -224,19 +232,19 @@ textarea, input { outline: none; } /* osx */
 
 #outliner .option.drag {
 
-	border: 1px dashed #999;
+	border: none;
 
 }
 
 #outliner .option.dragTop {
 
-	border-top: 1px dashed #999;
+	border-top: none;
 
 }
 
 #outliner .option.dragBottom {
 
-	border-bottom: 1px dashed #999;
+	border-bottom: none;
 
 }
 
@@ -939,75 +947,183 @@ select {
 	z-index: 0;
 }
 
-/* Panel resizer handle - completely invisible */
+/* Panel resizer handle - completely invisible but functional */
 .panel-resizer {
-	width: 0px;
-	background: transparent;
+	width: 8px;
+	background-color: transparent;
 	cursor: col-resize;
-	flex-shrink: 0;
 	position: relative;
-	margin-left: -4px;
-	margin-right: -4px;
-	padding-left: 4px;
-	padding-right: 4px;
+	user-select: none;
+	-webkit-user-select: none;
+	flex-shrink: 0;
+	margin: 0 -4px;
+	z-index: 10;
 }
 
 .panel-resizer:hover {
-	background: transparent;
+	background-color: transparent;
 }
 
 .panel-resizer:active {
-	background: transparent;
+	background-color: transparent;
 }
 
-/* Responsive sidebar content */
-@container (max-width: 300px) {
-	#sidebar .TabbedPanel-tabs {
-		font-size: 10px;
+/* Shortcut rows - inline layout like current 3js editor */
+div.shortcut-row {
+	display: flex !important;
+	flex-direction: row !important;
+	justify-content: flex-start !important;
+	align-items: center !important;
+	flex-wrap: nowrap !important;
+	gap: 16px !important;
+	padding: 2px 0 !important;
+}
+
+div.shortcut-row .Label {
+	flex: 0 0 84px !important;
+	text-align: left !important;
+	font-size: 12px !important;
+	min-width: 84px !important;
+	width: 84px !important;
+	display: inline-block !important;
+}
+
+div.shortcut-row input {
+	flex: 0 0 auto !important;
+	display: inline-block !important;
+}
+
+/* Fallback with higher specificity */
+#sidebar .Panel .Row.shortcut-row,
+#sidebar .Row.shortcut-row {
+	display: flex !important;
+	flex-direction: row !important;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: nowrap !important;
+	gap: 8px;
+	padding: 2px 0;
+}
+
+#sidebar .Panel .Row.shortcut-row .Label,
+#sidebar .Row.shortcut-row .Label {
+	flex: 1;
+	text-align: left;
+	font-size: 12px;
+	min-width: 0;
+	width: auto !important;
+}
+
+#sidebar .Panel .Row.shortcut-row input,
+#sidebar .Row.shortcut-row input {
+	flex: 0 0 auto;
+	margin-left: auto;
+}
+
+/* Responsive adjustments for narrow sidebar - keep horizontal layout */
+@container sidebar-wrapper (max-width: 350px) {
+	#sidebar .Row:not(.shortcut-row) {
+		flex-wrap: nowrap;
+		gap: 8px;
 	}
 	
-	#sidebar .TabbedPanel-tabText {
-		overflow: hidden;
-		text-overflow: ellipsis;
+	#sidebar .Row:not(.shortcut-row) .Label {
+		flex: 0 0 auto;
+		min-width: 60px;
+		max-width: 100px;
+		font-size: 11px;
+	}
+	
+	#sidebar .Row:not(.shortcut-row) input:not([style*="width: 15px"]),
+	#sidebar .Row:not(.shortcut-row) select {
+		flex: 1;
+		min-width: 0;
+		max-width: none;
+	}
+	
+	#sidebar .Row:not(.shortcut-row) .Checkbox {
+		flex: 0 0 auto;
+		margin-left: auto;
 	}
 }
 
-/* Fix shortcuts row layout issue caused by flexbox conversion */
-.shortcut-row {
+/* Fix TabbedPanel layout for proper sizing */
+.TabbedPanel {
 	display: flex !important;
-	flex-wrap: nowrap !important;
-	align-items: center;
-	justify-content: space-between;
-}
-
-/* Ensure sidebar content resizes properly */
-#sidebar {
-	width: 100% !important;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-}
-
-#sidebar .TabbedPanel-tabs {
-	flex-shrink: 0;
-}
-
-#sidebar .TabbedPanel-tab-content {
-	flex: 1;
-	overflow: auto;
-	width: 100%;
-	min-width: 0;
-}
-
-/* Force sidebar panels to use full available width */
-#sidebar .Panel {
-	width: 100% !important;
-	min-width: 0;
-}
-
-/* Ensure AI chat and other panels fill the space */
-#ai, #scene, #project, #settings {
-	width: 100% !important;
+	flex-direction: column !important;
 	height: 100% !important;
-	min-width: 0;
+	min-width: 0 !important;
+}
+
+/* Remove any focus outlines or borders that might appear blue */
+.TabbedPanel .Tab:focus {
+	outline: none !important;
+	border-bottom: none !important;
+	text-decoration: none !important;
+	box-shadow: none !important;
+}
+
+.TabbedPanel .Tab:active {
+	outline: none !important;
+	border-bottom: none !important;
+	text-decoration: none !important;
+	box-shadow: none !important;
+}
+
+.TabbedPanel .Tab {
+	outline: none !important;
+	text-decoration: none !important;
+}
+
+.TabbedPanel .Tabs {
+	flex-shrink: 0 !important;
+	height: 40px !important;
+	display: flex !important;
+	align-items: stretch !important;
+	overflow-x: hidden !important;
+}
+
+.TabbedPanel .Tab {
+	flex: 1 !important;
+	min-width: 0 !important;
+	text-align: center !important;
+	white-space: nowrap !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	cursor: pointer !important;
+	transition: background-color 0.2s ease !important;
+}
+
+.TabbedPanel .Tab:hover:not(.selected) {
+	background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.TabbedPanel .Panel {
+	flex: 1 !important;
+	overflow: auto !important;
+	overflow-x: hidden !important;
+	min-height: 0 !important;
+}
+
+/* Ensure panels container is properly laid out in flexbox */
+.TabbedPanel .Panels {
+	flex: 1 !important;
+	position: relative !important;
+	top: auto !important;
+	display: flex !important;
+	flex-direction: column !important;
+	min-height: 0 !important;
+}
+
+#sidebar {
+	position: relative !important;
+	display: flex !important;
+	flex-direction: column !important;
+	height: 100% !important;
+	overflow: hidden !important;
+}
+
+.sidebar-wrapper {
+	height: 100% !important;
+	max-width: 50vw !important;
 }
