@@ -103,6 +103,7 @@ export default function Home() {
           subtitle="Triberspace is an immersive art and entertainment platform, where you can discover experiences from your favorite brands and artists. Earn points and unlock exclusive products by exploring and connecting deeply."
           backgroundImage="/bgGif.gif"
           showOverlay={true}
+          overlayOpacity={88}
           rightImage="/TransparentImg.png"
           primaryAction={{
             label: "Get Started",
@@ -130,7 +131,7 @@ export default function Home() {
 
       {/* Calendar Section */}
       <div className="px-8 pb-8">
-        <div className="mt-16">
+        <div className="mt-20">
           <WeekCalendar />
         </div>
       </div>
