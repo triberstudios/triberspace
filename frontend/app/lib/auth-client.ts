@@ -15,7 +15,8 @@ export const authClient = createAuthClient({
   },
   
   plugins: [
-    inferAdditionalFields<typeof auth>(),
+    // TODO: Uncomment when @triberspace/auth is ready
+    // inferAdditionalFields<typeof auth>(),
     usernameClient(),
   ],
 });
