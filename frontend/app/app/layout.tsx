@@ -38,19 +38,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark overflow-hidden">
+    <html lang="en" className="dark">
       <body
-        className={`${workSans.variable} ${geistMono.variable} font-sans antialiased dynamic-viewport-height overflow-hidden`}
+        className={`${workSans.variable} ${geistMono.variable} font-sans antialiased dynamic-viewport-height safari-fixed-body`}
       >
-        <Providers>
-          <div className="flex h-full flex-col">
-            <GlobalNav />
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </div>
-        </Providers>
-        <Toaster theme="dark" />
+        <div className="app-container">
+          <Providers>
+            <div className="flex h-full flex-col">
+              <GlobalNav />
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+            </div>
+          </Providers>
+          <Toaster theme="dark" />
+        </div>
       </body>
     </html>
   );
