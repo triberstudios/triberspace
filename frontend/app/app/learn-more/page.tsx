@@ -16,7 +16,7 @@ export default function LearnMore() {
             <img 
               src="/studiosLogo.svg" 
               alt="Triber Studios Logo" 
-              className="h-12 sm:h-14 lg:h-16 mx-auto"
+              className="h-10 sm:h-12 lg:h-14 mx-auto"
             />
           </div>
           <p className="text-sidebar-foreground leading-relaxed">
