@@ -95,31 +95,15 @@ export default function Home() {
 
   return (
     <div className="min-h-full font-sans">
-      {/* Banner Section - Mobile */}
-      <div className="block sm:hidden px-6 pt-4">
+      {/* Banner Section */}
+      <div className="px-6 sm:px-8 pt-4 sm:pt-8">
         <Banner 
           variant="rightImage"
           title="Welcome to Triberspace"
           subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
           backgroundVideo="/previewVideoHB.mp4"
-          primaryAction={{
-            label: "Get Started",
-            onClick: () => console.log("Get started clicked")
-          }}
-          secondaryAction={{
-            label: "Learn More",
-            onClick: () => console.log("Learn more clicked")
-          }}
-        />
-      </div>
-      
-      {/* Banner Section - Desktop */}
-      <div className="hidden sm:block px-6 sm:px-8 pt-8">
-        <Banner 
-          variant="rightImage"
-          title="Welcome to Triberspace"
-          subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
-          backgroundVideo="/previewVideoHB.mp4"
+          baseBackground="/bgGif.gif"
+          baseOverlayOpacity={86}
           primaryAction={{
             label: "Get Started",
             onClick: () => console.log("Get started clicked")

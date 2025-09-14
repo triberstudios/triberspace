@@ -22,6 +22,8 @@ interface BannerProps {
   className?: string;
   showOverlay?: boolean;
   overlayOpacity?: number;
+  baseBackground?: string; // Can be a color (e.g., "#000000") or image path (e.g., "/bgGif.gif")
+  baseOverlayOpacity?: number; // Opacity for the overlay on base background (0-100)
 }
 
 function Banner({
@@ -37,6 +39,8 @@ function Banner({
   className,
   showOverlay = false,
   overlayOpacity = 80,
+  baseBackground,
+  baseOverlayOpacity = 85,
 }: BannerProps) {
   const content = (
     <div className="flex flex-col gap-6 sm:gap-6">
@@ -59,7 +63,7 @@ function Banner({
         <Button 
           type="button" 
           className="h-12 px-6 w-full sm:w-auto"
-          variant="outline"
+          variant="secondary"
           onClick={secondaryAction.onClick}
         >
           {secondaryAction.label}
@@ -70,11 +74,34 @@ function Banner({
 
   if (variant === "rightImage") {
     return (
-      <div className={cn("border-3 border-sidebar rounded-xl overflow-hidden bg-sidebar", className)}>
-        <div className="flex flex-col lg:flex-row gap-0">
+      <div className={cn("border-3 border-sidebar rounded-xl overflow-hidden bg-sidebar relative", className)}>
+        {/* Base background layer - can be color or image */}
+        {baseBackground && (
+          baseBackground.startsWith('#') || baseBackground.startsWith('rgb') ? (
+            <div 
+              className="absolute inset-0"
+              style={{ backgroundColor: baseBackground }}
+            />
+          ) : (
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${baseBackground})` }}
+            />
+          )
+        )}
+        
+        {/* Base background overlay */}
+        {baseBackground && (
+          <div 
+            className="absolute inset-0" 
+            style={{ backgroundColor: `rgba(0, 0, 0, ${baseOverlayOpacity / 100})` }}
+          />
+        )}
+        
+        <div className="flex flex-col lg:flex-row gap-0 relative">
           {/* Video/Image (shows first on mobile via order) */}
           {(rightImage || backgroundVideo) && (
-            <div className="w-full lg:flex-1 relative h-48 sm:h-64 lg:h-96 bg-sidebar order-1 lg:order-2 overflow-hidden rounded-t-xl lg:rounded-t-none lg:rounded-r-xl">
+            <div className="w-full lg:flex-1 relative h-48 sm:h-64 lg:h-96 bg-transparent order-1 lg:order-2 overflow-hidden rounded-t-xl lg:rounded-t-none lg:rounded-r-xl">
               {backgroundVideo ? (
                 <video
                   autoPlay
@@ -141,11 +168,31 @@ function Banner({
   // Default: fullBackground variant
   return (
     <div>
-      <div className={cn("relative bg-cover w-full min-h-[320px] sm:min-h-[30vh] lg:h-[50vh] rounded-xl flex items-center overflow-hidden border-3 border-sidebar", className)}
-           style={{ 
-             backgroundImage: backgroundImage && !backgroundVideo ? `url(${backgroundImage})` : undefined
-           }}>
-        {/* Video Background */}
+      <div className={cn("relative bg-cover w-full min-h-[320px] sm:min-h-[30vh] lg:h-[50vh] rounded-xl flex items-center overflow-hidden border-3 border-sidebar", className)}>
+        {/* Base background layer - can be color or image */}
+        {baseBackground && (
+          baseBackground.startsWith('#') || baseBackground.startsWith('rgb') ? (
+            <div 
+              className="absolute inset-0"
+              style={{ backgroundColor: baseBackground }}
+            />
+          ) : (
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${baseBackground})` }}
+            />
+          )
+        )}
+        
+        {/* Base background overlay */}
+        {baseBackground && (
+          <div 
+            className="absolute inset-0" 
+            style={{ backgroundColor: `rgba(0, 0, 0, ${baseOverlayOpacity / 100})` }}
+          />
+        )}
+        
+        {/* Video Background (on top of base + overlay) */}
         {backgroundVideo && (
           <video
             autoPlay
@@ -161,7 +208,7 @@ function Banner({
           </video>
         )}
         
-        {/* Image Background (if no video) */}
+        {/* Image Background (if no video, on top of base + overlay) */}
         {backgroundImage && !backgroundVideo && (
           <div 
             className="absolute inset-0 bg-cover bg-center"
@@ -169,7 +216,7 @@ function Banner({
           />
         )}
         
-        {/* Dark overlay for dimming background */}
+        {/* Additional overlay for dimming video/image if needed */}
         {showOverlay && (backgroundImage || backgroundVideo) && (
           <div 
             className="absolute inset-0" 
