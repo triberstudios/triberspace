@@ -101,7 +101,7 @@ export default function Home() {
           variant="rightImage"
           title="Welcome to Triberspace"
           subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
-          backgroundVideo="/TestBGVideoHB.mp4"
+          backgroundVideo="/previewVideoHB.mp4"
           primaryAction={{
             label: "Get Started",
             onClick: () => console.log("Get started clicked")
@@ -116,12 +116,10 @@ export default function Home() {
       {/* Banner Section - Desktop */}
       <div className="hidden sm:block px-6 sm:px-8 pt-8">
         <Banner 
-          variant="fullBackground"
+          variant="rightImage"
           title="Welcome to Triberspace"
           subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
-          backgroundVideo="/TestBGVideoHB.mp4"
-          showOverlay={true}
-          overlayOpacity={70}
+          backgroundVideo="/previewVideoHB.mp4"
           primaryAction={{
             label: "Get Started",
             onClick: () => console.log("Get started clicked")
