@@ -24,6 +24,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "triberspace",
   description: "A new dimension.",
+  viewport: "width=device-width, initial-scale=1.0, viewport-fit=cover",
+  other: {
+    "theme-color": "#343434",
+    "msapplication-navbutton-color": "#343434",
+    "apple-mobile-web-app-status-bar-style": "default"
+  }
 };
 
 export default function RootLayout({
@@ -34,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark overflow-hidden">
       <body
-        className={`${workSans.variable} ${geistMono.variable} font-sans antialiased h-screen overflow-hidden`}
+        className={`${workSans.variable} ${geistMono.variable} font-sans antialiased dynamic-viewport-height overflow-hidden`}
       >
         <Providers>
           <div className="flex h-full flex-col">
