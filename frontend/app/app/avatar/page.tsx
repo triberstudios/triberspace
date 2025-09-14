@@ -691,7 +691,7 @@ export default function Avatar() {
                     className="max-w-[90vw] w-full sm:max-w-md rounded-lg border bg-card p-0"
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
-                    <div className="px-4 py-6 sm:px-8 sm:py-8">
+                    <div className="px-6 py-6 sm:px-8 sm:py-8">
                         <DialogHeader>
                             <DialogTitle className="text-xl sm:text-2xl font-semibold text-center mb-4 sm:mb-6">
                                 Save avatar look
@@ -731,7 +731,7 @@ export default function Avatar() {
                     className="max-w-[90vw] w-full sm:max-w-md rounded-lg border bg-card p-0"
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
-                    <div className="px-4 py-6 sm:px-8 sm:py-8">
+                    <div className="px-6 py-6 sm:px-8 sm:py-8">
                         <DialogHeader>
                             <DialogTitle className="text-xl sm:text-2xl font-semibold text-center mb-4 sm:mb-6">
                                 Edit look

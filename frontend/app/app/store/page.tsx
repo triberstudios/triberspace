@@ -123,7 +123,7 @@ export default function StorePage() {
   return (
     <div className="min-h-full">
       {/* Mini Banner */}
-      <div className="px-4 pt-4 md:px-8 md:pt-8">
+      <div className="px-6 pt-4 sm:px-8 md:pt-8">
         <Banner 
           variant="mini"
           title="Shop"
@@ -141,7 +141,7 @@ export default function StorePage() {
       </div>
 
       {/* Shop Categories */}
-      <div className="px-4 pb-8 md:px-8">
+      <div className="px-6 pb-8 sm:px-8">
         <div className="flex flex-col gap-18 mt-8">
           {shopCategories.map((category) => (
             <div key={category.title} className="flex flex-col gap-4">

@@ -77,7 +77,7 @@ export default function ExplorePage() {
   return (
     <div className="min-h-full">
       {/* Search Bar */}
-      <div className="sticky top-0 z-[5] flex justify-center px-4 py-4 backdrop-blur-md bg-background/80 md:px-2">
+      <div className="sticky top-0 z-[5] flex justify-center px-6 py-4 backdrop-blur-md bg-background/80 sm:px-4 md:px-2">
         <div className="flex w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 md:w-[640px]">
           <input
             type="text"
@@ -91,7 +91,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-8 md:px-8">
+      <div className="px-6 pb-8 sm:px-8">
         <div className="flex flex-col gap-18">
           {filteredCategories.map((category) => (
             <div key={category.title} className="flex flex-col gap-4">

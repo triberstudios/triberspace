@@ -99,7 +99,7 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
           {dayNames.map((day) => (
             <div 
               key={day}
-              className="p-4 text-center text-sidebar-foreground font-medium bg-sidebar"
+              className="p-2 sm:p-4 text-center text-sidebar-foreground font-medium bg-sidebar text-xs sm:text-base"
             >
               {day}
             </div>
@@ -112,12 +112,12 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
             <div 
               key={index}
               className={cn(
-                "p-4 min-h-[160px] border-r border-white/5 last:border-r-0 bg-sidebar hover:bg-sidebar/80 transition-colors cursor-pointer",
+                "p-2 sm:p-4 min-h-[80px] sm:min-h-[160px] border-r border-white/5 last:border-r-0 bg-sidebar hover:bg-sidebar/80 transition-colors cursor-pointer",
                 isToday(date) && "bg-sidebar-accent"
               )}
             >
               <div className={cn(
-                "text-sidebar-foreground font-medium",
+                "text-sidebar-foreground font-medium text-sm sm:text-base",
                 isToday(date) && "text-sidebar-accent-foreground font-semibold"
               )}>
                 {date.getDate()}

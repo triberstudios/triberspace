@@ -96,7 +96,7 @@ export default function Home() {
   return (
     <div className="min-h-full font-sans">
       {/* Banner Section */}
-      <div className="px-8 pt-8">
+      <div className="px-6 sm:px-8 pt-8">
         <Banner 
           variant="fullBackground"
           title="Welcome to Triberspace"
@@ -116,7 +116,7 @@ export default function Home() {
       </div>
 
       {/* For You Section */}
-      <div className="px-8">
+      <div className="px-6 sm:px-8">
         <h2 className="text-2xl my-6 font-semibold text-sidebar-foreground tracking-tight">For You</h2>
         <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
           {categories
@@ -129,7 +129,7 @@ export default function Home() {
       </div>
 
       {/* Calendar Section */}
-      <div className="px-8 pb-8">
+      <div className="px-6 sm:px-8 pb-8">
         <div className="mt-20">
           <WeekCalendar />
         </div>
