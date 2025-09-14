@@ -70,35 +70,37 @@ function Banner({
 
   if (variant === "rightImage") {
     return (
-      <div className={cn("flex flex-col-reverse lg:flex-row items-center gap-8 lg:gap-16 p-8", className)}>
-        {/* Left Content (shows second on mobile, first on desktop) */}
-        <div className="flex-1">
-          {content}
-        </div>
-        
-        {/* Right Image/Video (shows first on mobile, second on desktop) */}
-        {(rightImage || backgroundVideo) && (
-          <div className="flex-1 relative h-64 lg:h-96 w-full rounded-lg overflow-hidden bg-sidebar">
-            {backgroundVideo ? (
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover rounded-lg"
-              >
-                <source src={backgroundVideo} type="video/mp4" />
-              </video>
-            ) : rightImage ? (
-              <Image
-                src={rightImage}
-                alt={title}
-                fill
-                className="object-cover"
-              />
-            ) : null}
+      <div className={cn("border-3 border-sidebar rounded-xl overflow-hidden bg-sidebar", className)}>
+        <div className="flex flex-col lg:flex-row gap-0">
+          {/* Video/Image (shows first on mobile via order) */}
+          {(rightImage || backgroundVideo) && (
+            <div className="w-full lg:flex-1 relative h-48 sm:h-64 lg:h-96 bg-sidebar order-1 lg:order-2 overflow-hidden rounded-t-xl lg:rounded-t-none lg:rounded-r-xl">
+              {backgroundVideo ? (
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                >
+                  <source src={backgroundVideo} type="video/mp4" />
+                </video>
+              ) : rightImage ? (
+                <Image
+                  src={rightImage}
+                  alt={title}
+                  fill
+                  className="object-cover"
+                />
+              ) : null}
+            </div>
+          )}
+          
+          {/* Content (shows second on mobile via order) */}
+          <div className="w-full lg:flex-1 px-6 py-6 sm:px-8 sm:py-8 lg:px-16 lg:py-8 order-2 lg:order-1 flex items-center">
+            {content}
           </div>
-        )}
+        </div>
       </div>
     );
   }
