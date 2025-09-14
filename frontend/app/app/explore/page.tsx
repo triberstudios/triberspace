@@ -11,10 +11,11 @@ const categories = [
     experiences: [
       { 
         id: 1, 
-        title: "Triber Gallery: Exhibition 1", 
+        title: "Triber Gallery Preview", 
         brand: "Triber Studios", 
         type: "gallery",
-        url: "https://triberworld.triber.space"
+        image: "/thumbnails/TriberGallery.png",
+        url: "https://preview.triber.space"
       },
       { 
         id: 2, 

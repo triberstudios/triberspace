@@ -57,7 +57,7 @@ export default function StorePage() {
         },
         { 
           id: 6, 
-          title: "Beloved Wave", 
+          title: "Beloved Salute", 
           creator: "Beloved.",
           points: 100,
           type: "emote",
@@ -73,10 +73,47 @@ export default function StorePage() {
         },
         { 
           id: 8, 
-          title: "Triber Salute", 
+          title: "Triber Wave", 
           creator: "Triber Studios",
           points: 175,
           type: "emote",
+          url: "#"
+        },
+      ]
+    },
+    {
+      title: "Outfits",
+      items: [
+        { 
+          id: 13, 
+          title: "Beloved Soldier Signature A/W '25", 
+          creator: "Beloved.",
+          points: 600, 
+          type: "outfit",
+          url: "#"
+        },
+        { 
+          id: 14, 
+          title: "V2 Street Bundle (Digital + Physical)", 
+          creator: "V2",
+          points: 750,
+          type: "outfit",
+          url: "#"
+        },
+        { 
+          id: 15, 
+          title: "Ajaar Traverser Knit Bundle", 
+          creator: "Ajaar",
+          points: 850,
+          type: "outfit",
+          url: "#"
+        },
+        { 
+          id: 16, 
+          title: "Sankofa Collection 2020 Bundle", 
+          creator: "Triber Studios",
+          points: 400,
+          type: "outfit",
           url: "#"
         },
       ]
