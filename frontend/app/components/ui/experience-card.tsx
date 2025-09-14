@@ -38,10 +38,25 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
         
         {/* Preview placeholder when no image */}
         {!experience.image && (
-          <div className="absolute inset-0 flex h-full items-center justify-center">
-            <div className="text-center">
-              {/* <div className="mb-2 text-4xl">🎨</div> */}
-              <p className="text-sm text-white/60">Preview Image</p>
+          <div className="absolute inset-0 bg-sidebar">
+            {/* Diagonal stripe pattern */}
+            <div 
+              className="absolute inset-0 opacity-30"
+              style={{
+                backgroundImage: `repeating-linear-gradient(
+                  45deg,
+                  rgba(255, 255, 255, 0.1) 0px,
+                  rgba(255, 255, 255, 0.1) 10px,
+                  transparent 10px,
+                  transparent 20px
+                )`
+              }}
+            />
+            {/* Preview text */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-sm text-white/40 font-medium">Preview Image</p>
+              </div>
             </div>
           </div>
         )}
