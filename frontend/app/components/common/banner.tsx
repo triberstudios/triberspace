@@ -81,6 +81,9 @@ function Banner({
                   loop
                   muted
                   playsInline
+                  webkit-playsinline="true"
+                  preload="metadata"
+                  disablePictureInPicture
                   className="w-full h-full object-cover"
                 >
                   <source src={backgroundVideo} type="video/mp4" />
@@ -117,6 +120,9 @@ function Banner({
             loop
             muted
             playsInline
+            webkit-playsinline="true"
+            preload="metadata"
+            disablePictureInPicture
             className="absolute inset-0 w-full h-full object-cover rounded-lg"
           >
             <source src={backgroundVideo} type="video/mp4" />
@@ -146,6 +152,9 @@ function Banner({
             loop
             muted
             playsInline
+            webkit-playsinline="true"
+            preload="metadata"
+            disablePictureInPicture
             className="absolute inset-0 w-full h-full object-cover"
           >
             <source src={backgroundVideo} type="video/mp4" />

@@ -49,10 +49,10 @@ export function ExperienceCard({ experience, className }: ExperienceCardProps) {
 
       {/* Content Box */}
       <div className="flex flex-col gap-0">
-        <div className="text-sidebar-foreground font-medium text-xl cursor-pointer mb-0 leading-tight">
+        <div className="text-sidebar-foreground font-medium text-lg sm:text-xl cursor-pointer mb-0 leading-tight">
           {experience.title}
         </div>
-        <div className="text-gray-500 font-medium text-base cursor-pointer">
+        <div className="text-gray-500 font-medium text-sm sm:text-base cursor-pointer">
           {experience.brand}
         </div>
       </div>
