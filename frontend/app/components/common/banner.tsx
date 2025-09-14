@@ -2,6 +2,7 @@ import React from "react";
 import Image from "next/image";
 import { Button } from "./button";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface BannerProps {
   title?: string;
@@ -42,6 +43,7 @@ function Banner({
   baseBackground,
   baseOverlayOpacity = 85,
 }: BannerProps) {
+  const router = useRouter();
   const content = (
     <div className="flex flex-col gap-6 sm:gap-6">
       {/* Text Content */}

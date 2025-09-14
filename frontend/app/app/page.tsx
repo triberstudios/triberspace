@@ -3,8 +3,10 @@
 import Banner from "@/components/common/banner";
 import { ExperienceCard } from "@/components/ui/experience-card";
 import { WeekCalendar } from "@/components/ui/week-calendar";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
   const categories = [
     {
       title: "Art",
@@ -103,14 +105,14 @@ export default function Home() {
           subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
           backgroundVideo="/previewVideoHB.mp4"
           baseBackground="/bgGif.gif"
-          baseOverlayOpacity={86}
+          baseOverlayOpacity={88}
           primaryAction={{
             label: "Get Started",
-            onClick: () => console.log("Get started clicked")
+            onClick: () => router.push("/auth/sign-up")
           }}
           secondaryAction={{
             label: "Learn More",
-            onClick: () => console.log("Learn more clicked")
+            onClick: () => router.push("/learn-more")
           }}
         />
       </div>
