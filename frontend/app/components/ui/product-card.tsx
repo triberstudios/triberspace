@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 interface Product {
   id: number
   title: string
-  creator: string
+  creator?: string
   price?: number
   points?: number
   image?: string
@@ -73,10 +73,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
           )}
         </div>
         
-        {/* Creator name */}
-        <p className="text-gray-300 text-sm">
-          {product.creator}
-        </p>
+        {/* Creator name - only show if present */}
+        {product.creator && (
+          <p className="text-gray-300 text-sm">
+            {product.creator}
+          </p>
+        )}
       </div>
     </div>
   )

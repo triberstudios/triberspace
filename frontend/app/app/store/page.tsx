@@ -12,32 +12,32 @@ export default function StorePage() {
       items: [
         { 
           id: 1, 
-          title: "Cyber Punk Avatar", 
-          creator: "Triber Studios",
+          title: "Beloved Soldier", 
+          creator: "Beloved.",
           points: 400, 
           type: "avatar",
           url: "#"
         },
         { 
           id: 2, 
-          title: "Space Explorer", 
-          creator: "Cosmic Designs",
+          title: "V2 Mecha", 
+          creator: "V2",
           points: 350,
           type: "avatar",
           url: "#"
         },
         { 
           id: 3, 
-          title: "Fantasy Warrior", 
-          creator: "Epic Creations",
+          title: "Ajaar Traverser", 
+          creator: "Ajaar",
           points: 500,
           type: "avatar",
           url: "#"
         },
         { 
           id: 4, 
-          title: "Street Style", 
-          creator: "Urban Collective",
+          title: "Triber Sankofa", 
+          creator: "Triber Studios",
           points: 250,
           type: "avatar",
           url: "#"
@@ -49,32 +49,32 @@ export default function StorePage() {
       items: [
         { 
           id: 5, 
-          title: "Victory Dance", 
-          creator: "Motion Studio",
+          title: "V2 Victory", 
+          creator: "V2",
           points: 150,
           type: "emote",
           url: "#"
         },
         { 
           id: 6, 
-          title: "Wave Hello", 
-          creator: "Friendly Co",
+          title: "Beloved Wave", 
+          creator: "Beloved.",
           points: 100,
           type: "emote",
           url: "#"
         },
         { 
           id: 7, 
-          title: "Laugh Out Loud", 
-          creator: "Happy Vibes",
+          title: "Ajaar Bow", 
+          creator: "Ajaar",
           points: 125,
           type: "emote",
           url: "#"
         },
         { 
           id: 8, 
-          title: "Cool Walk", 
-          creator: "Swagger Inc",
+          title: "Triber Salute", 
+          creator: "Triber Studios",
           points: 175,
           type: "emote",
           url: "#"
@@ -86,32 +86,28 @@ export default function StorePage() {
       items: [
         { 
           id: 9, 
-          title: "Beloved Collection", 
-          creator: "Beloved.",
+          title: "Beloved.", 
           price: 29.99,
           type: "store",
           url: "#"
         },
         { 
           id: 10, 
-          title: "V2 Exclusive", 
-          creator: "V2",
+          title: "V2", 
           price: 24.99,
           type: "store",
           url: "#"
         },
         { 
           id: 11, 
-          title: "Ajaar Originals", 
-          creator: "Ajaar",
+          title: "Ajaar", 
           price: 34.99,
           type: "store",
           url: "#"
         },
         { 
           id: 12, 
-          title: "Triber Premium", 
-          creator: "Triber Studios",
+          title: "Triber Studios", 
           price: 19.99,
           type: "store",
           url: "#"

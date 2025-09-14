@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 interface Store {
   id: number
   title: string
-  creator: string
+  creator?: string
   price?: number
   points?: number
   image?: string
@@ -66,10 +66,12 @@ export function StoreCard({ store, className }: StoreCardProps) {
           {store.title}
         </h3>
         
-        {/* Creator name */}
-        <p className="text-gray-300 text-sm">
-          {store.creator}
-        </p>
+        {/* Creator name - only show if present */}
+        {store.creator && (
+          <p className="text-gray-300 text-sm">
+            {store.creator}
+          </p>
+        )}
       </div>
     </div>
   )

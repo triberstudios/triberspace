@@ -42,22 +42,22 @@ const categories = [
   {
     title: "Music",
     experiences: [
-      { id: 5, title: "Concert Hall", brand: "Music Venue", type: "concert" },
-      { id: 6, title: "Studio Sessions", brand: "Record Label", type: "studio" },
+      { id: 5, title: "Ajaar Live Sessions", brand: "Ajaar", type: "concert" },
+      { id: 6, title: "V2 Listening Party", brand: "V2", type: "studio" },
     ]
   },
   {
     title: "Film",
     experiences: [
-      { id: 7, title: "Cinema Experience", brand: "Film Studio", type: "cinema" },
-      { id: 8, title: "Behind Scenes", brand: "Production Co", type: "production" },
+      { id: 7, title: "Beloved Film Premiere", brand: "Beloved.", type: "cinema" },
+      { id: 8, title: "Triber Documentary", brand: "Triber Studios", type: "production" },
     ]
   },
   {
     title: "Fashion",
     experiences: [
-      { id: 9, title: "Runway Show", brand: "Fashion House", type: "runway" },
-      { id: 10, title: "Designer Studio", brand: "Luxury Brand", type: "studio" },
+      { id: 9, title: "V2 Fashion Week", brand: "V2", type: "runway" },
+      { id: 10, title: "Ajaar Atelier", brand: "Ajaar", type: "studio" },
     ]
   }
 ]
