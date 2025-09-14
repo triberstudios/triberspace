@@ -24,12 +24,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "triberspace",
   description: "A new dimension.",
-  viewport: "width=device-width, initial-scale=1.0, viewport-fit=cover",
-  other: {
-    "theme-color": "#343434",
-    "msapplication-navbutton-color": "#343434",
-    "apple-mobile-web-app-status-bar-style": "default"
-  }
+  viewport: "width=device-width, initial-scale=1.0, viewport-fit=cover"
 };
 
 export default function RootLayout({
@@ -38,21 +33,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark overflow-hidden">
+      <head>
+        <meta name="theme-color" content="#171717" />
+        <meta name="msapplication-navbutton-color" content="#171717" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body
-        className={`${workSans.variable} ${geistMono.variable} font-sans antialiased dynamic-viewport-height safari-fixed-body`}
+        className={`${workSans.variable} ${geistMono.variable} font-sans antialiased dynamic-viewport-height overflow-hidden`}
       >
-        <div className="app-container">
-          <Providers>
-            <div className="flex h-full flex-col">
-              <GlobalNav />
-              <ConditionalLayout>
-                {children}
-              </ConditionalLayout>
-            </div>
-          </Providers>
-          <Toaster theme="dark" />
-        </div>
+        <Providers>
+          <div className="flex h-full flex-col">
+            <GlobalNav />
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
+          </div>
+        </Providers>
+        <Toaster theme="dark" />
       </body>
     </html>
   );

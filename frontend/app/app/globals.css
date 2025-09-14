@@ -198,23 +198,4 @@
     }
   }
 
-  /* App Container - Safari Address Bar Auto-Hide Support */
-  .app-container {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    position: relative;
-  }
-
-  /* Fixed Body Layout for Safari Scroll Detection */
-  .safari-fixed-body {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    -webkit-overflow-scrolling: touch;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
 }

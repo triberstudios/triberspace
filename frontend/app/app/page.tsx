@@ -100,7 +100,7 @@ export default function Home() {
         <Banner 
           variant="rightImage"
           title="Welcome to Triberspace"
-          subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform, where you can discover experiences from your favorite brands and artists. Earn points and unlock exclusive products by exploring and connecting deeply."
+          subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform. Discover experiences from your favorite brands and artists, earn points, and unlock exclusive products by exploring and connecting deeply."
           backgroundVideo="/TestBGVideoHB.mp4"
           primaryAction={{
             label: "Get Started",
