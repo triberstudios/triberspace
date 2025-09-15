@@ -105,8 +105,6 @@ export default function Home() {
             title="Welcome to Triberspace"
             subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
             backgroundVideo="/previewVideoHB.mp4"
-            baseBackground="/bgGif.gif"
-            baseOverlayOpacity={88}
             primaryAction={{
               label: "Get Started",
               onClick: () => router.push("/auth/sign-up")
