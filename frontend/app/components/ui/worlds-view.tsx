@@ -92,7 +92,7 @@ export function WorldsView() {
       </div>
 
       {/* World Info - Fixed bottom */}
-      <div className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-sidebar px-6 py-2 text-center">
+      <div className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-card px-6 py-2 text-center">
         <h3 className="text-xl font-medium text-white">
           {currentWorld.name}
         </h3>

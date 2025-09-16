@@ -49,7 +49,7 @@ export function MobileBottomNav({ className }: MobileBottomNavProps = {}) {
   const pathname = usePathname()
 
   return (
-    <div className={cn("border-t border-sidebar-border bg-sidebar", className)}>
+    <div className={cn("border-t border-border bg-background", className)}>
       <div className="flex items-center justify-around px-4 py-1">
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href === "/" && pathname === "/")
@@ -62,8 +62,8 @@ export function MobileBottomNav({ className }: MobileBottomNavProps = {}) {
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-lg py-1.5 px-2 transition-all duration-200 min-w-0 flex-1",
                 isActive 
-                  ? "text-sidebar-accent-foreground" 
-                  : "text-sidebar-foreground/70 hover:text-sidebar-accent-foreground"
+                  ? "text-primary" 
+                  : "text-foreground/70 hover:text-primary"
               )}
             >
               <IconComponent 

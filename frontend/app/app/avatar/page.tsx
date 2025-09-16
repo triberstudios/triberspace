@@ -476,7 +476,7 @@ export default function Avatar() {
     return (
         <div className="flex flex-col lg:flex-row h-full w-full">
             {/* Left Side - Avatar Display (50% desktop, full width mobile) */}
-            <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-black/20 p-4 lg:p-8 min-h-[40vh] lg:min-h-full">
+            <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-background p-4 lg:p-8 min-h-[40vh] lg:min-h-full">
                 {/* Avatar Preview Area */}
                 <div className="relative flex h-full w-full items-center justify-center bg-white/0.5 border border-white/15 rounded-lg">
                     {/* Canvas Container */}
@@ -598,7 +598,7 @@ export default function Avatar() {
                         onClick={() => setActiveTab("avatar")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center ${
                             activeTab === "avatar" 
-                                ? "border-b-2 border-sidebar-foreground text-sidebar-foreground" 
+                                ? "border-b-2 border-primary text-foreground" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >
@@ -608,7 +608,7 @@ export default function Avatar() {
                         onClick={() => setActiveTab("outfit")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center ${
                             activeTab === "outfit" 
-                                ? "border-b-2 border-sidebar-foreground text-sidebar-foreground" 
+                                ? "border-b-2 border-primary text-foreground" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >
@@ -618,7 +618,7 @@ export default function Avatar() {
                         onClick={() => setActiveTab("emotes")}
                         className={`pb-3 lg:pb-4 text-base lg:text-lg font-medium transition-colors cursor-pointer min-h-[44px] flex items-center gap-2 ${
                             activeTab === "emotes" 
-                                ? "border-b-2 border-sidebar-foreground text-sidebar-foreground" 
+                                ? "border-b-2 border-primary text-foreground" 
                                 : "text-white/40 hover:text-white/60"
                         }`}
                     >

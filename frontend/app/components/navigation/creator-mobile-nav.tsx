@@ -49,7 +49,7 @@ export function CreatorMobileNav({ className }: CreatorMobileNavProps) {
   
   return (
     <div className={cn(
-      "flex h-16 items-center justify-around border-t border-sidebar-border bg-sidebar px-2",
+      "flex h-16 items-center justify-around border-t border-border bg-background px-2",
       className
     )}>
       {/* Navigation Items */}
@@ -64,8 +64,8 @@ export function CreatorMobileNav({ className }: CreatorMobileNavProps) {
             className={cn(
               "flex flex-col items-center justify-center gap-1 px-3 py-2 transition-colors",
               isActive 
-                ? "text-sidebar-accent-foreground" 
-                : "hover:text-sidebar-accent-foreground"
+                ? "text-primary" 
+                : "hover:text-primary"
             )}
           >
             <IconComponent 

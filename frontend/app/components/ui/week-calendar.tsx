@@ -60,32 +60,32 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
     <div className={cn("w-full", className)}>
       {/* Header with title and navigation */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-sidebar-foreground tracking-tight">Your calendar</h2>
+        <h2 className="text-2xl font-semibold text-foreground tracking-tight">Your calendar</h2>
         
         <div className="flex items-center gap-4">
           {/* Previous week button */}
           <button 
             onClick={goToPreviousWeek}
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/5 bg-sidebar hover:bg-sidebar/80 transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/5 bg-background-2 hover:bg-white/8 transition-colors"
             aria-label="Previous week"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-sidebar-foreground">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-foreground">
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
 
           {/* Month/Year display */}
-          <span className="text-sidebar-foreground font-medium min-w-[80px] text-center">
+          <span className="text-foreground font-medium min-w-[80px] text-center">
             {formatMonthYear(currentDate)}
           </span>
 
           {/* Next week button */}
           <button 
             onClick={goToNextWeek}
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/5 bg-sidebar hover:bg-sidebar/80 transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-white/5 bg-background-2 hover:bg-white/8 transition-colors"
             aria-label="Next week"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-sidebar-foreground">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-foreground">
               <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
@@ -93,13 +93,13 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
       </div>
 
       {/* Calendar grid */}
-      <div className="border border-white/5 rounded-lg overflow-hidden bg-sidebar">
+      <div className="border-2 border-border rounded-lg overflow-hidden bg-background-2">
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-white/5">
           {dayNames.map((day) => (
             <div 
               key={day}
-              className="p-2 sm:p-4 text-center text-sidebar-foreground font-medium bg-sidebar text-xs sm:text-base"
+              className="p-2 sm:p-4 text-center text-foreground border-1 border-border font-medium bg-card text-xs sm:text-base"
             >
               {day}
             </div>
@@ -112,13 +112,13 @@ export function WeekCalendar({ className }: WeekCalendarProps) {
             <div 
               key={index}
               className={cn(
-                "p-2 sm:p-4 min-h-[80px] sm:min-h-[160px] border-r border-white/5 last:border-r-0 bg-sidebar hover:bg-sidebar/80 transition-colors cursor-pointer",
-                isToday(date) && "bg-sidebar-accent"
+                "p-2 sm:p-4 min-h-[80px] sm:min-h-[160px] border-r border-white/5 last:border-r-0 bg-card hover:bg-white/8 transition-colors cursor-pointer",
+                isToday(date) && "bg-secondary"
               )}
             >
               <div className={cn(
-                "text-sidebar-foreground font-medium text-sm sm:text-base",
-                isToday(date) && "text-sidebar-accent-foreground font-semibold"
+                "text-foreground font-medium text-sm sm:text-base",
+                isToday(date) && "text-primary font-semibold"
               )}>
                 {date.getDate()}
               </div>

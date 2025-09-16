@@ -12,7 +12,7 @@ export default function CreatorDashboard() {
           <div className="space-y-6">
           {/* Key Metrics */}
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-500/20 p-2">
                   <Eye className="h-5 w-5 text-blue-400" />
@@ -24,7 +24,7 @@ export default function CreatorDashboard() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-green-500/20 p-2">
                   <TrendUp className="h-5 w-5 text-green-400" />
@@ -36,7 +36,7 @@ export default function CreatorDashboard() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-purple-500/20 p-2">
                   <Users className="h-5 w-5 text-purple-400" />
@@ -52,7 +52,7 @@ export default function CreatorDashboard() {
           {/* Recent Activity Feed */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-black/20">
                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
@@ -73,14 +73,14 @@ export default function CreatorDashboard() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground">World Analytics</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <h3 className="text-base font-medium text-foreground mb-4">Top Performing Experiences</h3>
                 <div className="text-center text-muted-foreground">
                   <TrendUp className="mx-auto h-6 w-6 mb-2 opacity-50" />
                   <p className="text-sm">No data available</p>
                 </div>
               </div>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <h3 className="text-base font-medium text-foreground mb-4">Tribe Insights</h3>
                 <div className="text-center text-muted-foreground">
                   <Users className="mx-auto h-6 w-6 mb-2 opacity-50" />

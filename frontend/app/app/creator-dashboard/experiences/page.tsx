@@ -15,14 +15,14 @@ export default function ExperiencesPage() {
           <div className="space-y-6">
 
           {/* Experience Status Filter */}
-          <div className="flex items-center gap-4 border-b border-sidebar-border">
+          <div className="flex items-center gap-4 border-b border-border">
             {['all', 'published', 'draft', 'archived'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status as any)}
                 className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors capitalize cursor-pointer ${
                   statusFilter === status
-                    ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -48,7 +48,7 @@ export default function ExperiencesPage() {
             {/* Experience Cards Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {/* Empty State Card */}
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="text-center text-muted-foreground">
                   <Globe className="mx-auto h-12 w-12 mb-4 opacity-50" />
                   <h3 className="text-lg font-medium text-foreground mb-2">No experiences yet</h3>

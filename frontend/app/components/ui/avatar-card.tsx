@@ -89,7 +89,7 @@ export function AvatarCard({
       )}
       
       {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20" />
+      <div className="absolute inset-0 bg-white/0 transition-all duration-300 group-hover:bg-white/8" />
       
       {/* Selection Indicator - Empty circle or checkmark */}
       {type === "emotes" && (
@@ -112,7 +112,7 @@ export function AvatarCard({
         <div className="absolute bottom-0 left-0 right-0 p-3 backdrop-blur-lg bg-black/30 border-t border-white/10">
           {type === "emotes" ? (
             <div className="flex items-center justify-between">
-              <h3 className="text-sidebar-foreground font-medium text-sm leading-tight truncate flex-1">
+              <h3 className="text-foreground font-medium text-sm leading-tight truncate flex-1">
                 {itemTitle}
               </h3>
               <button 
@@ -124,11 +124,11 @@ export function AvatarCard({
                 }}
                 className="ml-2 p-1 hover:bg-white/10 rounded transition-colors"
               >
-                <Play className="w-4 h-4 text-sidebar-foreground" weight="fill" />
+                <Play className="w-4 h-4 text-foreground" weight="fill" />
               </button>
             </div>
           ) : (
-            <h3 className="text-sidebar-foreground font-medium text-sm leading-tight truncate">
+            <h3 className="text-foreground font-medium text-sm leading-tight truncate">
               {itemTitle}
             </h3>
           )}

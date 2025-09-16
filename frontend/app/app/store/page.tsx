@@ -180,7 +180,7 @@ export default function StorePage() {
             <div key={category.title} className="flex flex-col gap-4">
               {/* Category Header */}
               <div className="flex items-center justify-between px-2">
-                <h2 className="text-2xl font-semibold text-sidebar-foreground tracking-tight">
+                <h2 className="text-2xl font-semibold text-foreground tracking-tight">
                   {category.title}
                 </h2>
               </div>

@@ -53,7 +53,7 @@ export default function EarningsPage() {
 
           {/* Revenue Overview Stats */}
           <div className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-green-500/20 p-2">
                   <CurrencyDollar className="h-5 w-5 text-green-400" />
@@ -65,7 +65,7 @@ export default function EarningsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-500/20 p-2">
                   <Repeat className="h-5 w-5 text-blue-400" />
@@ -77,7 +77,7 @@ export default function EarningsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-purple-500/20 p-2">
                   <TrendUp className="h-5 w-5 text-purple-400" />
@@ -89,7 +89,7 @@ export default function EarningsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-orange-500/20 p-2">
                   <Bank className="h-5 w-5 text-orange-400" />
@@ -104,7 +104,7 @@ export default function EarningsPage() {
 
           {/* Revenue Breakdown by Source */}
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <h3 className="text-base font-medium text-foreground mb-4">Revenue Sources</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -124,7 +124,7 @@ export default function EarningsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <h3 className="text-base font-medium text-foreground mb-4">Active Subscribers</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -147,7 +147,7 @@ export default function EarningsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Revenue Over Time</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-48 flex items-end justify-center gap-1">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <div key={i} className="flex flex-col items-center gap-1 w-6">
@@ -174,7 +174,7 @@ export default function EarningsPage() {
             
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Revenue Distribution</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-48 flex items-center justify-center">
                   <div className="w-32 h-32 rounded-full border-8 border-green-400/20 border-t-green-400 border-r-blue-400 opacity-50"></div>
                 </div>
@@ -199,8 +199,8 @@ export default function EarningsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Point Pack Revenue</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar">
-                <div className="p-4 border-b border-sidebar-border">
+              <div className="rounded-lg border border-border bg-card">
+                <div className="p-4 border-b border-border">
                   <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
                     <span>Pack Tier</span>
                     <span>Sales</span>
@@ -218,8 +218,8 @@ export default function EarningsPage() {
             
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Tribe Membership Revenue</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar">
-                <div className="p-4 border-b border-sidebar-border">
+              <div className="rounded-lg border border-border bg-card">
+                <div className="p-4 border-b border-border">
                   <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
                     <span>Month</span>
                     <span>New Members</span>
@@ -245,8 +245,8 @@ export default function EarningsPage() {
                 Export
               </Button>
             </div>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar">
-              <div className="p-4 border-b border-sidebar-border">
+            <div className="rounded-lg border border-border bg-card">
+              <div className="p-4 border-b border-border">
                 <div className="grid grid-cols-5 gap-4 text-sm font-medium text-muted-foreground">
                   <span>Date</span>
                   <span>Customer</span>
@@ -269,7 +269,7 @@ export default function EarningsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Payout Settings</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -293,7 +293,7 @@ export default function EarningsPage() {
             
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Withdrawal History</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="text-center text-muted-foreground">
                   <Bank className="mx-auto h-6 w-6 mb-2 opacity-50" />
                   <p className="text-sm">No withdrawals yet</p>

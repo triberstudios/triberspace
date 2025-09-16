@@ -76,7 +76,7 @@ export function CreatorSidebar() {
   return (
     <div 
       className={cn(
-        "sidebar-enhanced flex flex-col gap-6 h-full border-r border-sidebar-border bg-sidebar text-sidebar-foreground overflow-visible relative z-10 md:flex hidden",
+        "sidebar-enhanced flex flex-col gap-6 h-full border-r border-border bg-background text-foreground overflow-visible relative z-10 md:flex hidden",
         isCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
       )}
     >
@@ -86,7 +86,7 @@ export function CreatorSidebar() {
         isCollapsed ? "justify-center px-2 pt-4" : "justify-between px-4 pt-4"
       )}>
         {!isCollapsed && (
-          <h2 className="text-lg font-medium text-sidebar-foreground">
+          <h2 className="text-lg font-medium text-foreground">
             Creator Tools
           </h2>
         )}
@@ -98,7 +98,7 @@ export function CreatorSidebar() {
           <button
             onClick={toggleSidebar}
             className={cn(
-              "flex items-center justify-center rounded-lg bg-transparent hover:bg-sidebar-accent transition-colors duration-200 h-8 w-8 cursor-pointer"
+              "flex items-center justify-center rounded-lg bg-transparent hover:bg-secondary transition-colors duration-200 h-8 w-8 cursor-pointer"
             )}
           >
             <Sidebar className="h-5 w-5" />
@@ -153,8 +153,8 @@ export function CreatorSidebar() {
                 "flex items-center rounded-lg transition-all duration-200 h-14",
                 isCollapsed ? "justify-center px-0" : "gap-3 px-3",
                 isActive 
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                  : "hover:bg-sidebar-accent/25 hover:text-sidebar-accent-foreground"
+                  ? "bg-secondary text-primary" 
+                  : "hover:bg-secondary/25 hover:text-primary"
               )}
             >
               <IconComponent 
@@ -172,11 +172,11 @@ export function CreatorSidebar() {
         
         {/* Exit Dashboard Button */}
         <div className={cn(
-          "mt-auto border-t border-sidebar-border pt-4 pb-4 transition-all duration-300"
+          "mt-auto border-t border-border pt-4 pb-4 transition-all duration-300"
         )}>
           <Button 
             variant="ghost" 
-            className="w-full flex items-center justify-center gap-3 h-10 border border-sidebar-border hover:bg-sidebar-accent/25" 
+            className="w-full flex items-center justify-center gap-3 h-10 border border-border hover:bg-secondary/25" 
             asChild
           >
             <Link href="/" className="flex items-center gap-3 w-full justify-center">

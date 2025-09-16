@@ -100,11 +100,13 @@ export default function Home() {
       <div className="flex flex-col">
         {/* Banner Section */}
         <div className="px-6 sm:px-8 pt-4 sm:pt-8">
-          <Banner 
+          <Banner
             variant="rightImage"
             title="Welcome to Triberspace"
             subtitle="(Coming soon) Triberspace is an immersive art and entertainment platform powering brands and artists to create immersive experiences. Explore, connect, and unlock exclusives from your favorite creators."
             backgroundVideo="/previewVideoHB.mp4"
+            //baseBackground="/bgGif.gif"
+            //baseOverlayOpacity={88}
             primaryAction={{
               label: "Get Started",
               onClick: () => router.push("/auth/sign-up")
@@ -122,7 +124,7 @@ export default function Home() {
             {/* For You Section */}
             <div className="flex flex-col gap-4 pt-6">
               <div className="flex items-center justify-between px-2">
-                <h2 className="text-2xl font-semibold text-sidebar-foreground tracking-tight">For You</h2>
+                <h2 className="text-2xl font-semibold text-foreground tracking-tight">For You</h2>
               </div>
               <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 p-2">
                 {categories

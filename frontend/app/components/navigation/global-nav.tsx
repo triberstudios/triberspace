@@ -41,7 +41,7 @@ export function GlobalNav() {
   const showCreateDropdown = pathname.startsWith('/creator-dashboard')
 
   return (
-    <nav className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-4 md:px-8">
+    <nav className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 md:px-8">
       {/* Logo Section */}
       <Link href="/" className="flex items-center gap-2">
         <Image

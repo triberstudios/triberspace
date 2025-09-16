@@ -48,8 +48,8 @@ function Banner({
     <div className="flex flex-col gap-6 sm:gap-6">
       {/* Text Content */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-sidebar-foreground">{title}</h1>
-        {subtitle && <span className="text-sm sm:text-base text-sidebar-foreground">{subtitle}</span>}
+        <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">{title}</h1>
+        {subtitle && <span className="text-sm sm:text-base text-foreground">{subtitle}</span>}
         {description && <p className="text-sm sm:text-base text-gray-300">{description}</p>}
       </div>
 
@@ -76,7 +76,7 @@ function Banner({
 
   if (variant === "rightImage") {
     return (
-      <div className={cn("border-3 border-sidebar rounded-xl overflow-hidden bg-sidebar relative", className)}>
+      <div className={cn("border-3 border-white/10 rounded-xl overflow-hidden bg-background-2 relative", className)}>
         {/* Base background layer - can be color or image */}
         {baseBackground && (
           baseBackground.startsWith('#') || baseBackground.startsWith('rgb') ? (
@@ -170,7 +170,7 @@ function Banner({
   // Default: fullBackground variant
   return (
     <div>
-      <div className={cn("relative bg-cover w-full min-h-[320px] sm:min-h-[30vh] lg:h-[50vh] rounded-xl flex items-center overflow-hidden border-3 border-sidebar", className)}>
+      <div className={cn("relative bg-cover w-full min-h-[320px] sm:min-h-[30vh] lg:h-[50vh] rounded-xl flex items-center overflow-hidden border-3 border-background-2", className)}>
         {/* Base background layer - can be color or image */}
         {baseBackground && (
           baseBackground.startsWith('#') || baseBackground.startsWith('rgb') ? (

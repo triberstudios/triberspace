@@ -20,7 +20,7 @@ export default function TribePage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Tribe Statistics</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Total Members</span>
@@ -44,8 +44,8 @@ export default function TribePage() {
             
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Most Active Members</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar">
-                <div className="p-4 border-b border-sidebar-border">
+              <div className="rounded-lg border border-border bg-card">
+                <div className="p-4 border-b border-border">
                   <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
                     <span>Member</span>
                     <span>Activity Score</span>
@@ -71,8 +71,8 @@ export default function TribePage() {
                 View All
               </Button>
             </div>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar">
-              <div className="p-4 border-b border-sidebar-border">
+            <div className="rounded-lg border border-border bg-card">
+              <div className="p-4 border-b border-border">
                 <div className="grid grid-cols-4 gap-4 text-sm font-medium text-muted-foreground">
                   <span>Member</span>
                   <span>Activity</span>
@@ -103,7 +103,7 @@ export default function TribePage() {
             </div>
             
             <div className="space-y-4">
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="text-center text-muted-foreground">
                   <Crown className="mx-auto h-12 w-12 mb-4 opacity-50" />
                   <h3 className="text-lg font-medium text-foreground mb-2">No membership tiers created</h3>
@@ -117,7 +117,7 @@ export default function TribePage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Member Management</h2>
-              <div className="flex items-center gap-2 bg-sidebar border border-sidebar-border rounded-lg p-1">
+              <div className="flex items-center gap-2 bg-sidebar border border-border rounded-lg p-1">
                 {[
                   { value: 'all', label: 'All' },
                   { value: 'active', label: 'Active' },
@@ -129,7 +129,7 @@ export default function TribePage() {
                     onClick={() => setMemberFilter(filter.value as any)}
                     className={`px-3 py-2 text-sm font-medium rounded transition-colors cursor-pointer ${
                       memberFilter === filter.value
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        ? 'bg-secondary text-primary'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -139,8 +139,8 @@ export default function TribePage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar">
-              <div className="p-4 border-b border-sidebar-border">
+            <div className="rounded-lg border border-border bg-card">
+              <div className="p-4 border-b border-border">
                 <div className="grid grid-cols-5 gap-4 text-sm font-medium text-muted-foreground">
                   <span>Member</span>
                   <span>Join Date</span>

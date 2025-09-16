@@ -27,12 +27,12 @@ export default function StorePage() {
           <ExitDashboardButton />
           <div className="space-y-6">
           {/* Store Tabs */}
-          <div className="flex items-center gap-4 border-b border-sidebar-border">
+          <div className="flex items-center gap-4 border-b border-border">
             <button
               onClick={() => setActiveTab('products')}
               className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'products'
-                  ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -42,7 +42,7 @@ export default function StorePage() {
               onClick={() => setActiveTab('point-packs')}
               className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'point-packs'
-                  ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -52,7 +52,7 @@ export default function StorePage() {
               onClick={() => setActiveTab('membership-tiers')}
               className={`pb-4 px-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'membership-tiers'
-                  ? 'border-sidebar-accent-foreground text-sidebar-accent-foreground'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -78,7 +78,7 @@ export default function StorePage() {
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                  <div className="rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-base font-medium text-foreground">Avatars</h3>
                       <Button variant="ghost" size="sm">
@@ -91,7 +91,7 @@ export default function StorePage() {
                     </div>
                   </div>
                   
-                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                  <div className="rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-base font-medium text-foreground">Outfits</h3>
                       <Button variant="ghost" size="sm">
@@ -104,7 +104,7 @@ export default function StorePage() {
                     </div>
                   </div>
                   
-                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                  <div className="rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-base font-medium text-foreground">Emotes</h3>
                       <Button variant="ghost" size="sm">
@@ -128,7 +128,7 @@ export default function StorePage() {
                 {/* Point Pack Grid */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {/* Example Point Pack Cards */}
-                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                  <div className="rounded-lg border border-border bg-card p-6">
                     <div className="text-center text-muted-foreground">
                       <Star className="mx-auto h-12 w-12 mb-4 opacity-50" />
                       <h3 className="text-lg font-medium text-foreground mb-2">No point packs created</h3>
@@ -157,7 +157,7 @@ export default function StorePage() {
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+                  <div className="rounded-lg border border-border bg-card p-6">
                     <div className="text-center text-muted-foreground">
                       <Crown className="mx-auto h-12 w-12 mb-4 opacity-50" />
                       <h3 className="text-lg font-medium text-foreground mb-2">No membership tiers created</h3>
@@ -176,8 +176,8 @@ export default function StorePage() {
           {/* Recent Orders */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground">Recent Orders</h2>
-            <div className="rounded-lg border border-sidebar-border bg-sidebar">
-              <div className="p-4 border-b border-sidebar-border">
+            <div className="rounded-lg border border-border bg-card">
+              <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-medium text-foreground">Order History</h3>
                   <Button variant="ghost" size="sm">

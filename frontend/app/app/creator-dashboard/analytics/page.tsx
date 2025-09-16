@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
 
           {/* Overview Stats */}
           <div className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-500/20 p-2">
                   <Eye className="h-5 w-5 text-blue-400" />
@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-green-500/20 p-2">
                   <TrendUp className="h-5 w-5 text-green-400" />
@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-purple-500/20 p-2">
                   <Users className="h-5 w-5 text-purple-400" />
@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             
-            <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-orange-500/20 p-2">
                   <Clock className="h-5 w-5 text-orange-400" />
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Views Over Time</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-48 flex items-end justify-center gap-2">
                   {/* Mock bar chart */}
                   {Array.from({ length: 7 }).map((_, i) => (
@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
             
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Engagement Breakdown</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-48 flex items-center justify-center">
                   {/* Mock pie chart */}
                   <div className="w-32 h-32 rounded-full border-8 border-purple-400/20 border-t-purple-400 border-r-blue-400 opacity-50"></div>
@@ -137,8 +137,8 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Top Experiences</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar">
-                <div className="p-4 border-b border-sidebar-border">
+              <div className="rounded-lg border border-border bg-card">
+                <div className="p-4 border-b border-border">
                   <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
                     <span>Experience</span>
                     <span>Views</span>
@@ -156,8 +156,8 @@ export default function AnalyticsPage() {
             
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">Top Products</h2>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar">
-                <div className="p-4 border-b border-sidebar-border">
+              <div className="rounded-lg border border-border bg-card">
+                <div className="p-4 border-b border-border">
                   <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground">
                     <span>Product</span>
                     <span>Sales</span>
@@ -178,14 +178,14 @@ export default function AnalyticsPage() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground">Audience Demographics</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <h3 className="text-base font-medium text-foreground mb-4">Age Groups</h3>
                 <div className="text-center text-muted-foreground">
                   <Users className="mx-auto h-6 w-6 mb-2 opacity-50" />
                   <p className="text-sm">No demographic data</p>
                 </div>
               </div>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar p-6">
+              <div className="rounded-lg border border-border bg-card p-6">
                 <h3 className="text-base font-medium text-foreground mb-4">Geographic Distribution</h3>
                 <div className="text-center text-muted-foreground">
                   <Users className="mx-auto h-6 w-6 mb-2 opacity-50" />

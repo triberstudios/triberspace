@@ -22,7 +22,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const CardContent = (
     <div
       className={cn(
-        "group relative flex w-full aspect-[2/3] flex-col cursor-pointer rounded-lg overflow-hidden bg-sidebar",
+        "group relative flex w-full aspect-[2/3] flex-col cursor-pointer rounded-lg overflow-hidden bg-card",
         className
       )}
     >
@@ -33,7 +33,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
           style={{ backgroundImage: `url(${product.image})` }}
         />
       ) : (
-        <div className="absolute inset-0 bg-sidebar">
+        <div className="absolute inset-0 bg-card">
           {/* Diagonal stripe pattern to show blur effect */}
           <div 
             className="absolute inset-0 opacity-30"
@@ -57,17 +57,17 @@ export function ProductCard({ product, className }: ProductCardProps) {
       )}
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20" />
+      <div className="absolute inset-0 bg-white/0 transition-all duration-300 group-hover:bg-white/10" />
 
       {/* Bottom text overlay with blur */}
       <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-1 p-4 backdrop-blur-lg bg-black/20 border-t border-white/10">
         {/* Product title and price */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sidebar-foreground font-medium text-lg leading-tight flex-1">
+          <h3 className="text-foreground font-medium text-lg leading-tight flex-1">
             {product.title}
           </h3>
           {(product.price || product.points) && (
-            <span className="text-sidebar-foreground font-medium text-base whitespace-nowrap">
+            <span className="text-foreground font-medium text-base whitespace-nowrap">
               {product.points ? `${product.points} points` : `$${product.price}`}
             </span>
           )}

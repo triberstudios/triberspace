@@ -57,12 +57,12 @@ export function StoreCard({ store, className }: StoreCardProps) {
       )}
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20" />
+      <div className="absolute inset-0 bg-white/0 transition-all duration-300 group-hover:bg-white/8" />
 
       {/* Bottom text overlay with blur */}
       <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-1 p-4 backdrop-blur-lg bg-black/5 border-t border-white/10">
         {/* Store title */}
-        <h3 className="text-sidebar-foreground font-medium text-lg leading-tight">
+        <h3 className="text-foreground font-medium text-lg leading-tight">
           {store.title}
         </h3>
         
