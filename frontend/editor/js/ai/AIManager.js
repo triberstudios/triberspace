@@ -181,7 +181,7 @@ class AIManager {
 	static createDefault() {
 		const config = {
 			openai: {
-				apiKey: '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',
+				apiKey: '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',
 				model: 'gpt-4-turbo',
 				maxTokens: 1000
 			},
@@ -198,9 +198,8 @@ class AIManager {
 	 * @returns {string}
 	 */
 	static getBestProvider() {
-		// Default to mock for safe testing
-		// Change to 'openai' once you add your API key above
-		return 'mock';
+		// Use OpenAI provider for production
+		return 'openai';
 	}
 }
 

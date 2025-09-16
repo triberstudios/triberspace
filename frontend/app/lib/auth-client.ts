@@ -1,7 +1,7 @@
 import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields, usernameClient } from "better-auth/client/plugins";
 // TODO: Uncomment when @triberspace/auth package is fully set up
-// import type { auth } from "@triberspace/auth";
+import type { auth } from "@triberspace/auth";
 
 // Temporary auth type for deployment - remove when real auth is ready
 type auth = any;
@@ -16,7 +16,7 @@ export const authClient = createAuthClient({
   
   plugins: [
     // TODO: Uncomment when @triberspace/auth is ready
-    // inferAdditionalFields<typeof auth>(),
+    inferAdditionalFields<typeof auth>(),
     usernameClient(),
   ],
 });
