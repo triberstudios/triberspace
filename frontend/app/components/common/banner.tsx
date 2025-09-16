@@ -94,9 +94,9 @@ function Banner({
         
         {/* Base background overlay */}
         {baseBackground && (
-          <div 
-            className="absolute inset-0" 
-            style={{ backgroundColor: `rgba(0, 0, 0, ${baseOverlayOpacity / 100})` }}
+          <div
+            className="absolute inset-0 bg-background"
+            style={{ opacity: baseOverlayOpacity / 100 }}
           />
         )}
         
@@ -188,9 +188,9 @@ function Banner({
         
         {/* Base background overlay */}
         {baseBackground && (
-          <div 
-            className="absolute inset-0" 
-            style={{ backgroundColor: `rgba(0, 0, 0, ${baseOverlayOpacity / 100})` }}
+          <div
+            className="absolute inset-0 bg-background"
+            style={{ opacity: baseOverlayOpacity / 100 }}
           />
         )}
         
