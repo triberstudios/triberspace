@@ -76,7 +76,7 @@ function Banner({
 
   if (variant === "rightImage") {
     return (
-      <div className={cn("border-3 border-white/10 rounded-xl overflow-hidden bg-background relative", className)}>
+      <div className={cn("border-4 border-white/10 rounded-xl overflow-hidden bg-background relative", className)}>
         {/* Base background layer - can be color or image */}
         {baseBackground && (
           baseBackground.startsWith('#') || baseBackground.startsWith('rgb') ? (
