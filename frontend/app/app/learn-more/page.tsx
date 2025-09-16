@@ -20,7 +20,7 @@ export default function LearnMore() {
             />
           </div>
           <p className="text-foreground leading-relaxed">
-            Triber Studios is an immersive experience studio helping brands and artists build more engaged, lasting communities - which we call tribes - using immersive technologies. 
+            Triberspace is designed and architected by Triber Studios: an immersive experience studio helping brands and artists build lasting communities, which we call tribes, using immersive technologies. 
             <br /><br />
             <a href="https://blogs.nvidia.com/blog/what-is-extended-reality/" target="_blank" rel="noopener noreferrer" className="text-foreground underline hover:no-underline">Immersive technology</a> is a powerful new medium for sharing our stories, culture, and memory across boundaries, and we believe it should be accessible to all — We built Triberspace to accomplish this.
           </p>
