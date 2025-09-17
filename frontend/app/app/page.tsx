@@ -103,12 +103,12 @@ export default function Home() {
           <Banner
             variant="rightImage"
             title="Welcome to Triberspace"
-            subtitle="(Coming soon) Triberspace is a next-gen community platform where creators and brands can host immersive art shows, events, minigames, and more - No code required. Fans can join in to explore, connect, and unlock exclusives from the communities they love."
+            subtitle="Triberspace is an immersive art and entertainment platform where creators can host art shows, events, minigames, and more - No code required. Fans can join to explore, connect, and unlock exclusives from the creators they love."
             backgroundVideo="/previewVideoHB.mp4"
             baseBackground="/bgGif.gif"
             baseOverlayOpacity={97}
             primaryAction={{
-              label: "Get Started",
+              label: "Join Waitlist",
               onClick: () => router.push("/auth/sign-up")
             }}
             secondaryAction={{
