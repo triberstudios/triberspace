@@ -545,16 +545,14 @@ select {
 		margin-bottom: 0;
 	}
 
-	#sidebar .Row,
-	#properties .Row {
+	#sidebar .Row {
 		display: flex;
 		align-items: center;
 		min-height: 24px;
 		margin-bottom: 10px;
 	}
 
-	#sidebar .Row .Label,
-	#properties .Row .Label {
+	#sidebar .Row .Label {
 
 		width: 120px;
 
@@ -1025,32 +1023,34 @@ div.shortcut-row input {
 /* Responsive adjustments for narrow sidebar - keep horizontal layout */
 @container sidebar-wrapper (max-width: 350px) {
 	#sidebar .Row:not(.shortcut-row),
-	#properties .Row:not(.shortcut-row) {
+	#properties .Row {
 		flex-wrap: nowrap;
 		gap: 8px;
 	}
 
 	#sidebar .Row:not(.shortcut-row) .Label,
-	#properties .Row:not(.shortcut-row) .Label {
+	#properties .Row .Label {
 		flex: 0 0 auto;
 		min-width: 60px;
 		max-width: 100px;
 		font-size: 11px;
 	}
 
-	#sidebar .Row:not(.shortcut-row) input:not([style*="width: 15px"]),
+	#sidebar .Row:not(.shortcut-row) input:not([type="checkbox"]),
 	#sidebar .Row:not(.shortcut-row) select,
-	#properties .Row:not(.shortcut-row) input:not([style*="width: 15px"]),
-	#properties .Row:not(.shortcut-row) select {
+	#properties .Row input:not([type="checkbox"]),
+	#properties .Row select {
 		flex: 1;
 		min-width: 0;
 		max-width: none;
 	}
 
 	#sidebar .Row:not(.shortcut-row) .Checkbox,
-	#properties .Row:not(.shortcut-row) .Checkbox {
+	#sidebar .Row:not(.shortcut-row) input[type="checkbox"],
+	#properties .Row .Checkbox,
+	#properties .Row input[type="checkbox"] {
+		width: auto !important;
 		flex: 0 0 auto;
-		margin-left: auto;
 	}
 }
 
@@ -1170,5 +1170,17 @@ div.shortcut-row input {
 /* Ensure main scene tab doesn't scroll as a whole */
 .TabbedPanel .Panels {
 	overflow: visible !important;
+}
+
+/* Apply sidebar Row styling to Properties panel as well */
+#properties .Row {
+	display: flex;
+	align-items: center;
+	min-height: 24px;
+	margin-bottom: 10px;
+}
+
+#properties .Row .Label {
+	width: 120px;
 }
 
