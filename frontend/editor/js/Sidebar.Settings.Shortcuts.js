@@ -98,11 +98,28 @@ function SidebarSettingsShortcuts( editor ) {
 
 	document.addEventListener( 'keydown', function ( event ) {
 
+		// Don't trigger shortcuts if user is typing in an input field or textarea
+		if ( document.querySelector( 'input:focus, textarea:focus' ) ) {
+			// Only handle backspace for deletion - all other shortcuts are blocked
+			if ( event.key.toLowerCase() !== 'backspace' && event.key.toLowerCase() !== 'delete' ) {
+				return;
+			}
+		}
+
 		switch ( event.key.toLowerCase() ) {
 
 			case 'backspace':
 
-				event.preventDefault(); // prevent browser back
+				// Only prevent default if NOT typing in an input/textarea
+				if ( !document.querySelector( 'input:focus, textarea:focus' ) ) {
+
+					event.preventDefault(); // prevent browser back
+
+				} else {
+
+					return; // Let input handle backspace normally
+
+				}
 
 				// fall-through
 

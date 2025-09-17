@@ -164,6 +164,22 @@ class AIManager {
 	}
 
 	/**
+	 * Easy toggle between mock and OpenAI providers
+	 * @param {string} providerName - 'mock' or 'openai'
+	 * @returns {Promise<void>}
+	 */
+	async toggleProvider(providerName = null) {
+		// If no provider specified, toggle between mock and openai
+		if (!providerName) {
+			providerName = this.currentProviderName === 'mock' ? 'openai' : 'mock';
+		}
+
+		console.log(`Switching from ${this.currentProviderName} to ${providerName}...`);
+		await this.switchProvider(providerName);
+		console.log(`Now using ${providerName} provider`);
+	}
+
+	/**
 	 * Clean up resources
 	 */
 	destroy() {
@@ -198,8 +214,9 @@ class AIManager {
 	 * @returns {string}
 	 */
 	static getBestProvider() {
-		// Use OpenAI provider for production
-		return 'openai';
+		// Use mock provider for testing and development
+		// Change to 'openai' when ready for production
+		return 'mock';
 	}
 }
 

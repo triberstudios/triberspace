@@ -4,6 +4,9 @@ import { SetPositionCommand } from '../commands/SetPositionCommand.js';
 import { SetRotationCommand } from '../commands/SetRotationCommand.js';
 import { SetScaleCommand } from '../commands/SetScaleCommand.js';
 import { RemoveObjectCommand } from '../commands/RemoveObjectCommand.js';
+import { SetMaterialColorCommand } from '../commands/SetMaterialColorCommand.js';
+import { SetMaterialCommand } from '../commands/SetMaterialCommand.js';
+import { SetMaterialValueCommand } from '../commands/SetMaterialValueCommand.js';
 
 /**
  * Executes AI-generated commands in the Three.js editor
@@ -59,7 +62,16 @@ class SceneCommandExecutor {
 			
 			case 'clearScene':
 				return this.clearScene(command);
-			
+
+			case 'changeMaterialColor':
+				return this.changeMaterialColor(command);
+
+			case 'changeMaterialType':
+				return this.changeMaterialType(command);
+
+			case 'changeMaterialProperty':
+				return this.changeMaterialProperty(command);
+
 			default:
 				throw new Error(`Unknown command action: ${command.action}`);
 		}
@@ -93,6 +105,13 @@ class SceneCommandExecutor {
 				throw new Error(`Unknown object type: ${type}`);
 		}
 
+		// Apply material properties if specified
+		if (command.material) {
+			material = this.createMaterial(command.material.type || 'standard', command.material.properties || {});
+		} else if (command.color) {
+			material.color.setHex(this.parseColorString(command.color));
+		}
+
 		// Create mesh
 		const mesh = new THREE.Mesh(geometry, material);
 		mesh.position.set(...position);
@@ -124,8 +143,11 @@ class SceneCommandExecutor {
 			throw new Error(`Object not found: ${target}`);
 		}
 
+		// Create THREE.Vector3 object from position array
+		const newPosition = new THREE.Vector3(position[0], position[1], position[2]);
+
 		// Use editor command system for undo/redo
-		this.editor.execute(new SetPositionCommand(this.editor, object, ...position));
+		this.editor.execute(new SetPositionCommand(this.editor, object, newPosition));
 
 		return object;
 	}
@@ -142,8 +164,11 @@ class SceneCommandExecutor {
 			throw new Error(`Object not found: ${target}`);
 		}
 
+		// Create THREE.Euler object from rotation array
+		const newRotation = new THREE.Euler(rotation[0], rotation[1], rotation[2]);
+
 		// Use editor command system for undo/redo
-		this.editor.execute(new SetRotationCommand(this.editor, object, ...rotation));
+		this.editor.execute(new SetRotationCommand(this.editor, object, newRotation));
 
 		return object;
 	}
@@ -157,11 +182,17 @@ class SceneCommandExecutor {
 		const object = this.findObject(target);
 
 		if (!object) {
-			throw new Error(`Object not found: ${target}`);
+			if (target === 'selected') {
+				throw new Error(`No object is currently selected. Please select an object first, or try adding an object before scaling it.`);
+			}
+			throw new Error(`Object not found: ${target}. Make sure the object exists in the scene.`);
 		}
 
+		// Create THREE.Vector3 object from scale array
+		const newScale = new THREE.Vector3(scale[0], scale[1], scale[2]);
+
 		// Use editor command system for undo/redo
-		this.editor.execute(new SetScaleCommand(this.editor, object, ...scale));
+		this.editor.execute(new SetScaleCommand(this.editor, object, newScale));
 
 		return object;
 	}
@@ -213,7 +244,30 @@ class SceneCommandExecutor {
 	 */
 	findObject(target) {
 		if (target === 'selected') {
-			return this.editor.selected;
+			// First try to get the selected object
+			if (this.editor.selected) {
+				return this.editor.selected;
+			}
+
+			// If no object is selected, try to find the most recently added object
+			console.warn('No object selected, trying to find the most recent object...');
+			const recentObjects = [];
+			this.editor.scene.traverse((child) => {
+				if (child.isMesh && child !== this.editor.camera && child.name.startsWith('AI_')) {
+					recentObjects.push(child);
+				}
+			});
+
+			if (recentObjects.length > 0) {
+				// Sort by name which includes timestamp, get the most recent
+				recentObjects.sort((a, b) => b.name.localeCompare(a.name));
+				const mostRecent = recentObjects[0];
+				console.log('Using most recent AI object:', mostRecent.name);
+				return mostRecent;
+			}
+
+			console.error('No selected object and no AI objects found in scene');
+			return null;
 		}
 
 		if (typeof target === 'string') {
@@ -284,8 +338,161 @@ class SceneCommandExecutor {
 		if (object.geometry.type === 'SphereGeometry') return 'sphere';
 		if (object.geometry.type === 'PlaneGeometry') return 'plane';
 		if (object.geometry.type === 'CylinderGeometry') return 'cylinder';
-		
+
 		return 'object';
+	}
+
+	/**
+	 * Change the color of an object's material
+	 * @param {Object} command - Change material color command
+	 */
+	changeMaterialColor(command) {
+		const { target, color, materialSlot = -1 } = command;
+		const object = this.findObject(target);
+
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Convert color to hex if it's a string
+		let hexColor;
+		if (typeof color === 'string') {
+			hexColor = this.parseColorString(color);
+		} else {
+			hexColor = color;
+		}
+
+		// Use editor command system for undo/redo
+		this.editor.execute(new SetMaterialColorCommand(this.editor, object, 'color', hexColor, materialSlot));
+
+		return object;
+	}
+
+	/**
+	 * Change the material type of an object
+	 * @param {Object} command - Change material type command
+	 */
+	changeMaterialType(command) {
+		const { target, materialType, properties = {}, materialSlot = -1 } = command;
+		const object = this.findObject(target);
+
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Create new material based on type
+		const newMaterial = this.createMaterial(materialType, properties);
+
+		// Use editor command system for undo/redo
+		this.editor.execute(new SetMaterialCommand(this.editor, object, newMaterial, materialSlot));
+
+		return object;
+	}
+
+	/**
+	 * Change a specific property of an object's material
+	 * @param {Object} command - Change material property command
+	 */
+	changeMaterialProperty(command) {
+		const { target, property, value, materialSlot = -1 } = command;
+		const object = this.findObject(target);
+
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Special handling for opacity - automatically enable transparency
+		if (property === 'opacity' && value < 1.0) {
+			// First enable transparency
+			this.editor.execute(new SetMaterialValueCommand(this.editor, object, 'transparent', true, materialSlot));
+			// Then set the opacity value
+			this.editor.execute(new SetMaterialValueCommand(this.editor, object, property, value, materialSlot));
+		} else {
+			// Use editor command system for undo/redo
+			this.editor.execute(new SetMaterialValueCommand(this.editor, object, property, value, materialSlot));
+		}
+
+		return object;
+	}
+
+	/**
+	 * Parse a color string into a hex number
+	 * @param {string} colorString - Color string (red, blue, #ff0000, etc.)
+	 * @returns {number} Hex color value
+	 */
+	parseColorString(colorString) {
+		const colorMap = {
+			'red': 0xff0000,
+			'green': 0x00ff00,
+			'blue': 0x0000ff,
+			'yellow': 0xffff00,
+			'orange': 0xff8000,
+			'purple': 0x8000ff,
+			'pink': 0xff69b4,
+			'white': 0xffffff,
+			'black': 0x000000,
+			'gray': 0x808080,
+			'grey': 0x808080,
+			'brown': 0x8b4513,
+			'cyan': 0x00ffff,
+			'magenta': 0xff00ff
+		};
+
+		// Check if it's a named color
+		const lowerColor = colorString.toLowerCase();
+		if (colorMap[lowerColor]) {
+			return colorMap[lowerColor];
+		}
+
+		// Check if it's a hex color
+		if (colorString.startsWith('#')) {
+			return parseInt(colorString.slice(1), 16);
+		}
+
+		// Default to gray if can't parse
+		return 0x808080;
+	}
+
+	/**
+	 * Create a Three.js material based on type and properties
+	 * @param {string} materialType - Type of material (standard, basic, phong, etc.)
+	 * @param {Object} properties - Material properties
+	 * @returns {THREE.Material} Created material
+	 */
+	createMaterial(materialType, properties = {}) {
+		const defaultProps = {
+			color: 0x888888,
+			...properties
+		};
+
+		switch (materialType.toLowerCase()) {
+			case 'standard':
+			case 'meshstandard':
+				return new THREE.MeshStandardMaterial(defaultProps);
+
+			case 'basic':
+			case 'meshbasic':
+				return new THREE.MeshBasicMaterial(defaultProps);
+
+			case 'phong':
+			case 'meshphong':
+				return new THREE.MeshPhongMaterial(defaultProps);
+
+			case 'lambert':
+			case 'meshlambert':
+				return new THREE.MeshLambertMaterial(defaultProps);
+
+			case 'toon':
+			case 'meshtoon':
+				return new THREE.MeshToonMaterial(defaultProps);
+
+			case 'normal':
+			case 'meshnormal':
+				return new THREE.MeshNormalMaterial(defaultProps);
+
+			default:
+				return new THREE.MeshStandardMaterial(defaultProps);
+		}
 	}
 }
 

@@ -36,11 +36,79 @@ function SidebarAI( editor ) {
 	let isInitializing = false;
 	let currentProvider = 'mock';
 
-	// Messages area - use viewport height for reliable calculation
+	// Provider toggle header
+	const providerHeader = document.createElement('div');
+	providerHeader.style.cssText = `
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 16px;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		background: rgba(0, 0, 0, 0.3);
+	`;
+
+	const providerInfo = document.createElement('div');
+	providerInfo.style.cssText = `
+		font-size: 12px;
+		color: #a0aec0;
+	`;
+	providerInfo.textContent = 'Provider: Mock (Local)';
+
+	const toggleButton = document.createElement('button');
+	toggleButton.style.cssText = `
+		padding: 4px 8px;
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 6px;
+		color: #e2e8f0;
+		font-size: 11px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	`;
+	toggleButton.textContent = 'Switch to OpenAI';
+
+	toggleButton.addEventListener('click', async () => {
+		try {
+			toggleButton.disabled = true;
+			toggleButton.textContent = 'Switching...';
+
+			const newProvider = currentProvider === 'mock' ? 'openai' : 'mock';
+			await aiManager.toggleProvider(newProvider);
+			currentProvider = newProvider;
+
+			// Update UI
+			const providerName = newProvider === 'mock' ? 'Mock (Local)' : 'OpenAI (GPT-4)';
+			providerInfo.textContent = `Provider: ${providerName}`;
+			toggleButton.textContent = newProvider === 'mock' ? 'Switch to OpenAI' : 'Switch to Mock';
+
+			addMessage(`Switched to ${providerName} provider`, false);
+		} catch (error) {
+			console.error('Error switching provider:', error);
+			addMessage(`Failed to switch provider: ${error.message}`, false, true);
+		} finally {
+			toggleButton.disabled = false;
+		}
+	});
+
+	toggleButton.addEventListener('mouseenter', () => {
+		if (!toggleButton.disabled) {
+			toggleButton.style.background = 'rgba(255, 255, 255, 0.15)';
+		}
+	});
+	toggleButton.addEventListener('mouseleave', () => {
+		if (!toggleButton.disabled) {
+			toggleButton.style.background = 'rgba(255, 255, 255, 0.1)';
+		}
+	});
+
+	providerHeader.appendChild(providerInfo);
+	providerHeader.appendChild(toggleButton);
+
+	// Messages area - use viewport height for reliable calculation (adjusted for provider header)
 	const messagesArea = document.createElement('div');
 	messagesArea.className = 'ai-messages-area';
 	messagesArea.style.cssText = `
-		height: calc(100vh - 140px);
+		height: calc(100vh - 185px);
 		overflow-y: auto;
 		overflow-x: hidden;
 		padding: 16px;
@@ -118,7 +186,8 @@ function SidebarAI( editor ) {
 	inputWrapper.appendChild(messageInput);
 	inputWrapper.appendChild(sendButton);
 	inputContainer.appendChild(inputWrapper);
-	
+
+	container.dom.appendChild(providerHeader);
 	container.dom.appendChild(messagesArea);
 	container.dom.appendChild(inputContainer);
 	
@@ -381,7 +450,12 @@ function SidebarAI( editor ) {
 			const provider = AIManager.getBestProvider();
 			await aiManager.initialize(provider);
 			currentProvider = aiManager.currentProviderName || provider;
-			
+
+			// Update provider info in UI
+			const providerName = currentProvider === 'mock' ? 'Mock (Local)' : 'OpenAI (GPT-4)';
+			providerInfo.textContent = `Provider: ${providerName}`;
+			toggleButton.textContent = currentProvider === 'mock' ? 'Switch to OpenAI' : 'Switch to Mock';
+
 			// Don't show initial message - let empty state handle it
 		} catch (error) {
 			console.error('Failed to initialize AI:', error);
@@ -393,6 +467,17 @@ function SidebarAI( editor ) {
 
 	// Initialize when panel is created
 	setTimeout(initializeAI, 100);
+
+	// Make processMessage function globally accessible for floating input
+	container.dom.processMessage = processMessage;
+
+	// Also store it globally on the AI panel element after DOM is ready
+	setTimeout(() => {
+		const aiPanel = document.getElementById('ai-panel');
+		if (aiPanel) {
+			aiPanel.processMessage = processMessage;
+		}
+	}, 50);
 
 	return container;
 }

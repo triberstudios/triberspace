@@ -53,6 +53,34 @@ class MockProvider extends AIProvider {
 				response = "I've moved the object for you!";
 			}
 		}
+		else if (input.includes('color') || input.includes('make') && (input.includes('red') || input.includes('blue') || input.includes('green'))) {
+			const colorCommand = this.parseColorCommand(input);
+			if (colorCommand) {
+				commands.push(colorCommand);
+				response = `I've changed the color to ${colorCommand.color}!`;
+			}
+		}
+		else if (input.includes('material') || input.includes('rough') || input.includes('metal') || input.includes('shiny')) {
+			const materialCommand = this.parseMaterialCommand(input);
+			if (materialCommand) {
+				commands.push(materialCommand);
+				response = "I've updated the material properties!";
+			}
+		}
+		else if (input.includes('rotate') || input.includes('turn')) {
+			const rotateCommand = this.parseRotateCommand(input);
+			if (rotateCommand) {
+				commands.push(rotateCommand);
+				response = "I've rotated the object for you!";
+			}
+		}
+		else if (input.includes('scale') || input.includes('size') || input.includes('bigger') || input.includes('smaller')) {
+			const scaleCommand = this.parseScaleCommand(input);
+			if (scaleCommand) {
+				commands.push(scaleCommand);
+				response = "I've scaled the object for you!";
+			}
+		}
 
 		return {
 			commands,
@@ -62,14 +90,14 @@ class MockProvider extends AIProvider {
 
 	async generateResponse(userInput, context = {}) {
 		await this.simulateDelay(300, 800);
-		
+
 		const responses = [
-			"I'm here to help you create 3D scenes! Try asking me to add objects like cubes, spheres, or planes.",
-			"You can ask me to add shapes, move objects around, or clear the scene. What would you like to create?",
-			"I can help you build 3D scenes with simple commands. For example, try 'add a red cube' or 'add a sphere at position 2,0,5'.",
-			"Ready to create something awesome! I can add basic shapes and position them in your scene."
+			"I'm here to help you create 3D scenes! Try asking me to add objects, change colors, or modify materials.",
+			"You can ask me to add shapes, move objects around, change colors, or adjust materials. What would you like to create?",
+			"I can help you build 3D scenes with simple commands. For example, try 'add a red cube', 'make it metal', or 'rotate 45 degrees'.",
+			"Ready to create something awesome! I can add shapes, change materials, adjust colors, and transform objects in your scene."
 		];
-		
+
 		return responses[Math.floor(Math.random() * responses.length)];
 	}
 
@@ -116,9 +144,10 @@ class MockProvider extends AIProvider {
 			command.scale = [scale, scale, scale];
 		}
 
-		// Add a name if we can infer one
-		const colorMatch = input.match(/(red|blue|green|yellow|orange|purple|pink|white|black|gray)/);
+		// Try to extract color from input
+		const colorMatch = input.match(/(red|blue|green|yellow|orange|purple|pink|white|black|gray|grey|brown|cyan|magenta)/);
 		if (colorMatch) {
+			command.color = colorMatch[1];
 			command.name = `${colorMatch[1]}_${type}`;
 		}
 
@@ -140,6 +169,105 @@ class MockProvider extends AIProvider {
 		};
 	}
 
+	parseColorCommand(input) {
+		const colors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'white', 'black', 'gray', 'brown'];
+		const foundColor = colors.find(color => input.includes(color));
+
+		if (!foundColor) return null;
+
+		return {
+			action: 'changeMaterialColor',
+			target: 'selected',
+			color: foundColor
+		};
+	}
+
+	parseMaterialCommand(input) {
+		if (input.includes('rough')) {
+			return {
+				action: 'changeMaterialProperty',
+				target: 'selected',
+				property: 'roughness',
+				value: input.includes('very rough') ? 1.0 : 0.8
+			};
+		}
+
+		if (input.includes('metal') || input.includes('metallic')) {
+			return {
+				action: 'changeMaterialProperty',
+				target: 'selected',
+				property: 'metalness',
+				value: 1.0
+			};
+		}
+
+		if (input.includes('shiny') || input.includes('smooth')) {
+			return {
+				action: 'changeMaterialProperty',
+				target: 'selected',
+				property: 'roughness',
+				value: 0.1
+			};
+		}
+
+		if (input.includes('glass') || input.includes('transparent')) {
+			return {
+				action: 'changeMaterialProperty',
+				target: 'selected',
+				property: 'opacity',
+				value: 0.5
+			};
+		}
+
+		return null;
+	}
+
+	parseRotateCommand(input) {
+		// Simple rotation parsing - default to 45 degrees
+		const angleMatch = input.match(/(\d+)\s*degrees?/);
+		const angle = angleMatch ? parseFloat(angleMatch[1]) : 45;
+		const radians = (angle * Math.PI) / 180;
+
+		// Determine axis
+		let rotation = [0, 0, 0];
+		if (input.includes('x')) {
+			rotation[0] = radians;
+		} else if (input.includes('z')) {
+			rotation[2] = radians;
+		} else {
+			rotation[1] = radians; // Default to Y axis
+		}
+
+		return {
+			action: 'rotateObject',
+			target: 'selected',
+			rotation: rotation
+		};
+	}
+
+	parseScaleCommand(input) {
+		let scale = [1, 1, 1];
+
+		if (input.includes('bigger') || input.includes('larger')) {
+			scale = [2, 2, 2];
+		} else if (input.includes('smaller')) {
+			scale = [0.5, 0.5, 0.5];
+		} else {
+			// Look for specific scale values
+			const scaleMatch = input.match(/scale\s+(\d+(?:\.\d+)?)/);
+			if (scaleMatch) {
+				const scaleValue = parseFloat(scaleMatch[1]);
+				scale = [scaleValue, scaleValue, scaleValue];
+			}
+		}
+
+		return {
+			action: 'scaleObject',
+			target: 'selected',
+			scale: scale
+		};
+	}
+
 	async simulateDelay(min = 100, max = 500) {
 		const delay = Math.random() * (max - min) + min;
 		return new Promise(resolve => setTimeout(resolve, delay));
@@ -148,8 +276,8 @@ class MockProvider extends AIProvider {
 	initializeResponses() {
 		// Pre-defined responses for common queries
 		this.responses.set('hello', "Hello! I'm your AI assistant for creating 3D scenes. What would you like to build today?");
-		this.responses.set('help', "I can help you add objects to your scene! Try commands like:\n• 'Add a cube'\n• 'Add a red sphere at position 2,0,5'\n• 'Clear the scene'");
-		this.responses.set('what can you do', "I can add basic 3D shapes like cubes, spheres, planes, and cylinders. I can also position them and clear the scene. More features coming soon!");
+		this.responses.set('help', "I can help you with your 3D scene! Try commands like:\n• 'Add a red cube'\n• 'Make it metallic'\n• 'Rotate 45 degrees'\n• 'Make the sphere blue'\n• 'Scale it bigger'\n• 'Clear the scene'");
+		this.responses.set('what can you do', "I can add 3D shapes (cubes, spheres, planes, cylinders), change colors and materials, rotate and scale objects, move them around, and clear the scene. Just tell me what you want to create!");
 	}
 }
 

@@ -115,9 +115,15 @@ Available commands:
 - moveObject: Move existing objects
 - rotateObject: Rotate objects
 - scaleObject: Scale objects
+- removeObject: Remove objects from scene
 - clearScene: Clear all objects
+- changeMaterialColor: Change object colors
+- changeMaterialType: Change material types (standard, basic, phong, etc.)
+- changeMaterialProperty: Change material properties (roughness, metalness, opacity, etc.)
 
 Object types: cube, sphere, plane, cylinder
+Material types: standard, basic, phong, lambert, toon, normal
+Common material properties: roughness (0-1), metalness (0-1), opacity (0-1), transparent (true/false)
 
 Response format (ALWAYS return valid JSON):
 {
@@ -128,7 +134,38 @@ Response format (ALWAYS return valid JSON):
       "position": [x, y, z],
       "rotation": [x, y, z],
       "scale": [x, y, z],
-      "name": "optional_name"
+      "name": "optional_name",
+      "color": "red|blue|#ff0000|etc",
+      "material": {
+        "type": "standard|basic|phong|etc",
+        "properties": {
+          "roughness": 0.5,
+          "metalness": 0.0
+        }
+      }
+    },
+    {
+      "action": "changeMaterialColor",
+      "target": "selected|object_name|uuid",
+      "color": "red|blue|#ff0000|etc",
+      "materialSlot": -1
+    },
+    {
+      "action": "changeMaterialType",
+      "target": "selected|object_name|uuid",
+      "materialType": "standard|basic|phong|etc",
+      "properties": {
+        "roughness": 0.5,
+        "metalness": 0.0
+      },
+      "materialSlot": -1
+    },
+    {
+      "action": "changeMaterialProperty",
+      "target": "selected|object_name|uuid",
+      "property": "roughness|metalness|opacity|etc",
+      "value": 0.5,
+      "materialSlot": -1
     }
   ],
   "response": "Friendly confirmation message"
@@ -138,7 +175,14 @@ Guidelines:
 - Default position: [0, 1, 0] (slightly above ground)
 - Default rotation: [0, 0, 0]
 - Default scale: [1, 1, 1]
+- materialSlot: -1 for main material, 0+ for specific material slots
 - Infer reasonable positions if not specified
+- Support color names (red, blue, etc.) and hex codes (#ff0000)
+- For targeting objects:
+  * If user says "the cube", "the sphere", etc., use object name (AI_cube_*, AI_sphere_*)
+  * If user says "it" or refers to a previous object, use "selected"
+  * If user mentions specific object by name, use that name
+  * If context shows selected objects, prefer using their names over "selected"
 - Use descriptive names when possible
 - Keep response messages brief and friendly
 - Always return valid JSON`;

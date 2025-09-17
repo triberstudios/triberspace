@@ -1029,21 +1029,44 @@ function Viewport( editor ) {
 	// Send message function
 	function sendMessage() {
 		if (textInput.value.trim()) {
-			// Switch to chat tab and focus the main chat input
+			const message = textInput.value.trim();
+
+			// Switch to chat tab first
 			const sidebar = document.getElementById('sidebar');
-			const chatTab = sidebar.querySelector('[data-tab="ai"]');
-			if (chatTab) chatTab.click();
-			
-			// Wait for tab to switch, then focus chat input and set value
+			const chatTab = sidebar.querySelector('#ai'); // Tab has id="ai"
+			if (chatTab) {
+				console.log('Found AI tab, clicking it');
+				chatTab.click();
+			} else {
+				console.warn('AI tab not found');
+			}
+
+			// Wait for tab to switch, then send message to AI
 			setTimeout(() => {
-				const chatInput = document.querySelector('#ai-panel input[type="text"]');
-				if (chatInput) {
-					chatInput.value = textInput.value;
-					chatInput.focus();
-					textInput.value = '';
-					toggleChatInput(); // Close the floating input
+				// Try the direct method first
+				const aiPanel = document.getElementById('ai-panel');
+				if (aiPanel && aiPanel.processMessage) {
+					console.log('Sending message via direct method:', message);
+					aiPanel.processMessage(message);
+				} else {
+					// Use the reliable fallback method
+					console.log('Using fallback method to send message:', message);
+					const chatInput = document.querySelector('#ai-panel input[type="text"]');
+					const sendButton = document.querySelector('#ai-panel .ph-paper-plane-tilt')?.parentElement; // Find button containing the icon
+
+					if (chatInput && sendButton) {
+						chatInput.value = message;
+						chatInput.focus();
+						// Trigger the send button click
+						sendButton.click();
+					} else {
+						console.warn('Could not find AI panel input or send button');
+					}
 				}
-			}, 100);
+
+				textInput.value = '';
+				// Don't auto-close the floating input - let user control the state
+			}, 150); // Slightly longer delay to ensure panel is ready
 		}
 	}
 
