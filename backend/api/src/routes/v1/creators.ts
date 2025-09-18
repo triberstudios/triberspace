@@ -47,7 +47,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
           user: {
             firstName: user.firstName,
             lastName: user.lastName,
-            userName: user.userName,
+            username: user.username,
             image: user.image
           }
         })
@@ -282,7 +282,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
           user: {
             firstName: user.firstName,
             lastName: user.lastName,
-            userName: user.userName,
+            username: user.username,
             image: user.image
           }
         })

@@ -44,7 +44,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
     password: z.string().min(8, 'Password must be at least 8 characters'),
     firstName: z.string().min(1, 'First name is required').max(50),
     lastName: z.string().min(1, 'Last name is required').max(50),
-    userName: z.string()
+    username: z.string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username must be at most 20 characters')
       .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
@@ -53,14 +53,14 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
   const completeProfileSchema = z.object({
     firstName: z.string().min(1, 'First name is required').max(50),
     lastName: z.string().min(1, 'Last name is required').max(50),
-    userName: z.string()
+    username: z.string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username must be at most 20 characters')
       .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
   });
 
   const checkUsernameSchema = z.object({
-    userName: z.string()
+    username: z.string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username must be at most 20 characters')
       .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
@@ -70,14 +70,14 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
   fastify.post('/signup-full', {
     preHandler: validateBody(signupFullSchema)
   }, async (request, reply) => {
-    const { email, password, firstName, lastName, userName } = request.body as z.infer<typeof signupFullSchema>;
+    const { email, password, firstName, lastName, username } = request.body as z.infer<typeof signupFullSchema>;
 
     try {
       // Check if username is already taken
       const [existingUsername] = await db
         .select({ id: user.id })
         .from(user)
-        .where(eq(user.userName, userName))
+        .where(eq(user.username, username))
         .limit(1);
 
       if (existingUsername) {
@@ -117,7 +117,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
           .set({
             firstName,
             lastName,
-            userName,
+            username,
             updatedAt: new Date()
           })
           .where(eq(user.id, userId));
@@ -132,7 +132,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
             email,
             firstName,
             lastName,
-            userName
+            username
           }
         }
       });
@@ -164,14 +164,14 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
   fastify.post('/complete-profile', {
     preHandler: [authMiddleware, validateBody(completeProfileSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
-    const { firstName, lastName, userName } = request.body as z.infer<typeof completeProfileSchema>;
+    const { firstName, lastName, username } = request.body as z.infer<typeof completeProfileSchema>;
 
     try {
       // Check if username is already taken by another user
       const [existingUsername] = await db
         .select({ id: user.id })
         .from(user)
-        .where(eq(user.userName, userName))
+        .where(eq(user.username, username))
         .limit(1);
 
       if (existingUsername && existingUsername.id !== request.user!.id) {
@@ -190,7 +190,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
         .set({
           firstName,
           lastName,
-          userName,
+          username,
           updatedAt: new Date()
         })
         .where(eq(user.id, request.user!.id));
@@ -203,7 +203,7 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
             ...request.user,
             firstName,
             lastName,
-            userName
+            username
           }
         }
       };
@@ -224,20 +224,20 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
   fastify.post('/check-username', {
     preHandler: validateBody(checkUsernameSchema)
   }, async (request, reply) => {
-    const { userName } = request.body as z.infer<typeof checkUsernameSchema>;
+    const { username } = request.body as z.infer<typeof checkUsernameSchema>;
 
     try {
       const [existingUser] = await db
         .select({ id: user.id })
         .from(user)
-        .where(eq(user.userName, userName))
+        .where(eq(user.username, username))
         .limit(1);
 
       return {
         success: true,
         data: {
           available: !existingUser,
-          userName
+          username
         }
       };
 
@@ -257,12 +257,12 @@ export async function v1AuthRoutes(fastify: FastifyInstance) {
   fastify.get('/profile-status', {
     preHandler: authMiddleware
   }, async (request: AuthenticatedRequest, reply) => {
-    const { firstName, lastName, userName } = request.user!;
+    const { firstName, lastName, username } = request.user!;
     const missingFields = [];
 
     if (!firstName) missingFields.push('firstName');
     if (!lastName) missingFields.push('lastName');  
-    if (!userName) missingFields.push('userName');
+    if (!username) missingFields.push('username');
 
     return {
       success: true,

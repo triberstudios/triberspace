@@ -103,7 +103,7 @@ export default function Home() {
           <Banner
             variant="rightImage"
             title="Welcome to Triberspace"
-            subtitle="Triberspace is an immersive art and entertainment platform where creators can host art shows, events, minigames, and more - No code required. Fans can join to explore, connect, and unlock exclusives from the creators they love."
+            subtitle="Triberspace is an immersive experience platform where creators can host art shows, events, minigames, and more - No code required. Fans can join to explore, connect, and unlock exclusives from the creators they love."
             backgroundVideo="/previewVideoHB.mp4"
             baseBackground="/bgGif.gif"
             baseOverlayOpacity={97}

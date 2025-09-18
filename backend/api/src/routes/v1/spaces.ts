@@ -77,7 +77,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           }
         })
         .from(spaces)
@@ -140,7 +140,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName,
+            username: user.username,
             bio: creators.bio
           }
         })

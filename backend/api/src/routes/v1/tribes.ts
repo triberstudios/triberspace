@@ -74,7 +74,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
             createdAt: tribes.createdAt,
             creator: {
               id: creators.publicId,
-              userName: user.userName
+              username: user.username
             }
           })
           .from(tribes)
@@ -97,7 +97,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
             createdAt: tribes.createdAt,
             creator: {
               id: creators.publicId,
-              userName: user.userName
+              username: user.username
             }
           })
           .from(tribes)
@@ -194,7 +194,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
           createdAt: tribes.createdAt,
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           }
         })
         .from(tribes)
@@ -659,7 +659,7 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
           id: user.id,
           firstName: user.firstName,
           lastName: user.lastName,
-          userName: user.userName,
+          username: user.username,
           image: user.image,
           role: userTribeMemberships.role,
           joinedAt: userTribeMemberships.joinedAt
@@ -678,8 +678,8 @@ export async function v1TribesRoutes(fastify: FastifyInstance) {
           },
           members: members.map(member => ({
             id: member.id,
-            name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.userName,
-            userName: member.userName,
+            name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.username,
+            username: member.username,
             image: member.image,
             role: member.role,
             joinedAt: member.joinedAt

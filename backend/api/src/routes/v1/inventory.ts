@@ -113,7 +113,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName,
+            username: user.username,
             pointsName: creators.pointsName
           },
           store: {
@@ -248,7 +248,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName,
+            username: user.username,
             bio: creators.bio,
             pointsName: creators.pointsName
           },
@@ -378,7 +378,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
         case 'creator':
           breakdown = await db
             .select({
-              category: user.userName,
+              category: user.username,
               creatorId: creators.publicId,
               count: sql<number>`sum(${userInventory.quantity})`,
               uniqueItems: sql<number>`count(distinct ${products.id})`,
@@ -389,7 +389,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
             .innerJoin(creators, eq(products.creatorId, creators.id))
             .innerJoin(user, eq(creators.userId, user.id))
             .where(eq(userInventory.userId, userId))
-            .groupBy(creators.publicId, user.userName)
+            .groupBy(creators.publicId, user.username)
             .orderBy(desc(sql`sum(${userInventory.quantity})`));
           break;
 
@@ -749,7 +749,7 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           }
         })
         .from(userInventory)

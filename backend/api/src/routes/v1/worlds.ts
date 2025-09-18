@@ -94,7 +94,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
               .select({
                 id: creators.publicId,
                 name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-                userName: user.userName
+                username: user.username
               })
               .from(creators)
               .innerJoin(user, eq(creators.userId, user.id))
@@ -178,7 +178,7 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         .select({
           id: creators.publicId,
           name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-          userName: user.userName,
+          username: user.username,
           bio: creators.bio
         })
         .from(creators)

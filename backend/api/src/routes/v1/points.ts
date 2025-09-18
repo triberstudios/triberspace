@@ -68,7 +68,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           user: {
             firstName: user.firstName,
             lastName: user.lastName,
-            userName: user.userName
+            username: user.username
           }
         })
         .from(creators)
@@ -131,7 +131,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           creator: {
             id: creator.publicId,
             name: `${creator.user.firstName} ${creator.user.lastName}`,
-            userName: creator.user.userName
+            username: creator.user.username
           },
           pointsSystem: {
             pointsName: pointsConfig?.pointsName || creator.pointsName,
@@ -529,7 +529,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           creator: {
             id: creators.publicId,
             name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-            userName: user.userName,
+            username: user.username,
             pointsName: creators.pointsName
           }
         })

@@ -178,7 +178,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           createdAt: products.createdAt,
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           },
           store: {
             id: creatorStores.publicId,
@@ -277,7 +277,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           createdAt: products.createdAt,
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           },
           store: {
             id: creatorStores.publicId,
@@ -372,7 +372,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           createdAt: creatorStores.createdAt,
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           }
         })
         .from(creatorStores)
@@ -694,7 +694,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           user: {
             firstName: user.firstName,
             lastName: user.lastName,
-            userName: user.userName,
+            username: user.username,
             image: user.image
           }
         })

@@ -104,7 +104,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName
+            username: user.username
           }
         })
         .from(events)
@@ -176,7 +176,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            userName: user.userName,
+            username: user.username,
             bio: creators.bio
           }
         })
@@ -589,7 +589,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           id: user.id,
           firstName: user.firstName,
           lastName: user.lastName,
-          userName: user.userName,
+          username: user.username,
           image: user.image,
           attendedAt: eventAttendance.attendedAt
         })
@@ -607,8 +607,8 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           },
           attendees: attendees.map(attendee => ({
             id: attendee.id,
-            name: `${attendee.firstName || ''} ${attendee.lastName || ''}`.trim() || attendee.userName,
-            userName: attendee.userName,
+            name: `${attendee.firstName || ''} ${attendee.lastName || ''}`.trim() || attendee.username,
+            username: attendee.username,
             image: attendee.image,
             attendedAt: attendee.attendedAt
           })),
