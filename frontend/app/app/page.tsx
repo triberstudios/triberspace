@@ -109,7 +109,7 @@ export default function Home() {
             baseOverlayOpacity={97}
             primaryAction={{
               label: "Join Waitlist",
-              onClick: () => router.push("/auth/sign-up")
+              onClick: () => window.open("https://airtable.com/appzFyXeZatsYQOr2/pagEvclKESGQsJvFZ/form", "_blank")
             }}
             secondaryAction={{
               label: "Learn More",
