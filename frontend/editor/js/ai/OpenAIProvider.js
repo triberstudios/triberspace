@@ -133,7 +133,7 @@ Defaults: position[0,1,0], rotation[0,0,0], scale[1,1,1]. Target "selected" for 
 		// Include scene objects with IDs when they might be referenced
 		if (context.sceneObjects && context.sceneObjects.length > 0) {
 			// Check if user is referencing objects by color, type, or position
-			const mightReferenceObjects = userInput.match(/\b(red|blue|green|yellow|orange|purple|pink|white|black|gray|brown|cyan|magenta|cube|sphere|plane|cylinder|cone|torus|dodecahedron|icosahedron|octahedron|tetrahedron|capsule|circle|ring|torusknot|box|ball|light|directional|point|spot|ambient|hemisphere|first|second|third|all|every|scene|objects)\b/i);
+			const mightReferenceObjects = userInput.match(/\b(red|blue|green|yellow|orange|purple|pink|white|black|gray|brown|cyan|magenta|maroon|crimson|coral|salmon|gold|silver|copper|bronze|navy|teal|indigo|violet|emerald|turquoise|forest|sky|dark|light|pale|bright|deep|cube|sphere|plane|cylinder|cone|torus|dodecahedron|icosahedron|octahedron|tetrahedron|capsule|circle|ring|torusknot|box|ball|light|directional|point|spot|ambient|hemisphere|first|second|third|all|every|scene|objects|rgb)\b/i);
 
 			if (mightReferenceObjects || needsContext) {
 				// Sort by ID to maintain creation order

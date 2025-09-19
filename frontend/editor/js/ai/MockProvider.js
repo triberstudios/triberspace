@@ -290,9 +290,42 @@ class MockProvider extends AIProvider {
 	}
 
 	parseColorCommand(input, target = 'selected') {
-		const colors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'white', 'black', 'gray', 'brown'];
-		const foundColor = colors.find(color => input.includes(color));
+		// Extended color list including new colors
+		const colors = [
+			'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'white', 'black', 'gray', 'brown',
+			'maroon', 'crimson', 'coral', 'salmon', 'gold', 'silver', 'copper', 'bronze', 'navy', 'teal',
+			'indigo', 'violet', 'emerald', 'turquoise', 'forestgreen', 'skyblue', 'darkred', 'lightblue',
+			'palegreen', 'brightred', 'deepblue', 'cyan', 'magenta', 'lime', 'olive', 'aqua'
+		];
 
+		// Check for RGB format
+		const rgbMatch = input.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+		if (rgbMatch) {
+			return {
+				action: 'changeMaterialColor',
+				target: target,
+				color: `rgb(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]})`
+			};
+		}
+
+		// Check for color modifiers
+		const modifiers = ['dark', 'light', 'pale', 'bright', 'deep'];
+		for (const modifier of modifiers) {
+			if (input.includes(modifier)) {
+				for (const color of colors) {
+					if (input.includes(color)) {
+						return {
+							action: 'changeMaterialColor',
+							target: target,
+							color: `${modifier} ${color}`
+						};
+					}
+				}
+			}
+		}
+
+		// Check for basic color names
+		const foundColor = colors.find(color => input.includes(color));
 		if (!foundColor) return null;
 
 		return {

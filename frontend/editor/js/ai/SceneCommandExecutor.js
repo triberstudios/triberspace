@@ -670,36 +670,202 @@ class SceneCommandExecutor {
 	 * @returns {number} Hex color value
 	 */
 	parseColorString(colorString) {
-		const colorMap = {
-			'red': 0xff0000,
-			'green': 0x00ff00,
-			'blue': 0x0000ff,
-			'yellow': 0xffff00,
-			'orange': 0xff8000,
-			'purple': 0x8000ff,
-			'pink': 0xff69b4,
-			'white': 0xffffff,
-			'black': 0x000000,
-			'gray': 0x808080,
-			'grey': 0x808080,
-			'brown': 0x8b4513,
-			'cyan': 0x00ffff,
-			'magenta': 0xff00ff
+		const extendedColorMap = {
+			// Basic colors
+			'red': 0xff0000, 'green': 0x00ff00, 'blue': 0x0000ff,
+			'yellow': 0xffff00, 'orange': 0xffa500, 'purple': 0x800080,
+			'pink': 0xffc0cb, 'white': 0xffffff, 'black': 0x000000,
+			'gray': 0x808080, 'grey': 0x808080, 'brown': 0xa52a2a,
+			'cyan': 0x00ffff, 'magenta': 0xff00ff,
+
+			// Extended CSS colors
+			'maroon': 0x800000, 'darkred': 0x8b0000, 'crimson': 0xdc143c,
+			'firebrick': 0xb22222, 'indianred': 0xcd5c5c, 'lightcoral': 0xf08080,
+			'salmon': 0xfa8072, 'darksalmon': 0xe9967a, 'lightsalmon': 0xffa07a,
+			'orangered': 0xff4500, 'tomato': 0xff6347, 'coral': 0xff7f50,
+			'chocolate': 0xd2691e, 'sandybrown': 0xf4a460, 'darkorange': 0xff8c00,
+			'gold': 0xffd700, 'khaki': 0xf0e68c, 'palegoldenrod': 0xeee8aa,
+			'darkkhaki': 0xbdb76b, 'olive': 0x808000, 'darkolivegreen': 0x556b2f,
+			'yellowgreen': 0x9acd32, 'limegreen': 0x32cd32, 'lime': 0x00ff00,
+			'forestgreen': 0x228b22, 'darkgreen': 0x006400, 'mediumseagreen': 0x3cb371,
+			'seagreen': 0x2e8b57, 'springgreen': 0x00ff7f, 'mediumspringgreen': 0x00fa9a,
+			'aqua': 0x00ffff, 'lightcyan': 0xe0ffff, 'paleturquoise': 0xafeeee,
+			'aquamarine': 0x7fffd4, 'turquoise': 0x40e0d0, 'mediumturquoise': 0x48d1cc,
+			'darkturquoise': 0x00ced1, 'lightseagreen': 0x20b2aa, 'cadetblue': 0x5f9ea0,
+			'darkcyan': 0x008b8b, 'teal': 0x008080, 'steelblue': 0x4682b4,
+			'lightsteelblue': 0xb0c4de, 'lightblue': 0xadd8e6, 'powderblue': 0xb0e0e6,
+			'skyblue': 0x87ceeb, 'lightskyblue': 0x87cefa, 'deepskyblue': 0x00bfff,
+			'dodgerblue': 0x1e90ff, 'cornflowerblue': 0x6495ed, 'royalblue': 0x4169e1,
+			'mediumblue': 0x0000cd, 'darkblue': 0x00008b, 'navy': 0x000080,
+			'midnightblue': 0x191970, 'indigo': 0x4b0082, 'darkslateblue': 0x483d8b,
+			'slateblue': 0x6a5acd, 'mediumslateblue': 0x7b68ee, 'mediumpurple': 0x9370db,
+			'blueviolet': 0x8a2be2, 'darkviolet': 0x9400d3, 'darkorchid': 0x9932cc,
+			'mediumorchid': 0xba55d3, 'thistle': 0xd8bfd8, 'plum': 0xdda0dd,
+			'violet': 0xee82ee, 'fuchsia': 0xff00ff, 'darkmagenta': 0x8b008b,
+			'mediumvioletred': 0xc71585, 'palevioletred': 0xdb7093, 'deeppink': 0xff1493,
+			'hotpink': 0xff69b4, 'lightpink': 0xffb6c1,
+
+			// Material colors
+			'silver': 0xc0c0c0, 'copper': 0xb87333, 'bronze': 0xcd7f32,
+			'brass': 0xb5a642, 'platinum': 0xe5e4e2, 'iron': 0x696969,
+			'steel': 0x4682b4,
+
+			// Natural colors
+			'emerald': 0x50c878, 'jade': 0x00a86b, 'ruby': 0xe0115f,
+			'sapphire': 0x0f52ba, 'amber': 0xffbf00, 'pearl': 0xf8f6ff
 		};
 
-		// Check if it's a named color
-		const lowerColor = colorString.toLowerCase();
-		if (colorMap[lowerColor]) {
-			return colorMap[lowerColor];
+		// Clean input string
+		const cleanColor = colorString.toLowerCase().trim().replace(/\s+/g, '');
+
+		// Check for exact match
+		if (extendedColorMap[cleanColor]) {
+			return extendedColorMap[cleanColor];
+		}
+
+		// Check for RGB format
+		const rgbResult = this.parseRGBColor(colorString);
+		if (rgbResult !== null) {
+			return rgbResult;
 		}
 
 		// Check if it's a hex color
 		if (colorString.startsWith('#')) {
-			return parseInt(colorString.slice(1), 16);
+			const hexValue = parseInt(colorString.slice(1), 16);
+			if (!isNaN(hexValue)) {
+				return hexValue;
+			}
 		}
 
-		// Default to gray if can't parse
-		return 0x808080;
+		// Handle color modifiers (dark, light, pale)
+		const modifierResult = this.parseColorWithModifier(cleanColor, extendedColorMap);
+		if (modifierResult !== null) {
+			return modifierResult;
+		}
+
+		// Smart color approximation using fuzzy matching
+		return this.approximateColor(cleanColor, extendedColorMap);
+	}
+
+	/**
+	 * Parse RGB color format
+	 * @param {string} colorString - RGB color string like "rgb(255, 0, 0)"
+	 * @returns {number|null} Hex color value or null if invalid
+	 */
+	parseRGBColor(colorString) {
+		const rgbMatch = colorString.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+		if (rgbMatch) {
+			const r = Math.min(255, Math.max(0, parseInt(rgbMatch[1])));
+			const g = Math.min(255, Math.max(0, parseInt(rgbMatch[2])));
+			const b = Math.min(255, Math.max(0, parseInt(rgbMatch[3])));
+			return (r << 16) | (g << 8) | b;
+		}
+		return null;
+	}
+
+	/**
+	 * Parse color with modifiers like "dark blue", "light red", "pale green"
+	 * @param {string} cleanColor - Clean color string
+	 * @param {Object} colorMap - Color mapping object
+	 * @returns {number|null} Modified hex color value or null
+	 */
+	parseColorWithModifier(cleanColor, colorMap) {
+		// Define modifier patterns
+		const modifiers = {
+			'dark': { factor: 0.4 },
+			'light': { factor: 1.6 },
+			'pale': { factor: 1.3, saturation: 0.6 },
+			'bright': { factor: 1.4 },
+			'deep': { factor: 0.7 }
+		};
+
+		for (const [modifier, config] of Object.entries(modifiers)) {
+			if (cleanColor.startsWith(modifier)) {
+				const baseColor = cleanColor.substring(modifier.length);
+				if (colorMap[baseColor]) {
+					return this.modifyColor(colorMap[baseColor], config);
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Modify a color based on factors
+	 * @param {number} hexColor - Original hex color
+	 * @param {Object} config - Modification config with factor and optional saturation
+	 * @returns {number} Modified hex color
+	 */
+	modifyColor(hexColor, config) {
+		const r = (hexColor >> 16) & 0xff;
+		const g = (hexColor >> 8) & 0xff;
+		const b = hexColor & 0xff;
+
+		let newR = Math.min(255, Math.max(0, Math.round(r * config.factor)));
+		let newG = Math.min(255, Math.max(0, Math.round(g * config.factor)));
+		let newB = Math.min(255, Math.max(0, Math.round(b * config.factor)));
+
+		// Apply saturation adjustment for pale colors
+		if (config.saturation) {
+			const gray = Math.round((newR + newG + newB) / 3);
+			newR = Math.round(gray + (newR - gray) * config.saturation);
+			newG = Math.round(gray + (newG - gray) * config.saturation);
+			newB = Math.round(gray + (newB - gray) * config.saturation);
+		}
+
+		return (newR << 16) | (newG << 8) | newB;
+	}
+
+	/**
+	 * Approximate closest color using fuzzy string matching
+	 * @param {string} input - Input color string
+	 * @param {Object} colorMap - Available colors
+	 * @returns {number} Best matching color
+	 */
+	approximateColor(input, colorMap) {
+		let bestMatch = null;
+		let bestScore = -1;
+
+		// Try substring matching first
+		for (const [colorName, colorValue] of Object.entries(colorMap)) {
+			if (colorName.includes(input) || input.includes(colorName)) {
+				return colorValue;
+			}
+		}
+
+		// Try Levenshtein distance matching
+		for (const [colorName, colorValue] of Object.entries(colorMap)) {
+			const score = this.calculateSimilarity(input, colorName);
+			if (score > bestScore) {
+				bestScore = score;
+				bestMatch = colorValue;
+			}
+		}
+
+		// Return best match or default to a reasonable color
+		return bestMatch || 0x808080; // Default to gray if no good match
+	}
+
+	/**
+	 * Calculate string similarity using simple character matching
+	 * @param {string} str1 - First string
+	 * @param {string} str2 - Second string
+	 * @returns {number} Similarity score between 0 and 1
+	 */
+	calculateSimilarity(str1, str2) {
+		const longer = str1.length > str2.length ? str1 : str2;
+		const shorter = str1.length > str2.length ? str2 : str1;
+
+		if (longer.length === 0) return 1.0;
+
+		let matches = 0;
+		for (let i = 0; i < shorter.length; i++) {
+			if (longer.includes(shorter[i])) {
+				matches++;
+			}
+		}
+
+		return matches / longer.length;
 	}
 
 	/**
