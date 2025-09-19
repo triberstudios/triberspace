@@ -630,9 +630,9 @@ function Loader( editor ) {
 
 					const contents = event.target.result;
 
-					const { USDLoader } = await import( 'three/addons/loaders/USDLoader.js' );
+					const { USDZLoader } = await import( 'three/addons/loaders/USDZLoader.js' );
 
-					const group = new USDLoader().parse( contents );
+					const group = new USDZLoader().parse( contents );
 					group.name = filename;
 
 					editor.execute( new AddObjectCommand( editor, group ) );
@@ -653,9 +653,9 @@ function Loader( editor ) {
 
 					const contents = event.target.result;
 
-					const { USDLoader } = await import( 'three/addons/loaders/USDLoader.js' );
+					const { USDZLoader } = await import( 'three/addons/loaders/USDZLoader.js' );
 
-					const group = new USDLoader().parse( contents );
+					const group = new USDZLoader().parse( contents );
 					group.name = filename;
 
 					editor.execute( new AddObjectCommand( editor, group ) );

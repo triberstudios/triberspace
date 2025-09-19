@@ -197,9 +197,9 @@ class AIManager {
 	static createDefault() {
 		const config = {
 			openai: {
-				apiKey: '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',
-				model: 'gpt-4-turbo',
-				maxTokens: 1000
+				apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+				model: 'gpt-3.5-turbo',
+				maxTokens: 300
 			},
 			mock: {
 				// Mock provider needs no configuration

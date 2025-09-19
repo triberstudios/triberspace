@@ -114,7 +114,16 @@ Lights: directional (default), point, spot, ambient, hemisphere. Light propertie
 Materials: standard, basic, phong, lambert, toon. Properties: roughness(0-1), metalness(0-1), opacity(0-1), transparent(bool).
 For transparency/glass: use changeMaterialProperty with property:"opacity", value:0.5 (or desired transparency).
 Object targeting: Use "objN" (e.g. obj12, obj42) from context. Use "selected" for currently selected object. Lower IDs = created first.
-Return: {"commands":[{action,type,position[x,y,z],color,target,property,value,intensity,etc}],"response":"brief message"}
+
+NAMING: Generate descriptive names by combining attributes from user input:
+- Colors: red_cube, blue_sphere, green_cylinder
+- Materials: glass_cube, metal_sphere, wood_plane
+- Sizes: large_cube, small_sphere, tiny_cylinder
+- Multiple attributes: large_red_cube, small_glass_sphere
+- Default: just the object type (cube, sphere, etc.) if no attributes specified
+
+Return: {"commands":[{action,type,name,position[x,y,z],color,target,property,value,intensity,etc}],"response":"brief message"}
+Examples: "red cube" → {action:"addObject",type:"cube",name:"red_cube",color:"red"}, "large blue sphere" → {action:"addObject",type:"sphere",name:"large_blue_sphere",color:"blue",scale:[2,2,2]}
 Defaults: position[0,1,0], rotation[0,0,0], scale[1,1,1]. Target "selected" for current/last object.`;
 	}
 
