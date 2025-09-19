@@ -8,9 +8,9 @@ class OpenAIProvider extends AIProvider {
 	constructor(config = {}) {
 		super(config);
 		this.apiKey = config.apiKey;
-		this.model = config.model || 'gpt-4-turbo';
+		this.model = config.model || 'gpt-3.5-turbo'; // Much cheaper, sufficient for parsing
 		this.baseURL = 'https://api.openai.com/v1/chat/completions';
-		this.maxTokens = config.maxTokens || 1000;
+		this.maxTokens = config.maxTokens || 300; // Reduced from 1000
 	}
 
 	async initialize() {
@@ -108,95 +108,46 @@ class OpenAIProvider extends AIProvider {
 	}
 
 	createSystemPrompt() {
-		return `You are a 3D scene assistant for a Three.js editor. Convert user requests into structured JSON commands.
-
-Available commands:
-- addObject: Add 3D objects to the scene
-- moveObject: Move existing objects
-- rotateObject: Rotate objects
-- scaleObject: Scale objects
-- removeObject: Remove objects from scene
-- clearScene: Clear all objects
-- changeMaterialColor: Change object colors
-- changeMaterialType: Change material types (standard, basic, phong, etc.)
-- changeMaterialProperty: Change material properties (roughness, metalness, opacity, etc.)
-
-Object types: cube, sphere, plane, cylinder
-Material types: standard, basic, phong, lambert, toon, normal
-Common material properties: roughness (0-1), metalness (0-1), opacity (0-1), transparent (true/false)
-
-Response format (ALWAYS return valid JSON):
-{
-  "commands": [
-    {
-      "action": "addObject",
-      "type": "cube|sphere|plane|cylinder",
-      "position": [x, y, z],
-      "rotation": [x, y, z],
-      "scale": [x, y, z],
-      "name": "optional_name",
-      "color": "red|blue|#ff0000|etc",
-      "material": {
-        "type": "standard|basic|phong|etc",
-        "properties": {
-          "roughness": 0.5,
-          "metalness": 0.0
-        }
-      }
-    },
-    {
-      "action": "changeMaterialColor",
-      "target": "selected|object_name|uuid",
-      "color": "red|blue|#ff0000|etc",
-      "materialSlot": -1
-    },
-    {
-      "action": "changeMaterialType",
-      "target": "selected|object_name|uuid",
-      "materialType": "standard|basic|phong|etc",
-      "properties": {
-        "roughness": 0.5,
-        "metalness": 0.0
-      },
-      "materialSlot": -1
-    },
-    {
-      "action": "changeMaterialProperty",
-      "target": "selected|object_name|uuid",
-      "property": "roughness|metalness|opacity|etc",
-      "value": 0.5,
-      "materialSlot": -1
-    }
-  ],
-  "response": "Friendly confirmation message"
-}
-
-Guidelines:
-- Default position: [0, 1, 0] (slightly above ground)
-- Default rotation: [0, 0, 0]
-- Default scale: [1, 1, 1]
-- materialSlot: -1 for main material, 0+ for specific material slots
-- Infer reasonable positions if not specified
-- Support color names (red, blue, etc.) and hex codes (#ff0000)
-- For targeting objects:
-  * If user says "the cube", "the sphere", etc., use object name (AI_cube_*, AI_sphere_*)
-  * If user says "it" or refers to a previous object, use "selected"
-  * If user mentions specific object by name, use that name
-  * If context shows selected objects, prefer using their names over "selected"
-- Use descriptive names when possible
-- Keep response messages brief and friendly
-- Always return valid JSON`;
+		return `Convert 3D editor commands to JSON. Actions: addObject, addLight, moveObject, rotateObject, scaleObject, removeObject, clearScene, changeMaterialColor/Type/Property.
+Objects: cube, sphere, plane, cylinder, cone, torus, dodecahedron, icosahedron, octahedron, tetrahedron, capsule, circle, ring, torusknot.
+Lights: directional (default), point, spot, ambient, hemisphere. Light properties: color, intensity, position.
+Materials: standard, basic, phong, lambert, toon. Properties: roughness(0-1), metalness(0-1), opacity(0-1), transparent(bool).
+For transparency/glass: use changeMaterialProperty with property:"opacity", value:0.5 (or desired transparency).
+Object targeting: Use "objN" (e.g. obj12, obj42) from context. Use "selected" for currently selected object. Lower IDs = created first.
+Return: {"commands":[{action,type,position[x,y,z],color,target,property,value,intensity,etc}],"response":"brief message"}
+Defaults: position[0,1,0], rotation[0,0,0], scale[1,1,1]. Target "selected" for current/last object.`;
 	}
 
 	createUserPrompt(userInput, context) {
-		let prompt = `User request: "${userInput}"`;
+		let prompt = userInput;
 
-		if (context.selectedObjects && context.selectedObjects.length > 0) {
-			prompt += `\n\nCurrently selected objects: ${context.selectedObjects.map(obj => obj.name || obj.type).join(', ')}`;
+		// Only add context if it's relevant to the command
+		const needsContext = userInput.match(/\b(it|that|this|selected|move|rotate|scale|change|make|color|transparent|opacity)\b/i);
+
+		// Add selected object info
+		if (needsContext && context.selectedObjects && context.selectedObjects.length > 0) {
+			const selected = context.selectedObjects[0];
+			prompt += ` [Selected: obj${selected.id}]`;
 		}
 
+		// Include scene objects with IDs when they might be referenced
 		if (context.sceneObjects && context.sceneObjects.length > 0) {
-			prompt += `\n\nObjects in scene: ${context.sceneObjects.slice(0, 10).map(obj => obj.name || obj.type).join(', ')}`;
+			// Check if user is referencing objects by color, type, or position
+			const mightReferenceObjects = userInput.match(/\b(red|blue|green|yellow|orange|purple|pink|white|black|gray|brown|cyan|magenta|cube|sphere|plane|cylinder|cone|torus|dodecahedron|icosahedron|octahedron|tetrahedron|capsule|circle|ring|torusknot|box|ball|light|directional|point|spot|ambient|hemisphere|first|second|third|all|every|scene|objects)\b/i);
+
+			if (mightReferenceObjects || needsContext) {
+				// Sort by ID to maintain creation order
+				const sortedObjects = [...context.sceneObjects].sort((a, b) => a.id - b.id);
+				const objectDescriptions = sortedObjects.slice(0, 10).map(obj => {
+					const objId = `obj${obj.id}`;
+					const type = obj.type || 'mesh';
+					const color = obj.color || 'gray';
+					const pos = obj.position ? `@${obj.position.x.toFixed(1)},${obj.position.y.toFixed(1)},${obj.position.z.toFixed(1)}` : '';
+					return `${objId}:${color}_${type}${pos}`;
+				}).join(', ');
+
+				prompt += ` [Objects: ${objectDescriptions}]`;
+			}
 		}
 
 		return prompt;

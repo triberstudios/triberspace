@@ -19,12 +19,16 @@ class MockProvider extends AIProvider {
 
 	async parseSceneCommand(userInput, context = {}) {
 		await this.simulateDelay(500, 1500); // Simulate thinking time
-		
+
 		const input = userInput.toLowerCase();
 		const commands = [];
 		let response = "I'm not sure how to do that yet.";
 
-		// Pattern matching for different commands
+		// Check for object ID references (e.g., "obj12")
+		const objIdMatch = input.match(/obj(\d+)/);
+		let targetObject = objIdMatch ? `obj${objIdMatch[1]}` : 'selected';
+
+		// Pattern matching for shapes
 		if (input.includes('cube') || input.includes('box')) {
 			commands.push(this.createAddObjectCommand('cube', input));
 			response = "I've added a cube to your scene!";
@@ -41,41 +45,96 @@ class MockProvider extends AIProvider {
 			commands.push(this.createAddObjectCommand('cylinder', input));
 			response = "I've added a cylinder to your scene!";
 		}
+		else if (input.includes('cone')) {
+			commands.push(this.createAddObjectCommand('cone', input));
+			response = "I've added a cone to your scene!";
+		}
+		else if (input.includes('torus') || input.includes('donut')) {
+			commands.push(this.createAddObjectCommand('torus', input));
+			response = "I've added a torus to your scene!";
+		}
+		else if (input.includes('dodecahedron')) {
+			commands.push(this.createAddObjectCommand('dodecahedron', input));
+			response = "I've added a dodecahedron to your scene!";
+		}
+		else if (input.includes('icosahedron')) {
+			commands.push(this.createAddObjectCommand('icosahedron', input));
+			response = "I've added an icosahedron to your scene!";
+		}
+		else if (input.includes('octahedron')) {
+			commands.push(this.createAddObjectCommand('octahedron', input));
+			response = "I've added an octahedron to your scene!";
+		}
+		else if (input.includes('tetrahedron')) {
+			commands.push(this.createAddObjectCommand('tetrahedron', input));
+			response = "I've added a tetrahedron to your scene!";
+		}
+		else if (input.includes('capsule') || input.includes('pill')) {
+			commands.push(this.createAddObjectCommand('capsule', input));
+			response = "I've added a capsule to your scene!";
+		}
+		else if (input.includes('circle')) {
+			commands.push(this.createAddObjectCommand('circle', input));
+			response = "I've added a circle to your scene!";
+		}
+		else if (input.includes('ring')) {
+			commands.push(this.createAddObjectCommand('ring', input));
+			response = "I've added a ring to your scene!";
+		}
+		else if (input.includes('torusknot') || input.includes('torus knot')) {
+			commands.push(this.createAddObjectCommand('torusknot', input));
+			response = "I've added a torus knot to your scene!";
+		}
+		// Pattern matching for lights
+		else if (input.includes('light') || input.includes('directional') || input.includes('point') || input.includes('spot') || input.includes('ambient') || input.includes('hemisphere')) {
+			const lightCommand = this.createAddLightCommand(input);
+			if (lightCommand) {
+				commands.push(lightCommand);
+				response = `I've added a ${lightCommand.type} light to your scene!`;
+			}
+		}
 		else if (input.includes('clear') || input.includes('delete all')) {
 			commands.push({ action: 'clearScene' });
 			response = "I've cleared the scene for you!";
 		}
 		else if (input.includes('move') || input.includes('position')) {
 			// Extract object and position from input
-			const moveCommand = this.parseMoveCommand(input);
+			const moveCommand = this.parseMoveCommand(input, targetObject);
 			if (moveCommand) {
 				commands.push(moveCommand);
 				response = "I've moved the object for you!";
 			}
 		}
 		else if (input.includes('color') || input.includes('make') && (input.includes('red') || input.includes('blue') || input.includes('green'))) {
-			const colorCommand = this.parseColorCommand(input);
+			const colorCommand = this.parseColorCommand(input, targetObject);
 			if (colorCommand) {
 				commands.push(colorCommand);
 				response = `I've changed the color to ${colorCommand.color}!`;
 			}
 		}
 		else if (input.includes('material') || input.includes('rough') || input.includes('metal') || input.includes('shiny')) {
-			const materialCommand = this.parseMaterialCommand(input);
+			const materialCommand = this.parseMaterialCommand(input, targetObject);
 			if (materialCommand) {
 				commands.push(materialCommand);
 				response = "I've updated the material properties!";
 			}
 		}
+		else if (input.includes('transparent') || input.includes('opacity') || input.includes('glass')) {
+			const transparencyCommand = this.parseTransparencyCommand(input, targetObject);
+			if (transparencyCommand) {
+				commands.push(transparencyCommand);
+				response = "I've made the object transparent!";
+			}
+		}
 		else if (input.includes('rotate') || input.includes('turn')) {
-			const rotateCommand = this.parseRotateCommand(input);
+			const rotateCommand = this.parseRotateCommand(input, targetObject);
 			if (rotateCommand) {
 				commands.push(rotateCommand);
 				response = "I've rotated the object for you!";
 			}
 		}
 		else if (input.includes('scale') || input.includes('size') || input.includes('bigger') || input.includes('smaller')) {
-			const scaleCommand = this.parseScaleCommand(input);
+			const scaleCommand = this.parseScaleCommand(input, targetObject);
 			if (scaleCommand) {
 				commands.push(scaleCommand);
 				response = "I've scaled the object for you!";
@@ -154,13 +213,74 @@ class MockProvider extends AIProvider {
 		return command;
 	}
 
-	parseMoveCommand(input) {
+	createAddLightCommand(input) {
+		const command = {
+			action: 'addLight',
+			type: 'directional', // default
+			color: 0xffffff,
+			intensity: 1,
+			position: [5, 10, 7.5]
+		};
+
+		// Determine light type
+		if (input.includes('point')) {
+			command.type = 'point';
+			command.position = [0, 5, 0];
+		} else if (input.includes('spot')) {
+			command.type = 'spot';
+			command.position = [5, 10, 5];
+		} else if (input.includes('ambient')) {
+			command.type = 'ambient';
+			command.intensity = 0.4; // Lower intensity for ambient
+			delete command.position; // Ambient lights don't need position
+		} else if (input.includes('hemisphere')) {
+			command.type = 'hemisphere';
+			command.position = [0, 10, 0];
+		}
+
+		// Try to extract position from input
+		const positionMatch = input.match(/(?:at|to|position)\s+(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+		if (positionMatch) {
+			command.position = [
+				parseFloat(positionMatch[1]),
+				parseFloat(positionMatch[2]),
+				parseFloat(positionMatch[3])
+			];
+		}
+
+		// Try to extract color from input
+		const colorMatch = input.match(/(red|blue|green|yellow|orange|purple|pink|white|black|gray|grey|brown|cyan|magenta)/);
+		if (colorMatch) {
+			const colorMap = {
+				'red': 0xff0000, 'blue': 0x0000ff, 'green': 0x00ff00,
+				'yellow': 0xffff00, 'orange': 0xffa500, 'purple': 0x800080,
+				'pink': 0xffc0cb, 'white': 0xffffff, 'black': 0x000000,
+				'gray': 0x808080, 'grey': 0x808080, 'brown': 0xa52a2a,
+				'cyan': 0x00ffff, 'magenta': 0xff00ff
+			};
+			command.color = colorMap[colorMatch[1]] || 0xffffff;
+		}
+
+		// Try to extract intensity
+		const intensityMatch = input.match(/(?:intensity|bright|dim)\s+(\d*\.?\d+)/);
+		if (intensityMatch) {
+			command.intensity = parseFloat(intensityMatch[1]);
+		} else if (input.includes('bright')) {
+			command.intensity = 2.0;
+		} else if (input.includes('dim')) {
+			command.intensity = 0.3;
+		}
+
+		return command;
+	}
+
+	parseMoveCommand(input, target = 'selected') {
 		const positionMatch = input.match(/(?:to|at|position)\s+(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
 		if (!positionMatch) return null;
 
 		return {
 			action: 'moveObject',
-			target: 'selected', // Move selected object
+			target: target,
 			position: [
 				parseFloat(positionMatch[1]),
 				parseFloat(positionMatch[2]),
@@ -169,7 +289,7 @@ class MockProvider extends AIProvider {
 		};
 	}
 
-	parseColorCommand(input) {
+	parseColorCommand(input, target = 'selected') {
 		const colors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'white', 'black', 'gray', 'brown'];
 		const foundColor = colors.find(color => input.includes(color));
 
@@ -177,16 +297,16 @@ class MockProvider extends AIProvider {
 
 		return {
 			action: 'changeMaterialColor',
-			target: 'selected',
+			target: target,
 			color: foundColor
 		};
 	}
 
-	parseMaterialCommand(input) {
+	parseMaterialCommand(input, target = 'selected') {
 		if (input.includes('rough')) {
 			return {
 				action: 'changeMaterialProperty',
-				target: 'selected',
+				target: target,
 				property: 'roughness',
 				value: input.includes('very rough') ? 1.0 : 0.8
 			};
@@ -195,7 +315,7 @@ class MockProvider extends AIProvider {
 		if (input.includes('metal') || input.includes('metallic')) {
 			return {
 				action: 'changeMaterialProperty',
-				target: 'selected',
+				target: target,
 				property: 'metalness',
 				value: 1.0
 			};
@@ -204,25 +324,33 @@ class MockProvider extends AIProvider {
 		if (input.includes('shiny') || input.includes('smooth')) {
 			return {
 				action: 'changeMaterialProperty',
-				target: 'selected',
+				target: target,
 				property: 'roughness',
 				value: 0.1
-			};
-		}
-
-		if (input.includes('glass') || input.includes('transparent')) {
-			return {
-				action: 'changeMaterialProperty',
-				target: 'selected',
-				property: 'opacity',
-				value: 0.5
 			};
 		}
 
 		return null;
 	}
 
-	parseRotateCommand(input) {
+	parseTransparencyCommand(input, target = 'selected') {
+		let opacity = 0.5; // Default transparency
+
+		// Try to extract specific opacity value
+		const opacityMatch = input.match(/opacity\s+(\d*\.?\d+)/);
+		if (opacityMatch) {
+			opacity = parseFloat(opacityMatch[1]);
+		}
+
+		return {
+			action: 'changeMaterialProperty',
+			target: target,
+			property: 'opacity',
+			value: opacity
+		};
+	}
+
+	parseRotateCommand(input, target = 'selected') {
 		// Simple rotation parsing - default to 45 degrees
 		const angleMatch = input.match(/(\d+)\s*degrees?/);
 		const angle = angleMatch ? parseFloat(angleMatch[1]) : 45;
@@ -240,12 +368,12 @@ class MockProvider extends AIProvider {
 
 		return {
 			action: 'rotateObject',
-			target: 'selected',
+			target: target,
 			rotation: rotation
 		};
 	}
 
-	parseScaleCommand(input) {
+	parseScaleCommand(input, target = 'selected') {
 		let scale = [1, 1, 1];
 
 		if (input.includes('bigger') || input.includes('larger')) {
@@ -263,7 +391,7 @@ class MockProvider extends AIProvider {
 
 		return {
 			action: 'scaleObject',
-			target: 'selected',
+			target: target,
 			scale: scale
 		};
 	}

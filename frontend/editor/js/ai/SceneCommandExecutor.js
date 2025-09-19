@@ -47,19 +47,22 @@ class SceneCommandExecutor {
 		switch (command.action) {
 			case 'addObject':
 				return this.addObject(command);
-			
+
+			case 'addLight':
+				return this.addLight(command);
+
 			case 'moveObject':
 				return this.moveObject(command);
-			
+
 			case 'rotateObject':
 				return this.rotateObject(command);
-			
+
 			case 'scaleObject':
 				return this.scaleObject(command);
-			
+
 			case 'removeObject':
 				return this.removeObject(command);
-			
+
 			case 'clearScene':
 				return this.clearScene(command);
 
@@ -90,16 +93,52 @@ class SceneCommandExecutor {
 		// Create geometry based on type
 		switch (type) {
 			case 'cube':
+			case 'box':
 				geometry = new THREE.BoxGeometry(1, 1, 1);
 				break;
 			case 'sphere':
+			case 'ball':
 				geometry = new THREE.SphereGeometry(0.5, 32, 16);
 				break;
 			case 'plane':
+			case 'ground':
 				geometry = new THREE.PlaneGeometry(5, 5);
 				break;
 			case 'cylinder':
 				geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+				break;
+			case 'cone':
+				geometry = new THREE.ConeGeometry(0.5, 1, 32);
+				break;
+			case 'torus':
+			case 'donut':
+				geometry = new THREE.TorusGeometry(0.7, 0.2, 16, 100);
+				break;
+			case 'dodecahedron':
+				geometry = new THREE.DodecahedronGeometry(0.8, 0);
+				break;
+			case 'icosahedron':
+				geometry = new THREE.IcosahedronGeometry(0.8, 0);
+				break;
+			case 'octahedron':
+				geometry = new THREE.OctahedronGeometry(0.8, 0);
+				break;
+			case 'tetrahedron':
+				geometry = new THREE.TetrahedronGeometry(0.8, 0);
+				break;
+			case 'capsule':
+			case 'pill':
+				geometry = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+				break;
+			case 'circle':
+				geometry = new THREE.CircleGeometry(1, 32);
+				break;
+			case 'ring':
+				geometry = new THREE.RingGeometry(0.5, 1, 32);
+				break;
+			case 'torusknot':
+			case 'torus_knot':
+				geometry = new THREE.TorusKnotGeometry(0.7, 0.2, 100, 16);
 				break;
 			default:
 				throw new Error(`Unknown object type: ${type}`);
@@ -107,7 +146,12 @@ class SceneCommandExecutor {
 
 		// Apply material properties if specified
 		if (command.material) {
-			material = this.createMaterial(command.material.type || 'standard', command.material.properties || {});
+			// If color is specified at top level, add it to material properties
+			const materialProps = { ...command.material.properties };
+			if (command.color && !materialProps.color) {
+				materialProps.color = command.color;
+			}
+			material = this.createMaterial(command.material.type || 'standard', materialProps);
 		} else if (command.color) {
 			material.color.setHex(this.parseColorString(command.color));
 		}
@@ -129,6 +173,64 @@ class SceneCommandExecutor {
 		this.editor.execute(new AddObjectCommand(this.editor, mesh));
 
 		return mesh;
+	}
+
+	/**
+	 * Add a light to the scene
+	 * @param {Object} command - Add light command
+	 */
+	addLight(command) {
+		const { type = 'directional', color = 0xffffff, intensity = 1, position = [5, 10, 7.5], distance = 0, angle = Math.PI / 4, penumbra = 0, decay = 2 } = command;
+
+		let light;
+
+		// Create light based on type
+		switch (type.toLowerCase()) {
+			case 'directional':
+				light = new THREE.DirectionalLight(color, intensity);
+				light.name = 'DirectionalLight';
+				light.target.name = 'DirectionalLight Target';
+				light.position.set(position[0], position[1], position[2]);
+				break;
+
+			case 'point':
+				light = new THREE.PointLight(color, intensity, distance, decay);
+				light.name = 'PointLight';
+				light.position.set(position[0], position[1], position[2]);
+				break;
+
+			case 'spot':
+				light = new THREE.SpotLight(color, intensity, distance, angle, penumbra, decay);
+				light.name = 'SpotLight';
+				light.target.name = 'SpotLight Target';
+				light.position.set(position[0], position[1], position[2]);
+				break;
+
+			case 'ambient':
+				light = new THREE.AmbientLight(color, intensity);
+				light.name = 'AmbientLight';
+				break;
+
+			case 'hemisphere':
+				const skyColor = command.skyColor || color;
+				const groundColor = command.groundColor || 0x444444;
+				light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+				light.name = 'HemisphereLight';
+				light.position.set(position[0], position[1], position[2]);
+				break;
+
+			default:
+				throw new Error(`Unknown light type: ${type}`);
+		}
+
+		// Generate unique name with timestamp
+		const timestamp = Date.now();
+		light.name = `AI_${light.name}_${timestamp}`;
+
+		// Use editor command system for undo/redo
+		this.editor.execute(new AddObjectCommand(this.editor, light));
+
+		return light;
 	}
 
 	/**
@@ -271,9 +373,89 @@ class SceneCommandExecutor {
 		}
 
 		if (typeof target === 'string') {
-			// Search by name first
+			// Check if target is an object ID (e.g., "obj12")
+			if (target.startsWith('obj')) {
+				const targetId = parseInt(target.substring(3));
+				if (!isNaN(targetId)) {
+					let foundObject = null;
+					this.editor.scene.traverse((child) => {
+						if (child.id === targetId) {
+							foundObject = child;
+						}
+					});
+					if (foundObject) {
+						console.log(`Found object by ID: ${target} -> ${foundObject.name || foundObject.type}`);
+						return foundObject;
+					}
+				}
+			}
+
+			// Search by exact name first
 			let object = this.editor.scene.getObjectByName(target);
 			if (object) return object;
+
+			// Try to find by color + type combination (e.g., "purple_sphere", "blue_cube")
+			const lowerTarget = target.toLowerCase();
+			const colorTypes = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'white', 'black', 'gray', 'brown'];
+			const objectTypes = ['cube', 'sphere', 'plane', 'cylinder'];
+
+			// Check if target contains color and/or type descriptors
+			let targetColor = null;
+			let targetType = null;
+
+			for (const color of colorTypes) {
+				if (lowerTarget.includes(color)) {
+					targetColor = color;
+					break;
+				}
+			}
+
+			for (const type of objectTypes) {
+				if (lowerTarget.includes(type)) {
+					targetType = type;
+					break;
+				}
+			}
+
+			// Search for objects matching the description
+			if (targetColor || targetType) {
+				let matchingObjects = [];
+				this.editor.scene.traverse((child) => {
+					if (child.isMesh && child !== this.editor.camera) {
+						const objectName = child.name.toLowerCase();
+						let matches = true;
+
+						// Check color match
+						if (targetColor && !objectName.includes(targetColor)) {
+							matches = false;
+						}
+
+						// Check type match
+						if (targetType) {
+							const objType = this.getObjectType(child).toLowerCase();
+							if (objType !== targetType) {
+								matches = false;
+							}
+						}
+
+						if (matches) {
+							matchingObjects.push(child);
+						}
+					}
+				});
+
+				// Return the most recently created matching object
+				if (matchingObjects.length > 0) {
+					matchingObjects.sort((a, b) => {
+						// Prioritize AI-created objects with timestamps
+						if (a.name.startsWith('AI_') && !b.name.startsWith('AI_')) return -1;
+						if (!a.name.startsWith('AI_') && b.name.startsWith('AI_')) return 1;
+						return b.name.localeCompare(a.name);
+					});
+					console.log(`Found ${matchingObjects.length} objects matching "${target}", using: ${matchingObjects[0].name}`);
+					return matchingObjects[0];
+				}
+			}
 
 			// Search by UUID
 			object = this.editor.scene.getObjectByProperty('uuid', target);
@@ -297,21 +479,64 @@ class SceneCommandExecutor {
 
 		// Get selected object info
 		if (this.editor.selected) {
+			// Get material color if available
+			let color = 'gray';
+			if (this.editor.selected.material && this.editor.selected.material.color) {
+				const hexColor = this.editor.selected.material.color.getHexString();
+				const colorMap = {
+					'ff0000': 'red', '00ff00': 'green', '0000ff': 'blue',
+					'ffff00': 'yellow', 'ffa500': 'orange', 'ff00ff': 'magenta',
+					'00ffff': 'cyan', 'ffffff': 'white', '000000': 'black',
+					'800080': 'purple', 'ffc0cb': 'pink', '808080': 'gray',
+					'ff8000': 'orange', '8000ff': 'purple', 'ff69b4': 'pink'
+				};
+				color = colorMap[hexColor.toLowerCase()] || 'gray';
+			}
+
 			context.selectedObjects.push({
+				id: this.editor.selected.id,
 				name: this.editor.selected.name,
 				type: this.getObjectType(this.editor.selected),
+				color: color,
 				position: this.editor.selected.position.toArray(),
 				uuid: this.editor.selected.uuid
 			});
 		}
 
-		// Get all scene objects info
+		// Get all scene objects info (meshes and lights)
 		this.editor.scene.traverse((child) => {
-			if (child.isMesh && child !== this.editor.camera) {
+			if ((child.isMesh || child.isLight) && child !== this.editor.camera) {
+				// Get material color if available (for meshes only)
+				let color = 'white';
+				if (child.isMesh && child.material && child.material.color) {
+					const hexColor = child.material.color.getHexString();
+					// Map common hex colors to names
+					const colorMap = {
+						'ff0000': 'red', '00ff00': 'green', '0000ff': 'blue',
+						'ffff00': 'yellow', 'ffa500': 'orange', 'ff00ff': 'magenta',
+						'00ffff': 'cyan', 'ffffff': 'white', '000000': 'black',
+						'800080': 'purple', 'ffc0cb': 'pink', '808080': 'gray',
+						'ff8000': 'orange', '8000ff': 'purple', 'ff69b4': 'pink'
+					};
+					color = colorMap[hexColor.toLowerCase()] || 'gray';
+				} else if (child.isLight && child.color) {
+					// For lights, get the light color
+					const hexColor = child.color.getHexString();
+					const colorMap = {
+						'ff0000': 'red', '00ff00': 'green', '0000ff': 'blue',
+						'ffff00': 'yellow', 'ffa500': 'orange', 'ff00ff': 'magenta',
+						'00ffff': 'cyan', 'ffffff': 'white', '000000': 'black',
+						'800080': 'purple', 'ffc0cb': 'pink', '808080': 'gray'
+					};
+					color = colorMap[hexColor.toLowerCase()] || 'white';
+				}
+
 				context.sceneObjects.push({
+					id: child.id,
 					name: child.name,
 					type: this.getObjectType(child),
-					position: child.position.toArray(),
+					color: color,
+					position: child.position,
 					uuid: child.uuid
 				});
 			}
@@ -332,12 +557,36 @@ class SceneCommandExecutor {
 	 * @returns {string} Object type
 	 */
 	getObjectType(object) {
+		// Handle lights
+		if (object.isLight) {
+			if (object.isDirectionalLight) return 'directionallight';
+			if (object.isPointLight) return 'pointlight';
+			if (object.isSpotLight) return 'spotlight';
+			if (object.isAmbientLight) return 'ambientlight';
+			if (object.isHemisphereLight) return 'hemispherelight';
+			return 'light';
+		}
+
+		// Handle meshes
 		if (!object.geometry) return 'unknown';
 
+		// Basic shapes
 		if (object.geometry.type === 'BoxGeometry') return 'cube';
 		if (object.geometry.type === 'SphereGeometry') return 'sphere';
 		if (object.geometry.type === 'PlaneGeometry') return 'plane';
 		if (object.geometry.type === 'CylinderGeometry') return 'cylinder';
+
+		// New shapes
+		if (object.geometry.type === 'ConeGeometry') return 'cone';
+		if (object.geometry.type === 'TorusGeometry') return 'torus';
+		if (object.geometry.type === 'DodecahedronGeometry') return 'dodecahedron';
+		if (object.geometry.type === 'IcosahedronGeometry') return 'icosahedron';
+		if (object.geometry.type === 'OctahedronGeometry') return 'octahedron';
+		if (object.geometry.type === 'TetrahedronGeometry') return 'tetrahedron';
+		if (object.geometry.type === 'CapsuleGeometry') return 'capsule';
+		if (object.geometry.type === 'CircleGeometry') return 'circle';
+		if (object.geometry.type === 'RingGeometry') return 'ring';
+		if (object.geometry.type === 'TorusKnotGeometry') return 'torusknot';
 
 		return 'object';
 	}
@@ -460,6 +709,11 @@ class SceneCommandExecutor {
 	 * @returns {THREE.Material} Created material
 	 */
 	createMaterial(materialType, properties = {}) {
+		// Parse color if it's a string
+		if (properties.color && typeof properties.color === 'string') {
+			properties.color = this.parseColorString(properties.color);
+		}
+
 		const defaultProps = {
 			color: 0x888888,
 			...properties
