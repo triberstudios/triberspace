@@ -260,8 +260,14 @@ class EditorControls extends THREE.EventDispatcher {
 
 			event.preventDefault();
 
-			// Normalize deltaY due to https://bugzilla.mozilla.org/show_bug.cgi?id=1392460
-			scope.zoom( delta.set( 0, 0, event.deltaY > 0 ? 1 : - 1 ) );
+			// Check if this is a pinch zoom gesture (Ctrl+scroll)
+			if ( event.ctrlKey ) {
+				// Pinch to zoom
+				scope.zoom( delta.set( 0, 0, event.deltaY > 0 ? 1 : - 1 ) );
+			} else {
+				// All other scroll gestures rotate the camera (Blender-style)
+				scope.rotate( delta.set( event.deltaX * 0.5, event.deltaY * 0.5, 0 ) );
+			}
 
 		}
 
