@@ -19,9 +19,11 @@
   "author": "Triber Studios",
   "license": "MIT",
   "devDependencies": {
+    "typescript": "^5.9.2",
     "vite": "^7.1.6"
   },
   "dependencies": {
-    "three": "^0.162.0"
+    "three": "^0.162.0",
+    "three-gpu-pathtracer": "^0.0.23"
   }
 }

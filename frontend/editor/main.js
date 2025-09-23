@@ -9,6 +9,7 @@ import { Player } from './js/Player.js';
 import { Sidebar } from './js/Sidebar.js';
 import { Menubar } from './js/Menubar.js';
 import { Resizer } from './js/Resizer.js';
+import { PatchEditorWindow } from './js/PatchEditorWindow.jsx';
 
 window.URL = window.URL || window.webkitURL;
 window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
@@ -112,6 +113,13 @@ document.body.appendChild( player.dom );
 
 const resizer = new Resizer( editor );
 document.body.appendChild( resizer.dom );
+
+// Patch Editor Window
+const patchEditor = new PatchEditorWindow( editor );
+editorContainer.appendChild( patchEditor.getContainer() );
+
+// Expose patch editor globally for menu access
+window.patchEditor = patchEditor;
 
 //
 

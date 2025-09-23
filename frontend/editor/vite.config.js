@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  plugins: [],
   // Development server configuration
   server: {
     port: 3003,
@@ -27,7 +28,10 @@ export default defineConfig({
   resolve: {
     alias: {
       'three/addons/': 'three/examples/jsm/',
-      'three/examples/': 'three/examples/'
+      'three/examples/': 'three/examples/',
+      // Force Rete.js to use our React instance instead of its bundled one
+      'react': 'react',
+      'react-dom': 'react-dom'
     }
   },
 

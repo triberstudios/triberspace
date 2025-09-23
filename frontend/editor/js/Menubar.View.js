@@ -98,6 +98,22 @@ function MenubarView( editor ) {
 
 	options.add( new UIHorizontalRule() );
 
+	// Patch Editor
+
+	option = new UIRow().addClass( 'option' ).addClass( 'toggle' ).setTextContent( 'Patch Editor' ).onClick( function () {
+
+		window.patchEditor.toggle();
+
+		this.toggleClass( 'toggle-on', window.patchEditor.isOpen() );
+
+	} ).toggleClass( 'toggle-on', false );
+
+	options.add( option );
+
+	//
+
+	options.add( new UIHorizontalRule() );
+
 	// Fullscreen
 
 	option = new UIRow();
