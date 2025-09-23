@@ -35,10 +35,26 @@ const mainContent = document.createElement( 'div' );
 mainContent.className = 'main-content';
 editorContainer.appendChild( mainContent );
 
-// Create viewport with container wrapper
+// Create left container for Scene + Interaction Editor (vertical split)
+const leftContainer = document.createElement( 'div' );
+leftContainer.className = 'left-container';
+leftContainer.style.cssText = `
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 400px;
+`;
+
+// Create viewport with container wrapper (takes full width of left container)
 const viewportWrapper = document.createElement( 'div' );
 viewportWrapper.className = 'viewport-wrapper panel-container';
-viewportWrapper.style.flex = '1';
+viewportWrapper.style.cssText = `
+	flex: none;
+	height: calc(100% - 56px);
+	display: flex;
+	flex-direction: column;
+	min-height: 200px;
+`;
 const viewport = new Viewport( editor );
 viewportWrapper.appendChild( viewport.dom );
 
@@ -46,12 +62,36 @@ viewportWrapper.appendChild( viewport.dom );
 const toolbar = new Toolbar( editor );
 viewportWrapper.appendChild( toolbar.dom );
 
-mainContent.appendChild( viewportWrapper );
+leftContainer.appendChild( viewportWrapper );
 
-// Create resizer handle
-const resizerHandle = document.createElement( 'div' );
-resizerHandle.className = 'panel-resizer';
-mainContent.appendChild( resizerHandle );
+// Create vertical resizer handle (between scene and interaction editor)
+const verticalResizerHandle = document.createElement( 'div' );
+verticalResizerHandle.className = 'vertical-panel-resizer';
+verticalResizerHandle.style.cssText = `
+	height: 8px;
+	width: 100%;
+	cursor: ns-resize;
+	background-color: transparent;
+	display: block;
+	user-select: none;
+	-webkit-user-select: none;
+`;
+leftContainer.appendChild( verticalResizerHandle );
+
+mainContent.appendChild( leftContainer );
+
+// Create horizontal resizer handle (between left container and sidebar)
+const horizontalResizerHandle = document.createElement( 'div' );
+horizontalResizerHandle.className = 'horizontal-panel-resizer';
+horizontalResizerHandle.style.cssText = `
+	width: 8px;
+	height: 100%;
+	cursor: col-resize;
+	background-color: transparent;
+	user-select: none;
+	-webkit-user-select: none;
+`;
+mainContent.appendChild( horizontalResizerHandle );
 
 // Create sidebar with container wrapper
 const sidebarWrapper = document.createElement( 'div' );
@@ -61,46 +101,98 @@ const sidebar = new Sidebar( editor );
 sidebarWrapper.appendChild( sidebar.dom );
 mainContent.appendChild( sidebarWrapper );
 
-// Add resize functionality
-let isResizing = false;
+// Add resize functionality for horizontal resizer (left container <-> sidebar)
+let isResizingHorizontal = false;
+let isResizingVertical = false;
 let startX = 0;
+let startY = 0;
 let startWidth = 0;
+let startHeight = 0;
 
-function handlePointerMove( event ) {
-	if ( !isResizing || event.isPrimary === false ) return;
-	
+function handleHorizontalPointerMove( event ) {
+	if ( !isResizingHorizontal || event.isPrimary === false ) return;
+
 	const deltaX = startX - event.clientX;
 	const newWidth = Math.min( Math.max( startWidth + deltaX, 250 ), 600 );
 	sidebarWrapper.style.width = newWidth + 'px';
-	
+
 	editor.signals.windowResize.dispatch();
 	event.preventDefault();
 }
 
-function handlePointerUp( event ) {
-	if ( !isResizing || event.isPrimary === false ) return;
-	
-	isResizing = false;
+function handleHorizontalPointerUp( event ) {
+	if ( !isResizingHorizontal || event.isPrimary === false ) return;
+
+	isResizingHorizontal = false;
 	document.body.style.cursor = '';
-	
-	// Remove the event listeners when done resizing
-	document.removeEventListener( 'pointermove', handlePointerMove );
-	document.removeEventListener( 'pointerup', handlePointerUp );
-	
+
+	document.removeEventListener( 'pointermove', handleHorizontalPointerMove );
+	document.removeEventListener( 'pointerup', handleHorizontalPointerUp );
+
 	event.preventDefault();
 }
 
-resizerHandle.addEventListener( 'pointerdown', function( event ) {
+horizontalResizerHandle.addEventListener( 'pointerdown', function( event ) {
 	if ( event.isPrimary === false ) return;
-	isResizing = true;
+	isResizingHorizontal = true;
 	startX = event.clientX;
 	startWidth = sidebarWrapper.offsetWidth;
 	document.body.style.cursor = 'col-resize';
-	
-	// Add event listeners only when actively resizing
-	document.addEventListener( 'pointermove', handlePointerMove );
-	document.addEventListener( 'pointerup', handlePointerUp );
-	
+
+	document.addEventListener( 'pointermove', handleHorizontalPointerMove );
+	document.addEventListener( 'pointerup', handleHorizontalPointerUp );
+
+	event.preventDefault();
+});
+
+// Add resize functionality for vertical resizer (scene <-> interaction editor)
+function handleVerticalPointerMove( event ) {
+	if ( !isResizingVertical || event.isPrimary === false ) return;
+
+	const deltaY = event.clientY - startY;
+	const newHeight = Math.min( Math.max( startHeight + deltaY, 200 ), 800 );
+	viewportWrapper.style.height = newHeight + 'px';
+	viewportWrapper.style.flex = 'none'; // Override flex when manually resized
+
+	// Trigger interaction editor canvas resize if visible
+	if ( window.interactionEditor && window.interactionEditor.isOpen() ) {
+		if ( window.interactionEditor.interactionEditor && window.interactionEditor.interactionEditor.resize ) {
+			setTimeout(() => {
+				window.interactionEditor.interactionEditor.resize();
+				// Also trigger a render to redraw the patches
+				if ( window.interactionEditor.interactionEditor.canvas && window.interactionEditor.interactionEditor.canvas.render ) {
+					window.interactionEditor.interactionEditor.canvas.render();
+				}
+			}, 10);
+		}
+	}
+
+	editor.signals.windowResize.dispatch();
+	event.preventDefault();
+}
+
+function handleVerticalPointerUp( event ) {
+	if ( !isResizingVertical || event.isPrimary === false ) return;
+
+	isResizingVertical = false;
+	document.body.style.cursor = '';
+
+	document.removeEventListener( 'pointermove', handleVerticalPointerMove );
+	document.removeEventListener( 'pointerup', handleVerticalPointerUp );
+
+	event.preventDefault();
+}
+
+verticalResizerHandle.addEventListener( 'pointerdown', function( event ) {
+	if ( event.isPrimary === false ) return;
+	isResizingVertical = true;
+	startY = event.clientY;
+	startHeight = viewportWrapper.offsetHeight;
+	document.body.style.cursor = 'ns-resize';
+
+	document.addEventListener( 'pointermove', handleVerticalPointerMove );
+	document.addEventListener( 'pointerup', handleVerticalPointerUp );
+
 	event.preventDefault();
 });
 
@@ -115,16 +207,9 @@ const resizer = new Resizer( editor );
 document.body.appendChild( resizer.dom );
 
 
-// Interaction Editor Window with consistent spacing
-const interactionEditorWrapper = document.createElement( 'div' );
-interactionEditorWrapper.className = 'interaction-editor-wrapper';
-interactionEditorWrapper.style.cssText = `
-	padding: 0 8px 8px 8px;
-`;
-
+// Interaction Editor Window integrated into modular layout
 const interactionEditor = new InteractionEditorWindow( editor );
-interactionEditorWrapper.appendChild( interactionEditor.getContainer() );
-editorContainer.appendChild( interactionEditorWrapper );
+leftContainer.appendChild( interactionEditor.getContainer() );
 
 // Expose interaction editor globally for menu access
 window.interactionEditor = interactionEditor;

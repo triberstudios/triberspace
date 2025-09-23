@@ -64,7 +64,14 @@ export class PatchCanvas {
             height: 100%;
             display: block;
             cursor: default;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         `;
+
+        // Also apply touch-action to the container to prevent browser gestures
+        this.container.style.touchAction = 'none';
+        this.container.style.overscrollBehavior = 'none';
 
         this.container.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d');
@@ -94,7 +101,26 @@ export class PatchCanvas {
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
+        this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
+
+        // Touch events for trackpad gestures
+        this.canvas.addEventListener('gesturestart', (e) => e.preventDefault());
+        this.canvas.addEventListener('gesturechange', (e) => e.preventDefault());
+        this.canvas.addEventListener('gestureend', (e) => e.preventDefault());
+
+        // Prevent browser back/forward navigation on horizontal swipe
+        // This is crucial for Mac trackpad users
+        this.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+        this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+
+        // Also prevent the default behavior on the container
+        this.container.addEventListener('wheel', (e) => {
+            // Only prevent default if the event is within our canvas
+            if (e.target === this.canvas || this.container.contains(e.target)) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
 
     onMouseDown(e) {
@@ -212,15 +238,29 @@ export class PatchCanvas {
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        // Calculate zoom factor
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        const newZoom = Math.min(Math.max(this.viewport.zoom * zoomFactor, 0.1), 3.0);
+        // Check if this is a pinch zoom gesture (ctrlKey is set for pinch on trackpad)
+        if (e.ctrlKey) {
+            // Pinch to zoom - zoom around mouse cursor position
+            // Smaller deltaY for smoother zoom on trackpad
+            const zoomDelta = -e.deltaY * 0.01;
+            const zoomFactor = Math.exp(zoomDelta);
+            const newZoom = Math.min(Math.max(this.viewport.zoom * zoomFactor, 0.1), 3.0);
 
-        // Calculate new viewport position to zoom around mouse
-        const zoomChange = newZoom / this.viewport.zoom;
-        this.viewport.x = mouseX - (mouseX - this.viewport.x) * zoomChange;
-        this.viewport.y = mouseY - (mouseY - this.viewport.y) * zoomChange;
-        this.viewport.zoom = newZoom;
+            // Calculate new viewport position to zoom around mouse
+            const zoomChange = newZoom / this.viewport.zoom;
+            this.viewport.x = mouseX - (mouseX - this.viewport.x) * zoomChange;
+            this.viewport.y = mouseY - (mouseY - this.viewport.y) * zoomChange;
+            this.viewport.zoom = newZoom;
+        } else if (e.shiftKey) {
+            // Shift + scroll for horizontal panning (Figma-style for mouse users)
+            // Convert vertical scroll to horizontal pan
+            this.viewport.x -= e.deltaY;
+        } else {
+            // Two-finger pan (trackpad scroll without modifiers)
+            // Regular mouse wheel or trackpad scroll
+            this.viewport.x -= e.deltaX;
+            this.viewport.y -= e.deltaY;
+        }
 
         this.render();
     }

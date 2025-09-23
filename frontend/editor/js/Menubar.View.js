@@ -106,7 +106,7 @@ function MenubarView( editor ) {
 
 		this.toggleClass( 'toggle-on', window.interactionEditor.isOpen() );
 
-	} ).toggleClass( 'toggle-on', false );
+	} ).toggleClass( 'toggle-on', window.interactionEditor ? window.interactionEditor.isOpen() : true );
 
 	options.add( option );
 

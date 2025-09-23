@@ -7,8 +7,8 @@ import { CustomPatchEditor } from './patch-editor/CustomPatchEditor.js';
 class InteractionEditorWindow {
 	constructor(editor) {
 		this.editor = editor;
-		this.isVisible = false;
-		this.panelHeight = 400; // Default height
+		this.isVisible = true; // Start visible by default
+		this.panelHeight = 200; // Start at minimum height
 		this.interactionEditor = null;
 
 		this.container = null;
@@ -19,38 +19,29 @@ class InteractionEditorWindow {
 
 	init() {
 		this.createDOM();
+
+		// Initialize interaction editor since it's visible by default
+		if (this.isVisible) {
+			setTimeout(() => {
+				this.initCustomInteractionEditor();
+			}, 100);
+		}
 	}
 
 	createDOM() {
-		// Main interaction editor container
+		// Main interaction editor container (integrates with flex layout)
 		this.container = document.createElement('div');
 		this.container.className = 'interaction-editor-container panel-container';
 		this.container.style.cssText = `
-			height: ${this.panelHeight}px;
-			display: none;
+			flex: 1;
+			display: block;
 			position: relative;
+			min-height: 200px;
 		`;
-
-		// Resizer handle
-		this.resizerHandle = document.createElement('div');
-		this.resizerHandle.style.cssText = `
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 8px;
-			cursor: ns-resize;
-			background-color: transparent;
-			user-select: none;
-			-webkit-user-select: none;
-			z-index: 10;
-		`;
-		this.container.appendChild(this.resizerHandle);
 
 		// Interaction editor title bar
 		const titleBar = document.createElement('div');
 		titleBar.className = 'interaction-editor-title';
-		titleBar.textContent = 'Interaction Editor';
 		titleBar.style.cssText = `
 			padding: 8px 12px;
 			background-color: #3a3a3a;
@@ -58,7 +49,47 @@ class InteractionEditorWindow {
 			font-size: 12px;
 			color: #cccccc;
 			user-select: none;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
 		`;
+
+		// Title text
+		const titleText = document.createElement('span');
+		titleText.textContent = 'Interaction Editor';
+		titleBar.appendChild(titleText);
+
+		// Close button
+		const closeButton = document.createElement('button');
+		closeButton.textContent = '×';
+		closeButton.style.cssText = `
+			background: none;
+			border: none;
+			color: #cccccc;
+			font-size: 16px;
+			cursor: pointer;
+			padding: 0;
+			width: 20px;
+			height: 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 3px;
+		`;
+
+		closeButton.addEventListener('mouseenter', () => {
+			closeButton.style.backgroundColor = '#555555';
+		});
+
+		closeButton.addEventListener('mouseleave', () => {
+			closeButton.style.backgroundColor = 'transparent';
+		});
+
+		closeButton.addEventListener('click', () => {
+			this.hide();
+		});
+
+		titleBar.appendChild(closeButton);
 
 		// Canvas container for interaction nodes
 		this.interactionCanvas = document.createElement('div');
@@ -75,9 +106,6 @@ class InteractionEditorWindow {
 
 		this.container.appendChild(titleBar);
 		this.container.appendChild(this.interactionCanvas);
-
-		// Setup resizing
-		this.setupResizing();
 	}
 
 	initCustomInteractionEditor() {
@@ -94,6 +122,12 @@ class InteractionEditorWindow {
 		this.isVisible = true;
 		this.container.style.display = 'block';
 
+		// Show the vertical resizer handle
+		const verticalResizer = document.querySelector('.vertical-panel-resizer');
+		if (verticalResizer) {
+			verticalResizer.style.display = 'block';
+		}
+
 		// Trigger layout reflow
 		this.editor.signals.windowResize.dispatch();
 
@@ -105,6 +139,18 @@ class InteractionEditorWindow {
 					this.initCustomInteractionEditor();
 				}, 50);
 			});
+		} else {
+			// If interaction editor already exists, force resize and render
+			requestAnimationFrame(() => {
+				setTimeout(() => {
+					if (this.interactionEditor.resize) {
+						this.interactionEditor.resize();
+					}
+					if (this.interactionEditor.canvas && this.interactionEditor.canvas.render) {
+						this.interactionEditor.canvas.render();
+					}
+				}, 50);
+			});
 		}
 	}
 
@@ -113,6 +159,20 @@ class InteractionEditorWindow {
 
 		this.isVisible = false;
 		this.container.style.display = 'none';
+
+		// Hide the vertical resizer handle
+		const verticalResizer = document.querySelector('.vertical-panel-resizer');
+		if (verticalResizer) {
+			verticalResizer.style.display = 'none';
+		}
+
+		// Reset viewport to use flex when interaction editor is hidden
+		const viewportWrapper = document.querySelector('.viewport-wrapper');
+		if (viewportWrapper) {
+			viewportWrapper.style.flex = '1';
+			viewportWrapper.style.height = 'auto';
+		}
+
 		this.editor.signals.windowResize.dispatch();
 	}
 
@@ -132,55 +192,6 @@ class InteractionEditorWindow {
 		return this.isVisible;
 	}
 
-	setupResizing() {
-		let isResizing = false;
-		let startY = 0;
-		let startHeight = 0;
-
-		const handlePointerMove = (event) => {
-			if (!isResizing || event.isPrimary === false) return;
-
-			const deltaY = startY - event.clientY;
-			const newHeight = Math.min(Math.max(startHeight + deltaY, 200), 800);
-			this.panelHeight = newHeight;
-			this.container.style.height = newHeight + 'px';
-
-			// Resize the interaction editor canvas
-			if (this.interactionEditor && this.interactionEditor.resize) {
-				this.interactionEditor.resize();
-			}
-
-			// Trigger window resize for other components
-			this.editor.signals.windowResize.dispatch();
-			event.preventDefault();
-		};
-
-		const handlePointerUp = (event) => {
-			if (!isResizing || event.isPrimary === false) return;
-
-			isResizing = false;
-			document.body.style.cursor = '';
-
-			document.removeEventListener('pointermove', handlePointerMove);
-			document.removeEventListener('pointerup', handlePointerUp);
-
-			event.preventDefault();
-		};
-
-		this.resizerHandle.addEventListener('pointerdown', (event) => {
-			if (event.isPrimary === false) return;
-
-			isResizing = true;
-			startY = event.clientY;
-			startHeight = this.panelHeight;
-			document.body.style.cursor = 'ns-resize';
-
-			document.addEventListener('pointermove', handlePointerMove);
-			document.addEventListener('pointerup', handlePointerUp);
-
-			event.preventDefault();
-		});
-	}
 
 	destroy() {
 		if (this.interactionEditor) {

@@ -49,7 +49,6 @@ body {
 	position: relative;
 	min-width: 0;
 	overflow: hidden;
-	margin-right: 8px;
 }
 
 .sidebar-wrapper {
@@ -974,6 +973,46 @@ select {
 	height: 8px;
 	cursor: ns-resize;
 	margin: -4px 0;
+}
+
+/* New modular layout system - Blender style */
+.left-container {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 400px;
+	gap: 0;
+}
+
+/* Horizontal resizer between left container and sidebar */
+.horizontal-panel-resizer {
+	width: 8px;
+	height: 100%;
+	cursor: col-resize;
+	background-color: transparent;
+	user-select: none;
+	-webkit-user-select: none;
+	flex-shrink: 0;
+}
+
+.horizontal-panel-resizer:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Vertical resizer between scene and interaction editor */
+.vertical-panel-resizer {
+	height: 8px;
+	width: 100%;
+	cursor: ns-resize;
+	background-color: transparent;
+	display: none;
+	user-select: none;
+	-webkit-user-select: none;
+	flex-shrink: 0;
+}
+
+.vertical-panel-resizer:hover {
+	background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Shortcut rows - inline layout like current 3js editor */
