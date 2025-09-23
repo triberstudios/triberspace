@@ -968,6 +968,14 @@ select {
 	background-color: transparent;
 }
 
+/* Horizontal variant of panel resizer for patch editor */
+.panel-resizer.horizontal {
+	width: 100%;
+	height: 8px;
+	cursor: ns-resize;
+	margin: -4px 0;
+}
+
 /* Shortcut rows - inline layout like current 3js editor */
 div.shortcut-row {
 	display: flex !important;

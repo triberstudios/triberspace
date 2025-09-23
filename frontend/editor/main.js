@@ -114,12 +114,21 @@ document.body.appendChild( player.dom );
 const resizer = new Resizer( editor );
 document.body.appendChild( resizer.dom );
 
-// Patch Editor Window
+
+// Patch Editor Window with consistent spacing
+const patchEditorWrapper = document.createElement( 'div' );
+patchEditorWrapper.className = 'patch-editor-wrapper';
+patchEditorWrapper.style.cssText = `
+	padding: 0 8px 8px 8px;
+`;
+
 const patchEditor = new PatchEditorWindow( editor );
-editorContainer.appendChild( patchEditor.getContainer() );
+patchEditorWrapper.appendChild( patchEditor.getContainer() );
+editorContainer.appendChild( patchEditorWrapper );
 
 // Expose patch editor globally for menu access
 window.patchEditor = patchEditor;
+
 
 //
 

@@ -12,7 +12,6 @@ class PatchEditorWindow {
 		this.patchEditor = null;
 
 		this.container = null;
-		this.resizerHandle = null;
 		this.patchCanvas = null;
 
 		this.init();
@@ -20,17 +19,33 @@ class PatchEditorWindow {
 
 	init() {
 		this.createDOM();
-		this.setupResizing();
 	}
 
 	createDOM() {
 		// Main patch editor container
 		this.container = document.createElement('div');
 		this.container.className = 'patch-editor-container panel-container';
-		this.container.style.display = 'none'; // Hidden by default
-		this.container.style.height = this.panelHeight + 'px';
-		this.container.style.marginTop = '8px';
-		this.container.style.position = 'relative';
+		this.container.style.cssText = `
+			height: ${this.panelHeight}px;
+			display: none;
+			position: relative;
+		`;
+
+		// Resizer handle
+		this.resizerHandle = document.createElement('div');
+		this.resizerHandle.style.cssText = `
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 8px;
+			cursor: ns-resize;
+			background-color: transparent;
+			user-select: none;
+			-webkit-user-select: none;
+			z-index: 10;
+		`;
+		this.container.appendChild(this.resizerHandle);
 
 		// Patch editor title bar
 		const titleBar = document.createElement('div');
@@ -50,7 +65,7 @@ class PatchEditorWindow {
 		this.patchCanvas.className = 'patch-editor-canvas';
 		this.patchCanvas.style.cssText = `
 			width: 100%;
-			height: calc(100% - 33px);
+			height: calc(100% - 41px);
 			position: relative;
 			background-color: #2a2a2a;
 			background-image: radial-gradient(circle, #3a3a3a 0.5px, transparent 0.5px);
@@ -61,67 +76,8 @@ class PatchEditorWindow {
 		this.container.appendChild(titleBar);
 		this.container.appendChild(this.patchCanvas);
 
-		// Resizer handle (horizontal for patch editor)
-		this.resizerHandle = document.createElement('div');
-		this.resizerHandle.className = 'patch-editor-resizer';
-		this.resizerHandle.style.cssText = `
-			width: 100%;
-			height: 8px;
-			background-color: transparent;
-			cursor: ns-resize;
-			position: absolute;
-			top: -4px;
-			left: 0;
-			user-select: none;
-			z-index: 10;
-		`;
-
-		this.container.appendChild(this.resizerHandle);
-	}
-
-	setupResizing() {
-		let isResizing = false;
-		let startY = 0;
-		let startHeight = 0;
-
-		const handlePointerMove = (event) => {
-			if (!isResizing || event.isPrimary === false) return;
-
-			const deltaY = startY - event.clientY;
-			const newHeight = Math.min(Math.max(startHeight + deltaY, 200), 800);
-			this.panelHeight = newHeight;
-			this.container.style.height = newHeight + 'px';
-
-			// Trigger window resize for other components
-			this.editor.signals.windowResize.dispatch();
-			event.preventDefault();
-		};
-
-		const handlePointerUp = (event) => {
-			if (!isResizing || event.isPrimary === false) return;
-
-			isResizing = false;
-			document.body.style.cursor = '';
-
-			document.removeEventListener('pointermove', handlePointerMove);
-			document.removeEventListener('pointerup', handlePointerUp);
-
-			event.preventDefault();
-		};
-
-		this.resizerHandle.addEventListener('pointerdown', (event) => {
-			if (event.isPrimary === false) return;
-
-			isResizing = true;
-			startY = event.clientY;
-			startHeight = this.panelHeight;
-			document.body.style.cursor = 'ns-resize';
-
-			document.addEventListener('pointermove', handlePointerMove);
-			document.addEventListener('pointerup', handlePointerUp);
-
-			event.preventDefault();
-		});
+		// Setup resizing
+		this.setupResizing();
 	}
 
 	initCustomPatchEditor() {
@@ -174,6 +130,51 @@ class PatchEditorWindow {
 
 	isOpen() {
 		return this.isVisible;
+	}
+
+	setupResizing() {
+		let isResizing = false;
+		let startY = 0;
+		let startHeight = 0;
+
+		const handlePointerMove = (event) => {
+			if (!isResizing || event.isPrimary === false) return;
+
+			const deltaY = startY - event.clientY;
+			const newHeight = Math.min(Math.max(startHeight + deltaY, 200), 800);
+			this.panelHeight = newHeight;
+			this.container.style.height = newHeight + 'px';
+
+			// Trigger window resize for other components
+			this.editor.signals.windowResize.dispatch();
+			event.preventDefault();
+		};
+
+		const handlePointerUp = (event) => {
+			if (!isResizing || event.isPrimary === false) return;
+
+			isResizing = false;
+			document.body.style.cursor = '';
+
+			document.removeEventListener('pointermove', handlePointerMove);
+			document.removeEventListener('pointerup', handlePointerUp);
+
+			event.preventDefault();
+		};
+
+		this.resizerHandle.addEventListener('pointerdown', (event) => {
+			if (event.isPrimary === false) return;
+
+			isResizing = true;
+			startY = event.clientY;
+			startHeight = this.panelHeight;
+			document.body.style.cursor = 'ns-resize';
+
+			document.addEventListener('pointermove', handlePointerMove);
+			document.addEventListener('pointerup', handlePointerUp);
+
+			event.preventDefault();
+		});
 	}
 
 	destroy() {

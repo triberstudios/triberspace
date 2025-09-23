@@ -14,6 +14,7 @@ export class CustomPatchEditor {
         this.nodes = new Map();
         this.connections = [];
         this.selectedNodes = new Set();
+        this.selectedConnections = new Set();
         this.isInitialized = false;
 
         this.init();
@@ -70,6 +71,15 @@ export class CustomPatchEditor {
             this.selectNode(nodeId);
         });
 
+        this.canvas.on('connectionClick', (connectionId) => {
+            console.log('CustomPatchEditor received connectionClick:', connectionId);
+            this.selectConnection(connectionId);
+        });
+
+        this.canvas.on('connectionComplete', (connectionData) => {
+            this.createConnection(connectionData);
+        });
+
         this.canvas.on('nodeDrag', (nodeId, delta) => {
             const node = this.nodes.get(nodeId);
             if (node) {
@@ -79,18 +89,74 @@ export class CustomPatchEditor {
             }
         });
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete' && this.selectedNodes.size > 0) {
-                this.deleteSelectedNodes();
-            }
+        this.canvas.on('emptySpaceClick', () => {
+            this.clearSelection();
         });
+
+        // Keyboard shortcuts - use capture phase to run before other handlers
+        document.addEventListener('keydown', (e) => {
+            console.log('PatchEditor key pressed:', e.key, 'Code:', e.code); // Debug any key press
+            if (e.key === 'Delete' || e.key === 'Backspace') { // Also try Backspace
+                console.log('PatchEditor Delete/Backspace key pressed. Selected nodes:', this.selectedNodes.size, 'Selected connections:', this.selectedConnections.size);
+                if (this.selectedNodes.size > 0) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.deleteSelectedNodes();
+                } else if (this.selectedConnections.size > 0) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.deleteSelectedConnections();
+                }
+            }
+        }, { capture: true }); // Use capture phase to run first
     }
 
     selectNode(nodeId) {
         this.selectedNodes.clear();
+        this.selectedConnections.clear();
         this.selectedNodes.add(nodeId);
         this.canvas.setSelectedNodes(this.selectedNodes);
+        this.canvas.setSelectedConnections(this.selectedConnections);
+        this.canvas.render();
+    }
+
+    selectConnection(connectionId) {
+        console.log('Selecting connection:', connectionId);
+        this.selectedNodes.clear();
+        this.selectedConnections.clear();
+        this.selectedConnections.add(connectionId);
+        console.log('Selected connections after add:', Array.from(this.selectedConnections));
+        this.canvas.setSelectedNodes(this.selectedNodes);
+        this.canvas.setSelectedConnections(this.selectedConnections);
+        this.canvas.render();
+    }
+
+    clearSelection() {
+        this.selectedNodes.clear();
+        this.selectedConnections.clear();
+        this.canvas.setSelectedNodes(this.selectedNodes);
+        this.canvas.setSelectedConnections(this.selectedConnections);
+        this.canvas.render();
+    }
+
+    createConnection(connectionData) {
+        // Prevent duplicate connections
+        const connectionId = `${connectionData.fromNodeId}-${connectionData.fromOutputIndex}-${connectionData.toNodeId}-${connectionData.toInputIndex}`;
+
+        // Check if connection already exists
+        const existingConnection = this.canvas.connections.find(conn => conn.id === connectionId);
+        if (existingConnection) {
+            return;
+        }
+
+        // Create the connection
+        const connection = this.canvas.addConnection(
+            connectionData.fromNodeId,
+            connectionData.fromOutputIndex,
+            connectionData.toNodeId,
+            connectionData.toInputIndex
+        );
+
         this.canvas.render();
     }
 
@@ -99,6 +165,16 @@ export class CustomPatchEditor {
             this.removeNode(nodeId);
         }
         this.selectedNodes.clear();
+    }
+
+    deleteSelectedConnections() {
+        console.log('deleteSelectedConnections called with:', Array.from(this.selectedConnections));
+        for (const connectionId of this.selectedConnections) {
+            console.log('Removing connection:', connectionId);
+            this.canvas.removeConnection(connectionId);
+        }
+        this.selectedConnections.clear();
+        this.canvas.render();
     }
 
     destroy() {

@@ -11,6 +11,7 @@ export class PatchCanvas {
         this.nodes = new Map();
         this.connections = [];
         this.selectedNodes = new Set();
+        this.selectedConnections = new Set();
         this.eventListeners = new Map();
 
         // Viewport state
@@ -27,12 +28,16 @@ export class PatchCanvas {
             dotSize: 1,
             dotSpacing: 16,
             nodeColor: '#3a3a3a',
-            nodeSelectedColor: '#4a4a4a',
+            nodeSelectedBorderColor: '#4a90e2',
             nodeTextColor: '#cccccc',
             nodeBorderRadius: 8,
             nodeMinWidth: 120,
             nodeHeight: 80,
-            socketSize: 8
+            socketSize: 8,
+            connectionColor: '#666666',
+            connectionSelectedColor: '#4a90e2',
+            connectionWidth: 2,
+            connectionSelectedWidth: 3
         };
 
         this.isDragging = false;
@@ -40,6 +45,9 @@ export class PatchCanvas {
         this.draggedNode = null;
         this.isPanning = false;
         this.lastPanPos = { x: 0, y: 0 };
+        this.isConnecting = false;
+        this.connectingFrom = null;
+        this.connectionPreview = null;
     }
 
     init() {
@@ -94,19 +102,43 @@ export class PatchCanvas {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Check if we clicked on a node
-        const clickedNode = this.getNodeAtPosition(x, y);
+        // Priority 1: Check for socket click (for connection creation)
+        const clickedSocket = this.getSocketAtPosition(x, y);
+        if (clickedSocket && clickedSocket.socketType === 'output') {
+            // Start connection from output socket
+            this.isConnecting = true;
+            this.connectingFrom = {
+                nodeId: clickedSocket.nodeId,
+                socketIndex: clickedSocket.socketIndex,
+                position: clickedSocket.position
+            };
+            this.connectionPreview = { x: clickedSocket.position.x, y: clickedSocket.position.y };
+            this.emit('connectionStart', this.connectingFrom);
+            return;
+        }
 
+        // Priority 2: Check for connection click (for selection)
+        const clickedConnection = this.getConnectionAtPosition(x, y);
+        if (clickedConnection) {
+            console.log('Connection clicked:', clickedConnection.id);
+            this.emit('connectionClick', clickedConnection.id);
+            return;
+        }
+
+        // Priority 3: Check for node click (for selection/dragging)
+        const clickedNode = this.getNodeAtPosition(x, y);
         if (clickedNode) {
             this.isDragging = true;
             this.draggedNode = clickedNode.id;
             this.dragStartPos = { x, y };
             this.emit('nodeClick', clickedNode.id);
         } else {
-            // Start panning if no node was clicked
+            // Priority 4: Start panning if no specific element was clicked
             this.isPanning = true;
             this.lastPanPos = { x, y };
             this.canvas.style.cursor = 'grabbing';
+            // Emit empty space click to deselect all items
+            this.emit('emptySpaceClick');
         }
     }
 
@@ -115,7 +147,13 @@ export class PatchCanvas {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (this.isDragging && this.draggedNode) {
+        if (this.isConnecting) {
+            // Update connection preview
+            const worldX = (x - this.viewport.x) / this.viewport.zoom;
+            const worldY = (y - this.viewport.y) / this.viewport.zoom;
+            this.connectionPreview = { x: worldX, y: worldY };
+            this.render();
+        } else if (this.isDragging && this.draggedNode) {
             const delta = {
                 x: (x - this.dragStartPos.x) / this.viewport.zoom,
                 y: (y - this.dragStartPos.y) / this.viewport.zoom
@@ -137,6 +175,30 @@ export class PatchCanvas {
     }
 
     onMouseUp(e) {
+        if (this.isConnecting) {
+            // Check if we're dropping on a valid input socket
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const targetSocket = this.getSocketAtPosition(x, y);
+            if (targetSocket && targetSocket.socketType === 'input') {
+                // Complete the connection
+                this.emit('connectionComplete', {
+                    fromNodeId: this.connectingFrom.nodeId,
+                    fromOutputIndex: this.connectingFrom.socketIndex,
+                    toNodeId: targetSocket.nodeId,
+                    toInputIndex: targetSocket.socketIndex
+                });
+            }
+
+            // Reset connection state
+            this.isConnecting = false;
+            this.connectingFrom = null;
+            this.connectionPreview = null;
+            this.render();
+        }
+
         this.isDragging = false;
         this.draggedNode = null;
         this.isPanning = false;
@@ -172,16 +234,134 @@ export class PatchCanvas {
         const nodeArray = Array.from(this.nodes.values());
         for (let i = nodeArray.length - 1; i >= 0; i--) {
             const node = nodeArray[i];
-            const nodeWidth = Math.max(this.styles.nodeMinWidth, this.getNodeWidth(node));
+            const nodeWidth = this.getNodeWidth(node);
+            const nodeHeight = this.getNodeHeight(node);
 
             if (worldX >= node.position.x &&
                 worldX <= node.position.x + nodeWidth &&
                 worldY >= node.position.y &&
-                worldY <= node.position.y + this.styles.nodeHeight) {
+                worldY <= node.position.y + nodeHeight) {
                 return node;
             }
         }
         return null;
+    }
+
+    getSocketAtPosition(x, y) {
+        // Transform screen coordinates to world coordinates
+        const worldX = (x - this.viewport.x) / this.viewport.zoom;
+        const worldY = (y - this.viewport.y) / this.viewport.zoom;
+
+        // Check all nodes for socket hits
+        for (const node of this.nodes.values()) {
+            const nodeWidth = this.getNodeWidth(node);
+            const socketRadius = this.styles.socketSize / 2;
+
+            // Check input sockets (left side)
+            for (let i = 0; i < node.inputs.length; i++) {
+                const socketX = node.position.x;
+                const socketY = node.position.y + 40 + (i * 20);
+
+                const distance = Math.sqrt(
+                    Math.pow(worldX - socketX, 2) +
+                    Math.pow(worldY - socketY, 2)
+                );
+
+                if (distance <= socketRadius) {
+                    return {
+                        nodeId: node.id,
+                        socketType: 'input',
+                        socketIndex: i,
+                        position: { x: socketX, y: socketY }
+                    };
+                }
+            }
+
+            // Check output sockets (right side)
+            for (let i = 0; i < node.outputs.length; i++) {
+                const socketX = node.position.x + nodeWidth;
+                const socketY = node.position.y + 40 + (i * 20);
+
+                const distance = Math.sqrt(
+                    Math.pow(worldX - socketX, 2) +
+                    Math.pow(worldY - socketY, 2)
+                );
+
+                if (distance <= socketRadius) {
+                    return {
+                        nodeId: node.id,
+                        socketType: 'output',
+                        socketIndex: i,
+                        position: { x: socketX, y: socketY }
+                    };
+                }
+            }
+        }
+        return null;
+    }
+
+    getConnectionAtPosition(x, y) {
+        // Transform screen coordinates to world coordinates
+        const worldX = (x - this.viewport.x) / this.viewport.zoom;
+        const worldY = (y - this.viewport.y) / this.viewport.zoom;
+
+        // Check all connections for hits
+        for (const connection of this.connections) {
+            const fromNode = this.nodes.get(connection.fromNodeId);
+            const toNode = this.nodes.get(connection.toNodeId);
+
+            if (!fromNode || !toNode) continue;
+
+            const fromNodeWidth = this.getNodeWidth(fromNode);
+            const fromX = fromNode.position.x + fromNodeWidth;
+            const fromY = fromNode.position.y + 40 + (connection.fromOutputIndex * 20);
+            const toX = toNode.position.x;
+            const toY = toNode.position.y + 40 + (connection.toInputIndex * 20);
+
+            // Simple distance check to bezier curve (approximation)
+            const distance = this.distanceToConnectionCurve(worldX, worldY, fromX, fromY, toX, toY);
+
+            if (distance <= 10) { // 10px tolerance for easier clicking
+                return connection;
+            }
+        }
+        return null;
+    }
+
+    distanceToConnectionCurve(px, py, fromX, fromY, toX, toY) {
+        // Simplified distance calculation to bezier curve
+        // For better precision, we'd use the actual bezier curve formula
+        // For now, use distance to the line segment as approximation
+
+        const A = px - fromX;
+        const B = py - fromY;
+        const C = toX - fromX;
+        const D = toY - fromY;
+
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+
+        if (lenSq === 0) {
+            return Math.sqrt(A * A + B * B);
+        }
+
+        const param = dot / lenSq;
+
+        let xx, yy;
+        if (param < 0) {
+            xx = fromX;
+            yy = fromY;
+        } else if (param > 1) {
+            xx = toX;
+            yy = toY;
+        } else {
+            xx = fromX + param * C;
+            yy = fromY + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     render() {
@@ -201,6 +381,11 @@ export class PatchCanvas {
         // Draw connections
         for (const connection of this.connections) {
             this.drawConnection(connection);
+        }
+
+        // Draw connection preview if connecting
+        if (this.isConnecting && this.connectionPreview) {
+            this.drawConnectionPreview();
         }
 
         // Draw nodes
@@ -243,22 +428,23 @@ export class PatchCanvas {
     drawNode(node) {
         const isSelected = this.selectedNodes.has(node.id);
         const nodeWidth = this.getNodeWidth(node);
+        const nodeHeight = this.getNodeHeight(node);
 
         // Draw node background
-        this.ctx.fillStyle = isSelected ? this.styles.nodeSelectedColor : this.styles.nodeColor;
+        this.ctx.fillStyle = this.styles.nodeColor;
         this.ctx.beginPath();
         this.roundRect(
             node.position.x,
             node.position.y,
             nodeWidth,
-            this.styles.nodeHeight,
+            nodeHeight,
             this.styles.nodeBorderRadius
         );
         this.ctx.fill();
 
-        // Draw border for selected nodes
+        // Draw blue border for selected nodes
         if (isSelected) {
-            this.ctx.strokeStyle = '#555';
+            this.ctx.strokeStyle = this.styles.nodeSelectedBorderColor;
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
         }
@@ -316,10 +502,61 @@ export class PatchCanvas {
 
         // Check title width
         this.ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        const titleWidth = this.ctx.measureText(node.type).width + 16;
+        const titleWidth = this.ctx.measureText(node.type).width + 16; // 8px padding each side
         maxWidth = Math.max(maxWidth, titleWidth);
 
+        // Check input label widths
+        this.ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        node.inputs.forEach(input => {
+            const inputWidth = 12 + this.ctx.measureText(input.name).width + 8; // socket + label + padding
+            maxWidth = Math.max(maxWidth, inputWidth);
+        });
+
+        // Check output label widths
+        node.outputs.forEach(output => {
+            const outputWidth = 12 + this.ctx.measureText(output.name).width + 8; // socket + label + padding
+            maxWidth = Math.max(maxWidth, outputWidth);
+        });
+
+        // Ensure enough space for both input and output labels side by side
+        if (node.inputs.length > 0 && node.outputs.length > 0) {
+            let maxRowWidth = titleWidth;
+            const maxPorts = Math.max(node.inputs.length, node.outputs.length);
+
+            for (let i = 0; i < maxPorts; i++) {
+                let rowWidth = 0;
+
+                // Input side
+                if (i < node.inputs.length) {
+                    rowWidth += 12 + this.ctx.measureText(node.inputs[i].name).width + 8;
+                }
+
+                // Output side
+                if (i < node.outputs.length) {
+                    rowWidth += 12 + this.ctx.measureText(node.outputs[i].name).width + 8;
+                }
+
+                // Add some spacing between input and output sides
+                if (i < node.inputs.length && i < node.outputs.length) {
+                    rowWidth += 16; // spacing between input and output
+                }
+
+                maxRowWidth = Math.max(maxRowWidth, rowWidth);
+            }
+            maxWidth = Math.max(maxWidth, maxRowWidth);
+        }
+
         return maxWidth;
+    }
+
+    getNodeHeight(node) {
+        // Calculate height based on content
+        const titleHeight = 32; // Title area with padding
+        const maxPorts = Math.max(node.inputs.length, node.outputs.length);
+        const portsHeight = maxPorts * 20; // 20px per port row
+        const bottomPadding = 8;
+
+        return titleHeight + portsHeight + bottomPadding;
     }
 
     roundRect(x, y, width, height, radius) {
@@ -355,9 +592,12 @@ export class PatchCanvas {
         const toX = toNode.position.x;
         const toY = toNode.position.y + 40 + (connection.toInputIndex * 20);
 
-        // Draw bezier curve
-        this.ctx.strokeStyle = '#888888';
-        this.ctx.lineWidth = 2;
+        // Check if connection is selected
+        const isSelected = this.selectedConnections.has(connection.id);
+
+        // Draw bezier curve with selection styling
+        this.ctx.strokeStyle = isSelected ? this.styles.connectionSelectedColor : this.styles.connectionColor;
+        this.ctx.lineWidth = isSelected ? this.styles.connectionSelectedWidth : this.styles.connectionWidth;
         this.ctx.beginPath();
         this.ctx.moveTo(fromX, fromY);
 
@@ -369,6 +609,32 @@ export class PatchCanvas {
         );
 
         this.ctx.stroke();
+    }
+
+    drawConnectionPreview() {
+        if (!this.connectingFrom || !this.connectionPreview) return;
+
+        const fromX = this.connectingFrom.position.x;
+        const fromY = this.connectingFrom.position.y;
+        const toX = this.connectionPreview.x;
+        const toY = this.connectionPreview.y;
+
+        // Draw preview bezier curve with semi-transparent style
+        this.ctx.strokeStyle = this.styles.connectionSelectedColor;
+        this.ctx.lineWidth = this.styles.connectionWidth;
+        this.ctx.globalAlpha = 0.7;
+        this.ctx.beginPath();
+        this.ctx.moveTo(fromX, fromY);
+
+        const controlPointOffset = Math.abs(toX - fromX) * 0.5;
+        this.ctx.bezierCurveTo(
+            fromX + controlPointOffset, fromY,
+            toX - controlPointOffset, toY,
+            toX, toY
+        );
+
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0; // Reset alpha
     }
 
     addNode(node) {
@@ -392,11 +658,18 @@ export class PatchCanvas {
     }
 
     removeConnection(connectionId) {
+        console.log('PatchCanvas.removeConnection called with:', connectionId);
+        console.log('Current connections before removal:', this.connections.map(c => c.id));
         this.connections = this.connections.filter(conn => conn.id !== connectionId);
+        console.log('Current connections after removal:', this.connections.map(c => c.id));
     }
 
     setSelectedNodes(selectedNodes) {
         this.selectedNodes = selectedNodes;
+    }
+
+    setSelectedConnections(selectedConnections) {
+        this.selectedConnections = selectedConnections;
     }
 
     // Event system
