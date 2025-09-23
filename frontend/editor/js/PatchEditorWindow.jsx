@@ -65,7 +65,7 @@ class PatchEditorWindow {
 		this.patchCanvas.className = 'patch-editor-canvas';
 		this.patchCanvas.style.cssText = `
 			width: 100%;
-			height: calc(100% - 41px);
+			height: calc(100% - 33px);
 			position: relative;
 			background-color: #2a2a2a;
 			background-image: radial-gradient(circle, #3a3a3a 0.5px, transparent 0.5px);
