@@ -9,7 +9,7 @@ import { Player } from './js/Player.js';
 import { Sidebar } from './js/Sidebar.js';
 import { Menubar } from './js/Menubar.js';
 import { Resizer } from './js/Resizer.js';
-import { PatchEditorWindow } from './js/PatchEditorWindow.jsx';
+import { InteractionEditorWindow } from './js/PatchEditorWindow.jsx';
 
 window.URL = window.URL || window.webkitURL;
 window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
@@ -115,19 +115,19 @@ const resizer = new Resizer( editor );
 document.body.appendChild( resizer.dom );
 
 
-// Patch Editor Window with consistent spacing
-const patchEditorWrapper = document.createElement( 'div' );
-patchEditorWrapper.className = 'patch-editor-wrapper';
-patchEditorWrapper.style.cssText = `
+// Interaction Editor Window with consistent spacing
+const interactionEditorWrapper = document.createElement( 'div' );
+interactionEditorWrapper.className = 'interaction-editor-wrapper';
+interactionEditorWrapper.style.cssText = `
 	padding: 0 8px 8px 8px;
 `;
 
-const patchEditor = new PatchEditorWindow( editor );
-patchEditorWrapper.appendChild( patchEditor.getContainer() );
-editorContainer.appendChild( patchEditorWrapper );
+const interactionEditor = new InteractionEditorWindow( editor );
+interactionEditorWrapper.appendChild( interactionEditor.getContainer() );
+editorContainer.appendChild( interactionEditorWrapper );
 
-// Expose patch editor globally for menu access
-window.patchEditor = patchEditor;
+// Expose interaction editor globally for menu access
+window.interactionEditor = interactionEditor;
 
 
 //

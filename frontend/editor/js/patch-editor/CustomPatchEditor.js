@@ -177,6 +177,12 @@ export class CustomPatchEditor {
         this.canvas.render();
     }
 
+    resize() {
+        if (this.canvas && this.canvas.updateCanvasSize) {
+            this.canvas.updateCanvasSize();
+        }
+    }
+
     destroy() {
         if (this.canvas) {
             this.canvas.destroy();

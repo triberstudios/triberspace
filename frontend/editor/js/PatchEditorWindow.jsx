@@ -1,18 +1,18 @@
 import { CustomPatchEditor } from './patch-editor/CustomPatchEditor.js';
 
 /**
- * Patch Editor Window - Independent resizable panel for node-based editing
+ * Interaction Editor Window - Independent resizable panel for node-based editing
  * Matches existing UI styling and integrates with Three.js editor
  */
-class PatchEditorWindow {
+class InteractionEditorWindow {
 	constructor(editor) {
 		this.editor = editor;
 		this.isVisible = false;
 		this.panelHeight = 400; // Default height
-		this.patchEditor = null;
+		this.interactionEditor = null;
 
 		this.container = null;
-		this.patchCanvas = null;
+		this.interactionCanvas = null;
 
 		this.init();
 	}
@@ -22,9 +22,9 @@ class PatchEditorWindow {
 	}
 
 	createDOM() {
-		// Main patch editor container
+		// Main interaction editor container
 		this.container = document.createElement('div');
-		this.container.className = 'patch-editor-container panel-container';
+		this.container.className = 'interaction-editor-container panel-container';
 		this.container.style.cssText = `
 			height: ${this.panelHeight}px;
 			display: none;
@@ -47,10 +47,10 @@ class PatchEditorWindow {
 		`;
 		this.container.appendChild(this.resizerHandle);
 
-		// Patch editor title bar
+		// Interaction editor title bar
 		const titleBar = document.createElement('div');
-		titleBar.className = 'patch-editor-title';
-		titleBar.textContent = 'Patch Editor';
+		titleBar.className = 'interaction-editor-title';
+		titleBar.textContent = 'Interaction Editor';
 		titleBar.style.cssText = `
 			padding: 8px 12px;
 			background-color: #3a3a3a;
@@ -60,10 +60,10 @@ class PatchEditorWindow {
 			user-select: none;
 		`;
 
-		// Canvas container for Rete
-		this.patchCanvas = document.createElement('div');
-		this.patchCanvas.className = 'patch-editor-canvas';
-		this.patchCanvas.style.cssText = `
+		// Canvas container for interaction nodes
+		this.interactionCanvas = document.createElement('div');
+		this.interactionCanvas.className = 'interaction-editor-canvas';
+		this.interactionCanvas.style.cssText = `
 			width: 100%;
 			height: calc(100% - 33px);
 			position: relative;
@@ -74,17 +74,17 @@ class PatchEditorWindow {
 		`;
 
 		this.container.appendChild(titleBar);
-		this.container.appendChild(this.patchCanvas);
+		this.container.appendChild(this.interactionCanvas);
 
 		// Setup resizing
 		this.setupResizing();
 	}
 
-	initCustomPatchEditor() {
-		// Initialize custom vanilla JS patch editor
-		if (!this.patchEditor) {
-			this.patchEditor = new CustomPatchEditor(this.patchCanvas);
-			console.log('Custom patch editor initialized successfully');
+	initCustomInteractionEditor() {
+		// Initialize custom vanilla JS interaction editor
+		if (!this.interactionEditor) {
+			this.interactionEditor = new CustomPatchEditor(this.interactionCanvas);
+			console.log('Custom interaction editor initialized successfully');
 		}
 	}
 
@@ -97,12 +97,12 @@ class PatchEditorWindow {
 		// Trigger layout reflow
 		this.editor.signals.windowResize.dispatch();
 
-		// Initialize custom patch editor on first show with proper timing
-		if (!this.patchEditor) {
+		// Initialize custom interaction editor on first show with proper timing
+		if (!this.interactionEditor) {
 			// Use requestAnimationFrame for better timing with DOM
 			requestAnimationFrame(() => {
 				setTimeout(() => {
-					this.initCustomPatchEditor();
+					this.initCustomInteractionEditor();
 				}, 50);
 			});
 		}
@@ -145,6 +145,11 @@ class PatchEditorWindow {
 			this.panelHeight = newHeight;
 			this.container.style.height = newHeight + 'px';
 
+			// Resize the interaction editor canvas
+			if (this.interactionEditor && this.interactionEditor.resize) {
+				this.interactionEditor.resize();
+			}
+
 			// Trigger window resize for other components
 			this.editor.signals.windowResize.dispatch();
 			event.preventDefault();
@@ -178,11 +183,11 @@ class PatchEditorWindow {
 	}
 
 	destroy() {
-		if (this.patchEditor) {
-			this.patchEditor.destroy();
-			this.patchEditor = null;
+		if (this.interactionEditor) {
+			this.interactionEditor.destroy();
+			this.interactionEditor = null;
 		}
 	}
 }
 
-export { PatchEditorWindow };
+export { InteractionEditorWindow };

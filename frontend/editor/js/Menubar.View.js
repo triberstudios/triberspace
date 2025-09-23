@@ -98,13 +98,13 @@ function MenubarView( editor ) {
 
 	options.add( new UIHorizontalRule() );
 
-	// Patch Editor
+	// Interaction Editor
 
-	option = new UIRow().addClass( 'option' ).addClass( 'toggle' ).setTextContent( 'Patch Editor' ).onClick( function () {
+	option = new UIRow().addClass( 'option' ).addClass( 'toggle' ).setTextContent( 'Interaction Editor' ).onClick( function () {
 
-		window.patchEditor.toggle();
+		window.interactionEditor.toggle();
 
-		this.toggleClass( 'toggle-on', window.patchEditor.isOpen() );
+		this.toggleClass( 'toggle-on', window.interactionEditor.isOpen() );
 
 	} ).toggleClass( 'toggle-on', false );
 
