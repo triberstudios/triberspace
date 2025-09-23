@@ -50,7 +50,7 @@ const viewportWrapper = document.createElement( 'div' );
 viewportWrapper.className = 'viewport-wrapper panel-container';
 viewportWrapper.style.cssText = `
 	flex: none;
-	height: calc(100% - 56px);
+	height: calc(100% - 100px);
 	display: flex;
 	flex-direction: column;
 	min-height: 200px;
