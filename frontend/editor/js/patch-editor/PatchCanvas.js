@@ -94,7 +94,7 @@ export class PatchCanvas {
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
+        this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
     }
 
     onMouseDown(e) {

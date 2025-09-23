@@ -214,6 +214,14 @@ leftContainer.appendChild( interactionEditor.getContainer() );
 // Expose interaction editor globally for menu access
 window.interactionEditor = interactionEditor;
 
+// Prevent Chrome swipe navigation with proper passive: false handling
+leftContainer.addEventListener('wheel', (e) => {
+	// Only prevent default for horizontal scroll events that could trigger navigation
+	if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+		e.preventDefault();
+	}
+}, { passive: false });
+
 
 //
 

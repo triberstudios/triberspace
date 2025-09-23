@@ -12,6 +12,7 @@ body {
 	margin: 0;
 	overflow: hidden;
 	background-color: #1a1a1a; /* Dark background like Blender */
+	overscroll-behavior-x: none; /* Prevent Chrome swipe navigation */
 }
 
 /* Blender-style modular container system */
@@ -21,6 +22,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	background-color: #1a1a1a;
+	overscroll-behavior-x: none; /* Additional protection against swipe navigation */
 }
 
 .main-content {
