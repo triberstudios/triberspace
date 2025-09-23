@@ -64,14 +64,7 @@ export class PatchCanvas {
             height: 100%;
             display: block;
             cursor: default;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
         `;
-
-        // Also apply touch-action to the container to prevent browser gestures
-        this.container.style.touchAction = 'none';
-        this.container.style.overscrollBehavior = 'none';
 
         this.container.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d');
@@ -101,26 +94,7 @@ export class PatchCanvas {
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
-
-        // Touch events for trackpad gestures
-        this.canvas.addEventListener('gesturestart', (e) => e.preventDefault());
-        this.canvas.addEventListener('gesturechange', (e) => e.preventDefault());
-        this.canvas.addEventListener('gestureend', (e) => e.preventDefault());
-
-        // Prevent browser back/forward navigation on horizontal swipe
-        // This is crucial for Mac trackpad users
-        this.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-        this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-        this.canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
-
-        // Also prevent the default behavior on the container
-        this.container.addEventListener('wheel', (e) => {
-            // Only prevent default if the event is within our canvas
-            if (e.target === this.canvas || this.container.contains(e.target)) {
-                e.preventDefault();
-            }
-        }, { passive: false });
+        this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
     }
 
     onMouseDown(e) {

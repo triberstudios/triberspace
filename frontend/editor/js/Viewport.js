@@ -271,7 +271,7 @@ function Viewport( editor ) {
 		}
 
 		controls.connect( newRenderer.domElement );
-		
+
 		// Initialize TransformControls with proper domElement
 		if ( !transformControls ) {
 			transformControls = new TransformControls( camera, newRenderer.domElement );
