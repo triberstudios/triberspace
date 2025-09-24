@@ -211,6 +211,17 @@ document.body.appendChild( resizer.dom );
 const interactionEditor = new InteractionEditorWindow( editor );
 leftContainer.appendChild( interactionEditor.getContainer() );
 
+// Set the interaction editor reference in the editor for persistence
+editor.interactionEditor = interactionEditor;
+
+// Add a getter for the patch editor to be accessible via editor.patchEditor
+Object.defineProperty(editor, 'patchEditor', {
+	get: function() {
+		return this.interactionEditor && this.interactionEditor.interactionEditor ?
+			this.interactionEditor.interactionEditor : null;
+	}
+});
+
 // Expose interaction editor globally for menu access
 window.interactionEditor = interactionEditor;
 
@@ -290,6 +301,7 @@ timeout = setTimeout( function () {
 	signals.sceneGraphChanged.add( saveState );
 	signals.scriptChanged.add( saveState );
 	signals.historyChanged.add( saveState );
+	signals.interactionGraphChanged.add( saveState );
 
 } );
 
@@ -331,6 +343,12 @@ function onWindowResize() {
 window.addEventListener( 'resize', onWindowResize );
 
 onWindowResize();
+
+// Removed createSpinningCube function - users can create objects manually via Add menu
+
+// Removed setupCubePatchAnimation function - users can connect nodes manually
+
+// Removed auto-creation of spinning cube - user can create objects manually
 
 //
 

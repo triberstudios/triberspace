@@ -57,6 +57,9 @@ function Editor() {
 		cameraChanged: new Signal(),
 		cameraResetted: new Signal(),
 
+		// interaction editor
+		interactionGraphChanged: new Signal(),
+
 		geometryChanged: new Signal(),
 
 		objectSelected: new Signal(),
@@ -117,6 +120,9 @@ function Editor() {
 	this.materials = {};
 	this.textures = {};
 	this.scripts = {};
+
+	// Interaction editor reference (set externally by main.js)
+	this.interactionEditor = null;
 
 	this.materialsRefCounter = new Map(); // tracks how often is a material used by a 3D object
 
@@ -654,6 +660,14 @@ Editor.prototype = {
 
 		this.setScene( await loader.parseAsync( json.scene ) );
 
+		// Restore interaction graph if available
+		if ( json.interactionGraph && this.interactionEditor && this.interactionEditor.interactionEditor ) {
+			const graph = this.interactionEditor.interactionEditor.getInteractionGraph();
+			if ( graph ) {
+				graph.deserialize( json.interactionGraph );
+			}
+		}
+
 		if ( json.environment === 'Room' ||
 			 json.environment === 'ModelViewer' /* DEPRECATED */ ) {
 
@@ -695,6 +709,15 @@ Editor.prototype = {
 
 		//
 
+		// Serialize interaction graph if available
+		var interactionGraph = null;
+		if ( this.interactionEditor && this.interactionEditor.interactionEditor ) {
+			const graph = this.interactionEditor.interactionEditor.getInteractionGraph();
+			if ( graph ) {
+				interactionGraph = graph.serialize();
+			}
+		}
+
 		return {
 
 			metadata: {},
@@ -708,7 +731,8 @@ Editor.prototype = {
 			scene: this.scene.toJSON(),
 			scripts: this.scripts,
 			history: this.history.toJSON(),
-			environment: environment
+			environment: environment,
+			interactionGraph: interactionGraph
 
 		};
 

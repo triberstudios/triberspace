@@ -116,7 +116,17 @@ function SidebarObject( editor ) {
 	const objectPositionY = new UINumber().setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 	const objectPositionZ = new UINumber().setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 
+	// Property patch arrow button for position
+	const positionArrow = new UIButton( '→' ).setWidth( '20px' ).setMarginLeft( '5px' );
+	positionArrow.onClick( function() {
+		const object = editor.selected;
+		if ( object && editor.patchEditor ) {
+			editor.patchEditor.createPropertyPatch( object, 'position' );
+		}
+	});
+
 	objectPositionRow.add( new UIText( strings.getKey( 'sidebar/object/position' ) ).setClass( 'Label' ) );
+	objectPositionRow.add( positionArrow );
 	objectPositionRow.add( objectPositionX, objectPositionY, objectPositionZ );
 
 	container.add( objectPositionRow );
@@ -128,7 +138,17 @@ function SidebarObject( editor ) {
 	const objectRotationY = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
 	const objectRotationZ = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
 
+	// Property patch arrow button for rotation
+	const rotationArrow = new UIButton( '→' ).setWidth( '20px' ).setMarginLeft( '5px' );
+	rotationArrow.onClick( function() {
+		const object = editor.selected;
+		if ( object && editor.patchEditor ) {
+			editor.patchEditor.createPropertyPatch( object, 'rotation' );
+		}
+	});
+
 	objectRotationRow.add( new UIText( strings.getKey( 'sidebar/object/rotation' ) ).setClass( 'Label' ) );
+	objectRotationRow.add( rotationArrow );
 	objectRotationRow.add( objectRotationX, objectRotationY, objectRotationZ );
 
 	container.add( objectRotationRow );
@@ -140,7 +160,17 @@ function SidebarObject( editor ) {
 	const objectScaleY = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 	const objectScaleZ = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 
+	// Property patch arrow button for scale
+	const scaleArrow = new UIButton( '→' ).setWidth( '20px' ).setMarginLeft( '5px' );
+	scaleArrow.onClick( function() {
+		const object = editor.selected;
+		if ( object && editor.patchEditor ) {
+			editor.patchEditor.createPropertyPatch( object, 'scale' );
+		}
+	});
+
 	objectScaleRow.add( new UIText( strings.getKey( 'sidebar/object/scale' ) ).setClass( 'Label' ) );
+	objectScaleRow.add( scaleArrow );
 	objectScaleRow.add( objectScaleX, objectScaleY, objectScaleZ );
 
 	container.add( objectScaleRow );

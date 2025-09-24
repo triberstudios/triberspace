@@ -62,9 +62,14 @@ export class PatchNode {
     setOutputValue(outputName, value) {
         const output = this.outputs.find(o => o.name === outputName);
         if (output) {
+            const oldValue = output.value;
             output.value = value;
-            // Propagate to connected nodes
-            this.propagateValue(output);
+
+            // Only propagate if value actually changed
+            if (oldValue !== value) {
+                this.propagateValue(output);
+                this.onOutputChanged(outputName, value, oldValue);
+            }
         }
     }
 
@@ -72,6 +77,32 @@ export class PatchNode {
         output.connections.forEach(connection => {
             connection.setValue(output.value);
         });
+    }
+
+    // Called when an output value changes
+    onOutputChanged(outputName, newValue, oldValue) {
+        // Override in subclasses for specific behavior
+        // Can be used to trigger immediate scene updates
+    }
+
+    // Set input value directly (for external updates)
+    setInputValue(inputName, value) {
+        const input = this.inputs.find(i => i.name === inputName);
+        if (input) {
+            const oldValue = input.value;
+            input.value = value;
+
+            // Only trigger processing if value actually changed
+            if (oldValue !== value) {
+                this.onInputChanged(inputName, value, oldValue);
+            }
+        }
+    }
+
+    // Enhanced input change handler
+    onInputChanged(inputName, newValue, oldValue) {
+        // Process immediately for real-time updates
+        this.process();
     }
 
     // Override in subclasses to implement node-specific logic

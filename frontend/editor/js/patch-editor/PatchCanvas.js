@@ -102,7 +102,18 @@ export class PatchCanvas {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Priority 1: Check for socket click (for connection creation)
+        // Convert screen coordinates to world coordinates
+        const worldX = (x - this.viewport.x) / this.viewport.zoom;
+        const worldY = (y - this.viewport.y) / this.viewport.zoom;
+
+        // Priority 1: Check for input field click (highest priority)
+        const clickedInputField = this.getInputFieldAtPosition(worldX, worldY);
+        if (clickedInputField) {
+            this.handleInputFieldClick(clickedInputField);
+            return;
+        }
+
+        // Priority 2: Check for socket click (for connection creation)
         const clickedSocket = this.getSocketAtPosition(x, y);
         if (clickedSocket && clickedSocket.socketType === 'output') {
             // Start connection from output socket
@@ -270,11 +281,13 @@ export class PatchCanvas {
         for (const node of this.nodes.values()) {
             const nodeWidth = this.getNodeWidth(node);
             const socketRadius = this.styles.socketSize / 2;
+            const startY = node.position.y + 35; // After title (matches new layout)
+            const lineHeight = 20;
 
-            // Check input sockets (left side)
+            // Check input sockets (left border)
             for (let i = 0; i < node.inputs.length; i++) {
                 const socketX = node.position.x;
-                const socketY = node.position.y + 40 + (i * 20);
+                const socketY = startY + (i * lineHeight);
 
                 const distance = Math.sqrt(
                     Math.pow(worldX - socketX, 2) +
@@ -291,10 +304,10 @@ export class PatchCanvas {
                 }
             }
 
-            // Check output sockets (right side)
+            // Check output sockets (right border)
             for (let i = 0; i < node.outputs.length; i++) {
                 const socketX = node.position.x + nodeWidth;
-                const socketY = node.position.y + 40 + (i * 20);
+                const socketY = startY + (i * lineHeight);
 
                 const distance = Math.sqrt(
                     Math.pow(worldX - socketX, 2) +
@@ -314,6 +327,106 @@ export class PatchCanvas {
         return null;
     }
 
+    getInputFieldAtPosition(x, y) {
+        // Check all nodes for input field hits
+        for (const node of this.nodes.values()) {
+            // Check each input that has fieldBounds set
+            for (const input of node.inputs) {
+                if (input.fieldBounds && !input.connection) {
+                    const bounds = input.fieldBounds;
+                    if (x >= bounds.x && x <= bounds.x + bounds.width &&
+                        y >= bounds.y && y <= bounds.y + bounds.height) {
+                        return { node, input, bounds };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    handleInputFieldClick(clickedField) {
+        const { node, input } = clickedField;
+
+        if (input.type === 'boolean') {
+            // Toggle boolean value
+            const newValue = !input.value;
+            node.setInputValue(input.name, newValue);
+            this.render();
+        } else if (input.type === 'number') {
+            // Create number input dialog
+            this.createNumberInputDialog(node, input, clickedField.bounds);
+        }
+    }
+
+    createNumberInputDialog(node, input, bounds) {
+        // Remove any existing input dialog
+        this.removeNumberInputDialog();
+
+        // Create input element
+        const inputElement = document.createElement('input');
+        inputElement.type = 'number';
+        inputElement.value = input.value;
+        inputElement.step = 'any';
+        inputElement.style.position = 'absolute';
+        inputElement.style.zIndex = '10000';
+        inputElement.style.fontSize = '12px';
+        inputElement.style.padding = '2px 4px';
+        inputElement.style.border = '1px solid #4a90e2';
+        inputElement.style.borderRadius = '3px';
+        inputElement.style.background = '#2a2a2a';
+        inputElement.style.color = '#ffffff';
+        inputElement.style.width = `${bounds.width}px`;
+        inputElement.style.height = `${bounds.height}px`;
+
+        // Position relative to canvas
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const screenX = bounds.x * this.viewport.zoom + this.viewport.x + canvasRect.left;
+        const screenY = bounds.y * this.viewport.zoom + this.viewport.y + canvasRect.top;
+
+        inputElement.style.left = `${screenX}px`;
+        inputElement.style.top = `${screenY}px`;
+
+        // Add to document
+        document.body.appendChild(inputElement);
+        this.currentNumberInput = inputElement;
+
+        // Focus and select all
+        inputElement.focus();
+        inputElement.select();
+
+        // Handle input changes
+        const updateValue = () => {
+            const newValue = parseFloat(inputElement.value) || 0;
+            node.setInputValue(input.name, newValue);
+            this.render();
+        };
+
+        // Event listeners
+        inputElement.addEventListener('blur', () => {
+            updateValue();
+            this.removeNumberInputDialog();
+        });
+
+        inputElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                updateValue();
+                this.removeNumberInputDialog();
+            } else if (e.key === 'Escape') {
+                this.removeNumberInputDialog();
+            }
+        });
+
+        // Update in real-time as user types (optional)
+        inputElement.addEventListener('input', updateValue);
+    }
+
+    removeNumberInputDialog() {
+        if (this.currentNumberInput) {
+            document.body.removeChild(this.currentNumberInput);
+            this.currentNumberInput = null;
+        }
+    }
+
     getConnectionAtPosition(x, y) {
         // Transform screen coordinates to world coordinates
         const worldX = (x - this.viewport.x) / this.viewport.zoom;
@@ -327,10 +440,13 @@ export class PatchCanvas {
             if (!fromNode || !toNode) continue;
 
             const fromNodeWidth = this.getNodeWidth(fromNode);
+            const startY = 35; // After title (matches new layout)
+            const lineHeight = 20;
+
             const fromX = fromNode.position.x + fromNodeWidth;
-            const fromY = fromNode.position.y + 40 + (connection.fromOutputIndex * 20);
+            const fromY = fromNode.position.y + startY + (connection.fromOutputIndex * lineHeight);
             const toX = toNode.position.x;
-            const toY = toNode.position.y + 40 + (connection.toInputIndex * 20);
+            const toY = toNode.position.y + startY + (connection.toInputIndex * lineHeight);
 
             // Simple distance check to bezier curve (approximation)
             const distance = this.distanceToConnectionCurve(worldX, worldY, fromX, fromY, toX, toY);
@@ -472,8 +588,144 @@ export class PatchCanvas {
             node.position.y + 20
         );
 
-        // Draw inputs and outputs
-        this.drawNodePorts(node, nodeWidth);
+        // Draw internal content (inputs with fields)
+        this.drawNodeContent(node, nodeWidth, nodeHeight);
+
+        // Draw sockets on the borders (external connection points)
+        this.drawNodeSockets(node, nodeWidth, nodeHeight);
+    }
+
+    drawNodeContent(node, nodeWidth, nodeHeight) {
+        const contentPadding = 8;
+        const startY = node.position.y + 35; // After title
+        const lineHeight = 20;
+
+        // Set font for content
+        this.ctx.fillStyle = this.styles.nodeTextColor;
+        this.ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+        // Draw inputs with inline fields
+        node.inputs.forEach((input, index) => {
+            const y = startY + (index * lineHeight);
+
+            // Draw input label
+            this.ctx.fillText(input.name, node.position.x + contentPadding, y + 3);
+
+            // Draw inline input field if not connected
+            if (!input.connection) {
+                const labelWidth = this.ctx.measureText(input.name).width;
+                this.drawInlineInputField(
+                    node,
+                    input,
+                    node.position.x + contentPadding + labelWidth + 8,
+                    y
+                );
+            }
+        });
+
+        // Draw outputs (just labels on right side)
+        node.outputs.forEach((output, index) => {
+            const y = startY + (index * lineHeight);
+
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText(
+                output.name,
+                node.position.x + nodeWidth - contentPadding,
+                y + 3
+            );
+            this.ctx.textAlign = 'left';
+        });
+    }
+
+    drawNodeSockets(node, nodeWidth, nodeHeight) {
+        const { socketSize } = this.styles;
+        const startY = node.position.y + 35; // After title
+        const lineHeight = 20;
+
+        // Draw input sockets on left border
+        node.inputs.forEach((input, index) => {
+            const y = startY + (index * lineHeight);
+
+            this.ctx.fillStyle = input.connection ? '#4a90e2' : '#666';
+            this.ctx.beginPath();
+            this.ctx.arc(node.position.x, y, socketSize / 2, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+
+        // Draw output sockets on right border
+        node.outputs.forEach((output, index) => {
+            const y = startY + (index * lineHeight);
+
+            this.ctx.fillStyle = '#f5a623';
+            this.ctx.beginPath();
+            this.ctx.arc(node.position.x + nodeWidth, y, socketSize / 2, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+    }
+
+    drawInlineInputField(node, input, x, y) {
+        if (input.dataType === 'boolean') {
+            // Draw compact boolean toggle
+            this.drawCompactBooleanToggle(x, y, input.value, node, input);
+        } else if (input.dataType === 'number') {
+            // Draw compact number field
+            this.drawCompactNumberField(x, y, input.value, node, input);
+        }
+    }
+
+    drawCompactNumberField(x, y, value, node, input) {
+        const fieldWidth = 40;
+        const fieldHeight = 12;
+        const fieldY = y - fieldHeight / 2;
+
+        // Draw subtle background
+        this.ctx.fillStyle = '#333';
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        if (this.ctx.roundRect) {
+            this.ctx.roundRect(x, fieldY, fieldWidth, fieldHeight, 2);
+        } else {
+            this.ctx.rect(x, fieldY, fieldWidth, fieldHeight);
+        }
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Draw value text
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(value.toString(), x + fieldWidth / 2, fieldY + fieldHeight / 2 + 3);
+        this.ctx.textAlign = 'left';
+
+        // Store field bounds for click detection
+        input.fieldBounds = { x, y: fieldY, width: fieldWidth, height: fieldHeight, node, input };
+    }
+
+    drawCompactBooleanToggle(x, y, value, node, input) {
+        const toggleWidth = 20;
+        const toggleHeight = 10;
+        const toggleY = y - toggleHeight / 2;
+
+        // Draw toggle background
+        this.ctx.fillStyle = value ? '#4a90e2' : '#666';
+        this.ctx.beginPath();
+        if (this.ctx.roundRect) {
+            this.ctx.roundRect(x, toggleY, toggleWidth, toggleHeight, 5);
+        } else {
+            this.ctx.rect(x, toggleY, toggleWidth, toggleHeight);
+        }
+        this.ctx.fill();
+
+        // Draw toggle switch
+        this.ctx.fillStyle = '#ffffff';
+        const switchX = value ? x + toggleWidth - 4 : x + 4;
+        this.ctx.beginPath();
+        this.ctx.arc(switchX, y, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Store toggle bounds for click detection
+        input.fieldBounds = { x, y: toggleY, width: toggleWidth, height: toggleHeight, node, input };
     }
 
     drawNodePorts(node, nodeWidth) {
@@ -482,7 +734,9 @@ export class PatchCanvas {
         // Draw input ports (left side)
         node.inputs.forEach((input, index) => {
             const y = node.position.y + 40 + (index * 20);
-            this.ctx.fillStyle = '#4a90e2';
+
+            // Draw input socket - dimmed if not connected
+            this.ctx.fillStyle = input.connection ? '#4a90e2' : '#666';
             this.ctx.beginPath();
             this.ctx.arc(node.position.x, y, socketSize / 2, 0, Math.PI * 2);
             this.ctx.fill();
@@ -491,6 +745,11 @@ export class PatchCanvas {
             this.ctx.fillStyle = this.styles.nodeTextColor;
             this.ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
             this.ctx.fillText(input.name, node.position.x + 12, y + 3);
+
+            // Draw inline input field if not connected
+            if (!input.connection) {
+                this.drawInputField(node, input, index, y, nodeWidth);
+            }
         });
 
         // Draw output ports (right side)
@@ -510,6 +769,78 @@ export class PatchCanvas {
         });
     }
 
+    drawInputField(node, input, index, y, nodeWidth) {
+        // Position the input field to the right side of the node, inside the node area
+        const fieldWidth = 50;
+        const fieldHeight = 14;
+        const fieldX = node.position.x + nodeWidth - fieldWidth - 8;
+        const fieldY = y - fieldHeight / 2;
+
+        if (input.dataType === 'boolean') {
+            // Draw boolean toggle switch
+            this.drawBooleanToggle(fieldX + fieldWidth - 20, fieldY + fieldHeight / 2, input.value, node, input);
+        } else if (input.dataType === 'number') {
+            // Draw number input field
+            this.drawNumberField(fieldX, fieldY, fieldWidth, fieldHeight, input.value, node, input);
+        }
+    }
+
+    drawNumberField(x, y, width, height, value, node, input) {
+        // Draw input background
+        this.ctx.fillStyle = '#2a2a2a';
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+
+        // Use roundRect with fallback
+        if (this.ctx.roundRect) {
+            this.ctx.roundRect(x, y, width, height, 2);
+        } else {
+            this.ctx.rect(x, y, width, height);
+        }
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Draw value text
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(value.toString(), x + width / 2, y + height / 2 + 3);
+        this.ctx.textAlign = 'left';
+
+        // Store field bounds for click detection
+        if (!input.fieldBounds) input.fieldBounds = {};
+        input.fieldBounds = { x, y, width, height, node, input };
+    }
+
+    drawBooleanToggle(x, y, value, node, input) {
+        const toggleWidth = 16;
+        const toggleHeight = 10;
+        const toggleX = x - toggleWidth / 2;
+        const toggleY = y - toggleHeight / 2;
+
+        // Draw toggle background
+        this.ctx.fillStyle = value ? '#4a90e2' : '#555';
+        this.ctx.beginPath();
+        if (this.ctx.roundRect) {
+            this.ctx.roundRect(toggleX, toggleY, toggleWidth, toggleHeight, 5);
+        } else {
+            this.ctx.rect(toggleX, toggleY, toggleWidth, toggleHeight);
+        }
+        this.ctx.fill();
+
+        // Draw toggle switch
+        this.ctx.fillStyle = '#ffffff';
+        const switchX = value ? toggleX + toggleWidth - 6 : toggleX + 2;
+        this.ctx.beginPath();
+        this.ctx.arc(switchX, y, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Store toggle bounds for click detection
+        if (!input.fieldBounds) input.fieldBounds = {};
+        input.fieldBounds = { x: toggleX, y: toggleY, width: toggleWidth, height: toggleHeight, node, input };
+    }
+
     getNodeWidth(node) {
         // Calculate width based on content
         let maxWidth = this.styles.nodeMinWidth;
@@ -519,10 +850,20 @@ export class PatchCanvas {
         const titleWidth = this.ctx.measureText(node.type).width + 16; // 8px padding each side
         maxWidth = Math.max(maxWidth, titleWidth);
 
-        // Check input label widths
+        // Check input label widths (including input fields)
         this.ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         node.inputs.forEach(input => {
-            const inputWidth = 12 + this.ctx.measureText(input.name).width + 8; // socket + label + padding
+            let inputWidth = 12 + this.ctx.measureText(input.name).width + 8; // socket + label + padding
+
+            // Add space for input field if not connected
+            if (!input.connection) {
+                if (input.dataType === 'number') {
+                    inputWidth += 58; // 50px field + 8px padding
+                } else if (input.dataType === 'boolean') {
+                    inputWidth += 24; // 16px toggle + 8px padding
+                }
+            }
+
             maxWidth = Math.max(maxWidth, inputWidth);
         });
 
@@ -542,7 +883,19 @@ export class PatchCanvas {
 
                 // Input side
                 if (i < node.inputs.length) {
-                    rowWidth += 12 + this.ctx.measureText(node.inputs[i].name).width + 8;
+                    const input = node.inputs[i];
+                    let inputSideWidth = 12 + this.ctx.measureText(input.name).width + 8;
+
+                    // Add space for input field if not connected
+                    if (!input.connection) {
+                        if (input.dataType === 'number') {
+                            inputSideWidth += 58; // 50px field + 8px padding
+                        } else if (input.dataType === 'boolean') {
+                            inputSideWidth += 24; // 16px toggle + 8px padding
+                        }
+                    }
+
+                    rowWidth += inputSideWidth;
                 }
 
                 // Output side
@@ -600,11 +953,14 @@ export class PatchCanvas {
         if (!fromOutput || !toInput) return;
 
         const fromNodeWidth = this.getNodeWidth(fromNode);
+        const startY = 35; // After title (matches new layout)
+        const lineHeight = 20;
+
         const fromX = fromNode.position.x + fromNodeWidth;
-        const fromY = fromNode.position.y + 40 + (connection.fromOutputIndex * 20);
+        const fromY = fromNode.position.y + startY + (connection.fromOutputIndex * lineHeight);
 
         const toX = toNode.position.x;
-        const toY = toNode.position.y + 40 + (connection.toInputIndex * 20);
+        const toY = toNode.position.y + startY + (connection.toInputIndex * lineHeight);
 
         // Check if connection is selected
         const isSelected = this.selectedConnections.has(connection.id);
@@ -672,10 +1028,7 @@ export class PatchCanvas {
     }
 
     removeConnection(connectionId) {
-        console.log('PatchCanvas.removeConnection called with:', connectionId);
-        console.log('Current connections before removal:', this.connections.map(c => c.id));
         this.connections = this.connections.filter(conn => conn.id !== connectionId);
-        console.log('Current connections after removal:', this.connections.map(c => c.id));
     }
 
     setSelectedNodes(selectedNodes) {
@@ -701,6 +1054,9 @@ export class PatchCanvas {
     }
 
     destroy() {
+        // Clean up input dialogs
+        this.removeNumberInputDialog();
+
         if (this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
         }
