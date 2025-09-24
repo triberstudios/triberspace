@@ -347,12 +347,12 @@ export class PatchCanvas {
     handleInputFieldClick(clickedField) {
         const { node, input } = clickedField;
 
-        if (input.type === 'boolean') {
+        if (input.dataType === 'boolean') {
             // Toggle boolean value
             const newValue = !input.value;
             node.setInputValue(input.name, newValue);
             this.render();
-        } else if (input.type === 'number') {
+        } else if (input.dataType === 'number') {
             // Create number input dialog
             this.createNumberInputDialog(node, input, clickedField.bounds);
         }
@@ -390,9 +390,11 @@ export class PatchCanvas {
         document.body.appendChild(inputElement);
         this.currentNumberInput = inputElement;
 
-        // Focus and select all
-        inputElement.focus();
-        inputElement.select();
+        // Focus and select all - delay to prevent immediate blur
+        setTimeout(() => {
+            inputElement.focus();
+            inputElement.select();
+        }, 10);
 
         // Handle input changes
         const updateValue = () => {
@@ -401,10 +403,15 @@ export class PatchCanvas {
             this.render();
         };
 
-        // Event listeners
+        // Event listeners - add flag to prevent immediate removal
+        let justCreated = true;
+        setTimeout(() => { justCreated = false; }, 100);
+
         inputElement.addEventListener('blur', () => {
-            updateValue();
-            this.removeNumberInputDialog();
+            if (!justCreated) {
+                updateValue();
+                this.removeNumberInputDialog();
+            }
         });
 
         inputElement.addEventListener('keydown', (e) => {
@@ -728,118 +735,7 @@ export class PatchCanvas {
         input.fieldBounds = { x, y: toggleY, width: toggleWidth, height: toggleHeight, node, input };
     }
 
-    drawNodePorts(node, nodeWidth) {
-        const { socketSize } = this.styles;
 
-        // Draw input ports (left side)
-        node.inputs.forEach((input, index) => {
-            const y = node.position.y + 40 + (index * 20);
-
-            // Draw input socket - dimmed if not connected
-            this.ctx.fillStyle = input.connection ? '#4a90e2' : '#666';
-            this.ctx.beginPath();
-            this.ctx.arc(node.position.x, y, socketSize / 2, 0, Math.PI * 2);
-            this.ctx.fill();
-
-            // Input label
-            this.ctx.fillStyle = this.styles.nodeTextColor;
-            this.ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-            this.ctx.fillText(input.name, node.position.x + 12, y + 3);
-
-            // Draw inline input field if not connected
-            if (!input.connection) {
-                this.drawInputField(node, input, index, y, nodeWidth);
-            }
-        });
-
-        // Draw output ports (right side)
-        node.outputs.forEach((output, index) => {
-            const y = node.position.y + 40 + (index * 20);
-            this.ctx.fillStyle = '#f5a623';
-            this.ctx.beginPath();
-            this.ctx.arc(node.position.x + nodeWidth, y, socketSize / 2, 0, Math.PI * 2);
-            this.ctx.fill();
-
-            // Output label
-            this.ctx.fillStyle = this.styles.nodeTextColor;
-            this.ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-            this.ctx.textAlign = 'right';
-            this.ctx.fillText(output.name, node.position.x + nodeWidth - 12, y + 3);
-            this.ctx.textAlign = 'left';
-        });
-    }
-
-    drawInputField(node, input, index, y, nodeWidth) {
-        // Position the input field to the right side of the node, inside the node area
-        const fieldWidth = 50;
-        const fieldHeight = 14;
-        const fieldX = node.position.x + nodeWidth - fieldWidth - 8;
-        const fieldY = y - fieldHeight / 2;
-
-        if (input.dataType === 'boolean') {
-            // Draw boolean toggle switch
-            this.drawBooleanToggle(fieldX + fieldWidth - 20, fieldY + fieldHeight / 2, input.value, node, input);
-        } else if (input.dataType === 'number') {
-            // Draw number input field
-            this.drawNumberField(fieldX, fieldY, fieldWidth, fieldHeight, input.value, node, input);
-        }
-    }
-
-    drawNumberField(x, y, width, height, value, node, input) {
-        // Draw input background
-        this.ctx.fillStyle = '#2a2a2a';
-        this.ctx.strokeStyle = '#555';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-
-        // Use roundRect with fallback
-        if (this.ctx.roundRect) {
-            this.ctx.roundRect(x, y, width, height, 2);
-        } else {
-            this.ctx.rect(x, y, width, height);
-        }
-        this.ctx.fill();
-        this.ctx.stroke();
-
-        // Draw value text
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(value.toString(), x + width / 2, y + height / 2 + 3);
-        this.ctx.textAlign = 'left';
-
-        // Store field bounds for click detection
-        if (!input.fieldBounds) input.fieldBounds = {};
-        input.fieldBounds = { x, y, width, height, node, input };
-    }
-
-    drawBooleanToggle(x, y, value, node, input) {
-        const toggleWidth = 16;
-        const toggleHeight = 10;
-        const toggleX = x - toggleWidth / 2;
-        const toggleY = y - toggleHeight / 2;
-
-        // Draw toggle background
-        this.ctx.fillStyle = value ? '#4a90e2' : '#555';
-        this.ctx.beginPath();
-        if (this.ctx.roundRect) {
-            this.ctx.roundRect(toggleX, toggleY, toggleWidth, toggleHeight, 5);
-        } else {
-            this.ctx.rect(toggleX, toggleY, toggleWidth, toggleHeight);
-        }
-        this.ctx.fill();
-
-        // Draw toggle switch
-        this.ctx.fillStyle = '#ffffff';
-        const switchX = value ? toggleX + toggleWidth - 6 : toggleX + 2;
-        this.ctx.beginPath();
-        this.ctx.arc(switchX, y, 3, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Store toggle bounds for click detection
-        if (!input.fieldBounds) input.fieldBounds = {};
-        input.fieldBounds = { x: toggleX, y: toggleY, width: toggleWidth, height: toggleHeight, node, input };
-    }
 
     getNodeWidth(node) {
         // Calculate width based on content
