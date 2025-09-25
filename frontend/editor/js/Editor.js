@@ -6,6 +6,8 @@ import { History as _History } from './History.js';
 import { Strings } from './Strings.js';
 import { Storage as _Storage } from './Storage.js';
 import { Selector } from './Selector.js';
+import { SpinNode } from './interaction-editor/nodes/SpinNode.js';
+import { ObjectRotationNode } from './interaction-editor/nodes/ObjectRotationNode.js';
 
 var _DEFAULT_CAMERA = new THREE.PerspectiveCamera( 50, 1, 0.01, 5000 );
 _DEFAULT_CAMERA.name = 'Camera';
@@ -633,6 +635,56 @@ Editor.prototype = {
 		this.deselect();
 
 		this.signals.editorCleared.dispatch();
+
+	},
+
+	createDefaultInteractions: function () {
+
+		// Only create default interactions if we have an interaction graph
+		if (!this.interactionEditor ||
+			!this.interactionEditor.interactionEditor ||
+			!this.interactionEditor.interactionEditor.interactionGraph) {
+			return;
+		}
+
+		const interactionGraph = this.interactionEditor.interactionEditor.interactionGraph;
+
+		// Find the default cube (BoxGeometry mesh)
+		let cubeObject = null;
+		this.scene.traverse(function (child) {
+			if (child.isMesh && child.geometry && child.geometry.type === 'BoxGeometry') {
+				cubeObject = child;
+			}
+		});
+
+		if (!cubeObject) return; // No cube found
+
+		try {
+			// Calculate center position for the pair of nodes
+			const canvas = interactionGraph.getCanvasViewport();
+			const centerX = (-canvas.viewportX / canvas.zoom) + (canvas.width / canvas.zoom / 2);
+			const centerY = (-canvas.viewportY / canvas.zoom) + (canvas.height / canvas.zoom / 2) - 25;
+
+			// Position nodes as a centered pair (SpinNode on left, ObjectRotationNode on right)
+			const spacing = 350; // Same spacing as smart positioning uses
+			const spinX = centerX - spacing / 2 - 75; // Offset left by half spacing + node width/2
+			const rotationX = centerX + spacing / 2 - 75; // Offset right by half spacing + node width/2
+
+			// Create and add first node (SpinNode)
+			const spinNode = new SpinNode(spinX, centerY);
+			spinNode.setInputValue('speed', 5); // 5 RPM
+			interactionGraph.addNode(spinNode);
+
+			// Create and add second node (ObjectRotationNode)
+			const rotationNode = new ObjectRotationNode(cubeObject, rotationX, centerY, this);
+			interactionGraph.addNode(rotationNode);
+
+			// Connect SpinNode rotation output to ObjectRotationNode Y input
+			interactionGraph.addConnection(spinNode.id, 0, rotationNode.id, 1); // Output 0 (rotation) -> Input 1 (Y)
+
+		} catch (error) {
+			console.warn('Failed to create default spinning cube interactions:', error);
+		}
 
 	},
 

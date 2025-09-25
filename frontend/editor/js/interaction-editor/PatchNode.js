@@ -131,7 +131,12 @@ export class PatchNode {
             id: this.id,
             type: this.type,
             position: { ...this.position },
-            properties: Object.fromEntries(this.properties)
+            properties: Object.fromEntries(this.properties),
+            inputs: this.inputs.map(input => ({
+                name: input.name,
+                dataType: input.dataType,
+                value: input.value
+            }))
         };
     }
 
@@ -140,5 +145,15 @@ export class PatchNode {
         this.id = data.id;
         this.position = { ...data.position };
         this.properties = new Map(Object.entries(data.properties || {}));
+
+        // Restore input values
+        if (data.inputs) {
+            for (const savedInput of data.inputs) {
+                const input = this.inputs.find(i => i.name === savedInput.name);
+                if (input) {
+                    input.value = savedInput.value;
+                }
+            }
+        }
     }
 }

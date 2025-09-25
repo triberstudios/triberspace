@@ -134,10 +134,15 @@ export class InteractionGraph {
         const node = this.nodes.get(nodeId);
         if (!node) return;
 
-        // Remove connections
-        this.connections = this.connections.filter(conn =>
-            conn.fromNodeId !== nodeId && conn.toNodeId !== nodeId
+        // Properly remove connections by calling removeConnection for each one
+        const connectionsToRemove = this.connections.filter(conn =>
+            conn.fromNodeId === nodeId || conn.toNodeId === nodeId
         );
+
+        // Call removeConnection for each to properly clean up inputs/outputs
+        for (const connection of connectionsToRemove) {
+            this.removeConnection(connection.id);
+        }
 
         // Remove from scene mapping if applicable
         if (node.sceneObject) {

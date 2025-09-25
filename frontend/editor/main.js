@@ -51,7 +51,7 @@ const viewportWrapper = document.createElement( 'div' );
 viewportWrapper.className = 'viewport-wrapper panel-container';
 viewportWrapper.style.cssText = `
 	flex: none;
-	height: calc(100% - 100px);
+	height: calc(100% - 300px);
 	display: flex;
 	flex-direction: column;
 	min-height: 200px;
@@ -308,6 +308,9 @@ if ( state !== undefined ) {
 	// Add objects to scene using the editor's command system
 	editor.execute( new AddObjectCommand( editor, cube ) );
 	editor.execute( new AddObjectCommand( editor, directionalLight ) );
+
+	// Create default spinning cube interactions
+	editor.createDefaultInteractions();
 
 }
 
