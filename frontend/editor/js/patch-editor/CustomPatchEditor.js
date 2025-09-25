@@ -279,25 +279,15 @@ export class CustomPatchEditor {
     }
 
     // Deserialization from saved state
-    deserialize(data) {
+    async deserialize(data) {
         if (!data) return;
 
         // Clear existing state
         this.clearEditor();
 
-        // Restore interaction graph first
+        // Delegate all restoration to InteractionGraph
         if (this.interactionGraph && data.interactionGraph) {
-            this.interactionGraph.deserialize(data.interactionGraph);
-        }
-
-        // Restore nodes - will need node factory for proper instantiation
-        if (data.nodes) {
-            Object.values(data.nodes).forEach(nodeData => {
-                const node = this.createNodeFromData(nodeData);
-                if (node) {
-                    this.addNode(node);
-                }
-            });
+            await this.interactionGraph.deserialize(data.interactionGraph);
         }
 
         // Render restored state
@@ -321,71 +311,6 @@ export class CustomPatchEditor {
         }
     }
 
-    // Factory method for creating nodes from serialized data
-    createNodeFromData(nodeData) {
-        // Import node types as needed
-        switch (nodeData.type) {
-            case 'Spin':
-                import('./nodes/SpinNode.js').then(({ SpinNode }) => {
-                    return new SpinNode(nodeData.position.x, nodeData.position.y);
-                });
-                return null; // Will be handled asynchronously
-            case 'Pulse':
-                import('./nodes/PulseNode.js').then(({ PulseNode }) => {
-                    return new PulseNode(nodeData.position.x, nodeData.position.y);
-                });
-                return null; // Will be handled asynchronously
-            case 'Clock':
-                return new ClockNode(nodeData.position.x, nodeData.position.y);
-            case 'Position':
-                return new PositionNode(nodeData.position.x, nodeData.position.y);
-            case 'Time':
-                import('./nodes/TimeNode.js').then(({ TimeNode }) => {
-                    return new TimeNode(nodeData.position.x, nodeData.position.y);
-                });
-                return null; // Will be handled asynchronously
-            case 'Multiply':
-                import('./nodes/MultiplyNode.js').then(({ MultiplyNode }) => {
-                    return new MultiplyNode(nodeData.position.x, nodeData.position.y);
-                });
-                return null; // Will be handled asynchronously
-            case 'SceneObject':
-                // SceneObject nodes need special handling to relink to scene objects
-                // For now, create a placeholder - the InteractionGraph will handle relinking
-                import('./nodes/SceneObjectNode.js').then(({ SceneObjectNode }) => {
-                    return new SceneObjectNode(null, nodeData.position.x, nodeData.position.y);
-                });
-                return null; // Will be handled asynchronously
-            case 'ObjectProperty':
-                // Property-specific nodes for Meta Spark AR style patches
-                const propertyType = nodeData.propertyType;
-                switch (propertyType) {
-                    case 'position':
-                        import('./nodes/ObjectPositionNode.js').then(({ ObjectPositionNode }) => {
-                            // Will need to relink to scene object during restoration
-                            return new ObjectPositionNode(null, nodeData.position.x, nodeData.position.y);
-                        });
-                        return null;
-                    case 'rotation':
-                        import('./nodes/ObjectRotationNode.js').then(({ ObjectRotationNode }) => {
-                            return new ObjectRotationNode(null, nodeData.position.x, nodeData.position.y);
-                        });
-                        return null;
-                    case 'scale':
-                        import('./nodes/ObjectScaleNode.js').then(({ ObjectScaleNode }) => {
-                            return new ObjectScaleNode(null, nodeData.position.x, nodeData.position.y);
-                        });
-                        return null;
-                    default:
-                        console.warn(`Unknown property type: ${propertyType}`);
-                        return null;
-                }
-            // Additional node types will be added here
-            default:
-                console.warn(`Unknown node type: ${nodeData.type}`);
-                return null;
-        }
-    }
 
     // Get interaction graph for external access
     getInteractionGraph() {

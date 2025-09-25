@@ -11,9 +11,14 @@ export class InteractionGraph {
         this.sceneObjectMap = new Map(); // Maps Three.js objects to patch nodes
         this.evaluationQueue = [];
         this.isEvaluating = false;
+        this.instanceId = Math.random().toString(36).substr(2, 9);
+        console.log(`InteractionGraph.constructor: Created new instance ${this.instanceId}`);
 
         // Bind to editor signals for scene synchronization
         this.setupSceneBindings();
+
+        // Set up auto-save listener for interaction graph changes
+        this.setupAutoSaveListener();
 
         // Start evaluation loop
         this.startEvaluationLoop();
@@ -41,6 +46,29 @@ export class InteractionGraph {
         signals.objectRemoved.add((object) => {
             this.onObjectRemoved(object);
         });
+    }
+
+    setupAutoSaveListener() {
+        // Set up the auto-save listener to save when interaction graph changes
+        if (this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged) {
+            console.log(`InteractionGraph.setupAutoSaveListener [${this.instanceId}]: Setting up auto-save listener`);
+
+            // Create the save function that matches the main.js pattern
+            const saveInteractionGraphState = () => {
+                console.log(`InteractionGraph.saveInteractionGraphState [${this.instanceId}]: Auto-save triggered`);
+
+                // Call editor's storage save (same as main.js saveState function)
+                if (this.editor.storage) {
+                    this.editor.storage.set(this.editor.toJSON());
+                }
+            };
+
+            // Add the listener
+            this.editor.signals.interactionGraphChanged.add(saveInteractionGraphState);
+            console.log(`InteractionGraph.setupAutoSaveListener [${this.instanceId}]: Auto-save listener added successfully`);
+        } else {
+            console.warn(`InteractionGraph.setupAutoSaveListener [${this.instanceId}]: Cannot set up auto-save - editor or signals not available`);
+        }
     }
 
     // Scene event handlers
@@ -147,6 +175,8 @@ export class InteractionGraph {
         };
 
         this.connections.push(connection);
+        console.log(`InteractionGraph.addConnection [${this.instanceId || 'unknown'}]: Added connection ${connection.id}. Total connections: ${this.connections.length}`);
+        console.log(`InteractionGraph.addConnection [${this.instanceId || 'unknown'}]: Connection details:`, connection);
 
         // Connect the nodes
         const fromNode = this.nodes.get(fromNodeId);
@@ -184,7 +214,16 @@ export class InteractionGraph {
 
         // Dispatch editor signal for autosave
         if (this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged) {
+            console.log('InteractionGraph.addConnection: Dispatching interactionGraphChanged signal for auto-save');
+            console.log('InteractionGraph.addConnection: Signal has', this.editor.signals.interactionGraphChanged._listeners?.length || 0, 'listeners');
             this.editor.signals.interactionGraphChanged.dispatch();
+            console.log('InteractionGraph.addConnection: Signal dispatched successfully');
+        } else {
+            console.warn('InteractionGraph.addConnection: Cannot dispatch interactionGraphChanged signal:', {
+                hasEditor: !!this.editor,
+                hasSignals: !!(this.editor && this.editor.signals),
+                hasInteractionGraphChanged: !!(this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged)
+            });
         }
 
         return connection;
@@ -498,12 +537,16 @@ export class InteractionGraph {
 
     // Serialization for persistence
     serialize() {
+        console.log(`InteractionGraph.serialize [${this.instanceId}]: Called from:`, new Error().stack.split('\n')[2]);
         const nodesData = {};
         this.nodes.forEach((node, id) => {
             if (node.serialize) {
                 nodesData[id] = node.serialize();
             }
         });
+
+        console.log(`InteractionGraph.serialize [${this.instanceId || 'unknown'}]: Saving ${this.nodes.size} nodes and ${this.connections.length} connections`);
+        console.log(`InteractionGraph.serialize [${this.instanceId || 'unknown'}]: Connection details:`, this.connections);
 
         return {
             nodes: nodesData,
@@ -515,19 +558,221 @@ export class InteractionGraph {
         };
     }
 
-    deserialize(data) {
-        if (!data) return;
+    // Node factory for creating nodes from serialized data
+    async createNodeFromData(nodeData) {
+        if (!nodeData || !nodeData.type) {
+            console.warn('InteractionGraph: Invalid node data for restoration:', nodeData);
+            return null;
+        }
+
+        try {
+            switch (nodeData.type) {
+                case 'Clock':
+                    const { ClockNode } = await import('./nodes/ClockNode.js');
+                    return new ClockNode(nodeData.position.x, nodeData.position.y);
+
+                case 'Position':
+                    const { PositionNode } = await import('./nodes/PositionNode.js');
+                    return new PositionNode(nodeData.position.x, nodeData.position.y);
+
+                case 'Time':
+                    const { TimeNode } = await import('./nodes/TimeNode.js');
+                    return new TimeNode(nodeData.position.x, nodeData.position.y);
+
+                case 'Multiply':
+                    const { MultiplyNode } = await import('./nodes/MultiplyNode.js');
+                    return new MultiplyNode(nodeData.position.x, nodeData.position.y);
+
+                case 'Spin':
+                    const { SpinNode } = await import('./nodes/SpinNode.js');
+                    return new SpinNode(nodeData.position.x, nodeData.position.y);
+
+                case 'Pulse':
+                    const { PulseNode } = await import('./nodes/PulseNode.js');
+                    return new PulseNode(nodeData.position.x, nodeData.position.y);
+
+                case 'SceneObject':
+                    const { SceneObjectNode } = await import('./nodes/SceneObjectNode.js');
+                    // Try to find the scene object by UUID if available
+                    let sceneObject = null;
+                    if (nodeData.objectUuid && this.editor && this.editor.scene) {
+                        sceneObject = this.editor.scene.getObjectByProperty('uuid', nodeData.objectUuid, true);
+                    }
+                    return new SceneObjectNode(sceneObject, nodeData.position.x, nodeData.position.y);
+
+                case 'ObjectProperty':
+                    // Property-specific nodes for Meta Spark AR style patches
+                    const propertyType = nodeData.propertyType;
+                    let sceneObj = null;
+
+                    // Try to find the scene object by UUID if available
+                    if (nodeData.objectUuid && this.editor && this.editor.scene) {
+                        sceneObj = this.editor.scene.getObjectByProperty('uuid', nodeData.objectUuid, true);
+                    }
+
+                    switch (propertyType) {
+                        case 'position':
+                            const { ObjectPositionNode } = await import('./nodes/ObjectPositionNode.js');
+                            const posNode = new ObjectPositionNode(sceneObj, nodeData.position.x, nodeData.position.y, this.editor);
+                            posNode.type = 'ObjectProperty';
+                            posNode.propertyType = 'position';
+                            return posNode;
+
+                        case 'rotation':
+                            const { ObjectRotationNode } = await import('./nodes/ObjectRotationNode.js');
+                            const rotNode = new ObjectRotationNode(sceneObj, nodeData.position.x, nodeData.position.y, this.editor);
+                            rotNode.type = 'ObjectProperty';
+                            rotNode.propertyType = 'rotation';
+                            return rotNode;
+
+                        case 'scale':
+                            const { ObjectScaleNode } = await import('./nodes/ObjectScaleNode.js');
+                            const scaleNode = new ObjectScaleNode(sceneObj, nodeData.position.x, nodeData.position.y, this.editor);
+                            scaleNode.type = 'ObjectProperty';
+                            scaleNode.propertyType = 'scale';
+                            return scaleNode;
+
+                        default:
+                            console.warn(`InteractionGraph: Unknown property type: ${propertyType}`);
+                            return null;
+                    }
+
+                default:
+                    console.warn(`InteractionGraph: Unknown node type: ${nodeData.type}`);
+                    return null;
+            }
+        } catch (error) {
+            console.error(`InteractionGraph: Failed to create node of type ${nodeData.type}:`, error);
+            return null;
+        }
+    }
+
+    async deserialize(data) {
+        console.log('InteractionGraph.deserialize: Starting with data:', data);
+        if (!data) {
+            console.warn('InteractionGraph.deserialize: No data provided');
+            return;
+        }
 
         // Clear existing state
         this.nodes.clear();
         this.connections.length = 0;
         this.sceneObjectMap.clear();
+        console.log('InteractionGraph.deserialize: Cleared existing state');
 
-        // Restore connections
-        this.connections = [...(data.connections || [])];
+        // Restore nodes first (must complete before connections)
+        if (data.nodes) {
+            const nodePromises = [];
+            const nodeDataArray = Object.values(data.nodes);
 
-        // Note: Node restoration will be handled by the patch editor
-        // since it needs to instantiate the specific node types
+            for (const nodeData of nodeDataArray) {
+                const nodePromise = this.createNodeFromData(nodeData);
+                if (nodePromise) {
+                    nodePromises.push(nodePromise);
+                }
+            }
+
+            // Wait for all nodes to be created
+            const createdNodes = await Promise.all(nodePromises);
+
+            // Add all successfully created nodes to the graph and restore their data
+            createdNodes.forEach((node, index) => {
+                if (node) {
+                    const nodeData = nodeDataArray[index];
+                    const originalId = node.id;
+
+                    // Restore the original node ID and properties
+                    if (node.deserialize) {
+                        node.deserialize(nodeData);
+                    }
+
+                    this.addNode(node);
+                    console.log(`InteractionGraph.deserialize: Restored node ${originalId} -> ${node.id} (type: ${node.type})`);
+
+                    // Debug: Verify the node is findable in the map
+                    const testFind = this.nodes.get(node.id);
+                    console.log(`InteractionGraph.deserialize: Node ${node.id} findable in map:`, !!testFind);
+                }
+            });
+
+            // Debug: Show all available node IDs after restoration
+            console.log(`InteractionGraph.deserialize: All available node IDs:`, Array.from(this.nodes.keys()));
+        }
+
+        // Restore connections after all nodes are created
+        if (data.connections) {
+            console.log(`InteractionGraph.deserialize: Restoring ${data.connections.length} connections...`);
+            let successfulConnections = 0;
+            let failedConnections = 0;
+
+            data.connections.forEach((connectionData, index) => {
+                console.log(`InteractionGraph.deserialize: Connection ${index + 1}:`, connectionData);
+
+                // Validate that both nodes exist before creating connection
+                const fromNode = this.nodes.get(connectionData.fromNodeId);
+                const toNode = this.nodes.get(connectionData.toNodeId);
+
+                if (fromNode && toNode) {
+                    console.log(`InteractionGraph.deserialize: Found both nodes for connection - from: ${fromNode.id} (${fromNode.type}), to: ${toNode.id} (${toNode.type})`);
+
+                    try {
+                        this.addConnection(
+                            connectionData.fromNodeId,
+                            connectionData.fromOutputIndex,
+                            connectionData.toNodeId,
+                            connectionData.toInputIndex
+                        );
+                        successfulConnections++;
+                        console.log(`InteractionGraph.deserialize: Connection ${index + 1} restored successfully`);
+                    } catch (error) {
+                        failedConnections++;
+                        console.error(`InteractionGraph.deserialize: Connection ${index + 1} failed:`, error);
+                    }
+                } else {
+                    failedConnections++;
+                    console.warn(`InteractionGraph.deserialize: Connection ${index + 1} failed - Missing nodes:`, {
+                        fromNodeId: connectionData.fromNodeId,
+                        toNodeId: connectionData.toNodeId,
+                        fromNodeExists: !!fromNode,
+                        toNodeExists: !!toNode,
+                        availableNodes: Array.from(this.nodes.keys())
+                    });
+                }
+            });
+
+            console.log(`InteractionGraph.deserialize: Connection restoration complete - ${successfulConnections} successful, ${failedConnections} failed`);
+        }
+
+        console.log(`InteractionGraph: Restored ${this.nodes.size} nodes and ${this.connections.length} connections`);
+
+        // Update PatchNode counter to prevent ID conflicts with future nodes
+        this.updatePatchNodeCounter();
+    }
+
+    // Update PatchNode counter to prevent ID conflicts
+    updatePatchNodeCounter() {
+        // Import PatchNode to access its static counter
+        import('./PatchNode.js').then(({ PatchNode }) => {
+            // Find the highest node ID number from existing nodes
+            let highestNodeNumber = 0;
+
+            this.nodes.forEach(node => {
+                if (node.id && node.id.startsWith('node_')) {
+                    const nodeNumber = parseInt(node.id.split('_')[1], 10);
+                    if (!isNaN(nodeNumber) && nodeNumber > highestNodeNumber) {
+                        highestNodeNumber = nodeNumber;
+                    }
+                }
+            });
+
+            // Update the static counter to be higher than any existing node
+            if (highestNodeNumber > 0) {
+                PatchNode.nodeCounter = highestNodeNumber;
+                console.log(`InteractionGraph.updatePatchNodeCounter: Updated PatchNode.nodeCounter to ${PatchNode.nodeCounter}`);
+            }
+        }).catch(error => {
+            console.warn('InteractionGraph.updatePatchNodeCounter: Failed to update node counter:', error);
+        });
     }
 
     // Event system

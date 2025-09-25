@@ -661,11 +661,25 @@ Editor.prototype = {
 		this.setScene( await loader.parseAsync( json.scene ) );
 
 		// Restore interaction graph if available
+		console.log('Editor.fromJSON: Checking interaction graph restore...', {
+			hasInteractionGraphData: !!json.interactionGraph,
+			hasInteractionEditor: !!this.interactionEditor,
+			hasNestedEditor: !!(this.interactionEditor && this.interactionEditor.interactionEditor)
+		});
+
 		if ( json.interactionGraph && this.interactionEditor && this.interactionEditor.interactionEditor ) {
 			const graph = this.interactionEditor.interactionEditor.getInteractionGraph();
+			console.log('Editor.fromJSON: Found InteractionGraph, restoring...', graph);
 			if ( graph ) {
-				graph.deserialize( json.interactionGraph );
+				await graph.deserialize( json.interactionGraph );
+				console.log('Editor.fromJSON: InteractionGraph restore completed');
 			}
+		} else {
+			console.warn('Editor.fromJSON: Cannot restore interaction graph - missing references:', {
+				hasData: !!json.interactionGraph,
+				interactionEditor: this.interactionEditor,
+				nestedEditor: this.interactionEditor?.interactionEditor
+			});
 		}
 
 		if ( json.environment === 'Room' ||

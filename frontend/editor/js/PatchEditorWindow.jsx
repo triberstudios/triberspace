@@ -20,11 +20,9 @@ class InteractionEditorWindow {
 	init() {
 		this.createDOM();
 
-		// Initialize interaction editor since it's visible by default
+		// Initialize interaction editor immediately to ensure it's available for load
 		if (this.isVisible) {
-			setTimeout(() => {
-				this.initCustomInteractionEditor();
-			}, 100);
+			this.initCustomInteractionEditor();
 		}
 	}
 
@@ -127,8 +125,10 @@ class InteractionEditorWindow {
 	initCustomInteractionEditor() {
 		// Initialize custom vanilla JS interaction editor
 		if (!this.interactionEditor) {
+			console.log('PatchEditorWindow: Creating CustomPatchEditor...');
 			this.interactionEditor = new CustomPatchEditor(this.interactionCanvas, this.editor);
-			console.log('Custom interaction editor initialized successfully');
+			console.log('PatchEditorWindow: CustomPatchEditor created successfully', this.interactionEditor);
+			console.log('PatchEditorWindow: InteractionGraph available:', this.interactionEditor.getInteractionGraph());
 		}
 	}
 
@@ -147,26 +147,17 @@ class InteractionEditorWindow {
 		// Trigger layout reflow
 		this.editor.signals.windowResize.dispatch();
 
-		// Initialize custom interaction editor on first show with proper timing
+		// Initialize custom interaction editor on first show immediately
 		if (!this.interactionEditor) {
-			// Use requestAnimationFrame for better timing with DOM
-			requestAnimationFrame(() => {
-				setTimeout(() => {
-					this.initCustomInteractionEditor();
-				}, 50);
-			});
+			this.initCustomInteractionEditor();
 		} else {
 			// If interaction editor already exists, force resize and render
-			requestAnimationFrame(() => {
-				setTimeout(() => {
-					if (this.interactionEditor.resize) {
-						this.interactionEditor.resize();
-					}
-					if (this.interactionEditor.canvas && this.interactionEditor.canvas.render) {
-						this.interactionEditor.canvas.render();
-					}
-				}, 50);
-			});
+			if (this.interactionEditor.resize) {
+				this.interactionEditor.resize();
+			}
+			if (this.interactionEditor.canvas && this.interactionEditor.canvas.render) {
+				this.interactionEditor.canvas.render();
+			}
 		}
 	}
 
