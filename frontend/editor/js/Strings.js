@@ -49,6 +49,7 @@ function Strings( config ) {
 			'menubar/file/open': 'باز کردن',
 			'menubar/file/save': 'ذخیره تغییرات',
 			'menubar/file/import': 'ایمپورت',
+			'menubar/file/import/sketchfab': 'ایمپورت از Sketchfab',
 			'menubar/file/export': 'اکسپورت',
 
 			'menubar/edit': 'تغییر',
@@ -451,6 +452,7 @@ function Strings( config ) {
 			'menubar/file/open': 'Open',
 			'menubar/file/save': 'Save',
 			'menubar/file/import': 'Import',
+			'menubar/file/import/sketchfab': 'Import from Sketchfab',
 			'menubar/file/export': 'Export',
 
 			'menubar/edit': 'Edit',

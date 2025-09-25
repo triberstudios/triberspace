@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   // Development server configuration
   server: {
-    port: 3003,
+    port: 3001,
     host: true, // Allow external connections
     open: true  // Auto-open browser
   },

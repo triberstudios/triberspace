@@ -1,4 +1,7 @@
+import * as THREE from 'three';
+
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
+import { SketchfabBrowser } from './sketchfab/SketchfabBrowser.js';
 
 function MenubarFile( editor ) {
 
@@ -204,6 +207,38 @@ function MenubarFile( editor ) {
 	option.onClick( function () {
 
 		fileInput.click();
+
+	} );
+	options.add( option );
+
+	// Import from Sketchfab
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( strings.getKey( 'menubar/file/import/sketchfab' ) );
+	option.onClick( function () {
+
+		// Toggle Sketchfab browser sidebar
+		if ( ! editor.sketchfabBrowser ) {
+
+			editor.sketchfabBrowser = SketchfabBrowser( editor );
+
+			// Add to sidebar or create modal dialog
+			const sidebar = document.querySelector( '.Sidebar' );
+			if ( sidebar ) {
+
+				sidebar.appendChild( editor.sketchfabBrowser.container.dom );
+
+			} else {
+
+				// Fallback: add to main container
+				document.body.appendChild( editor.sketchfabBrowser.container.dom );
+
+			}
+
+		}
+
+		editor.sketchfabBrowser.toggle();
 
 	} );
 	options.add( option );
