@@ -7,7 +7,7 @@ import { CustomInteractionEditor } from './interaction-editor/CustomInteractionE
 class InteractionEditorWindow {
 	constructor(editor) {
 		this.editor = editor;
-		this.isVisible = true; // Start visible by default
+		this.isVisible = editor.config.getKey('layout/interactionEditorVisible') !== false; // Read saved state
 		this.panelHeight = 200; // Start at minimum height
 		this.interactionEditor = null;
 
@@ -19,6 +19,16 @@ class InteractionEditorWindow {
 
 	init() {
 		this.createDOM();
+
+		// Apply initial visibility state
+		if (!this.isVisible) {
+			this.container.style.display = 'none';
+			// Hide the vertical resizer handle when interaction editor is hidden
+			const verticalResizer = document.querySelector('.vertical-panel-resizer');
+			if (verticalResizer) {
+				verticalResizer.style.display = 'none';
+			}
+		}
 
 		// Initialize interaction editor immediately to ensure it's available for load
 		if (this.isVisible) {
@@ -138,6 +148,9 @@ class InteractionEditorWindow {
 		this.isVisible = true;
 		this.container.style.display = 'block';
 
+		// Save visibility state
+		this.editor.config.setKey('layout/interactionEditorVisible', true);
+
 		// Show the vertical resizer handle
 		const verticalResizer = document.querySelector('.vertical-panel-resizer');
 		if (verticalResizer) {
@@ -166,6 +179,9 @@ class InteractionEditorWindow {
 
 		this.isVisible = false;
 		this.container.style.display = 'none';
+
+		// Save visibility state
+		this.editor.config.setKey('layout/interactionEditorVisible', false);
 
 		// Hide the vertical resizer handle
 		const verticalResizer = document.querySelector('.vertical-panel-resizer');

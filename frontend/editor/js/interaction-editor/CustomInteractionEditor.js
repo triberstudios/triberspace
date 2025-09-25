@@ -12,7 +12,7 @@ export class CustomInteractionEditor {
     constructor(container, editor = null) {
         this.container = container;
         this.editor = editor;
-        this.canvas = new PatchCanvas(container);
+        this.canvas = new PatchCanvas(container, editor);
         this.nodes = new Map();
         this.connections = [];
         this.selectedNodes = new Set();

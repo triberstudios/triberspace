@@ -27,7 +27,14 @@ function Config() {
 		'settings/shortcuts/rotate': 'r',
 		'settings/shortcuts/scale': 's',
 		'settings/shortcuts/undo': 'z',
-		'settings/shortcuts/focus': 'f'
+		'settings/shortcuts/focus': 'f',
+
+		'layout/sidebarWidth': 350,
+		'layout/viewportHeight': null,
+		'layout/interactionEditorVisible': true,
+		'layout/interactionEditor/viewportX': 0,
+		'layout/interactionEditor/viewportY': 0,
+		'layout/interactionEditor/viewportZoom': 1
 	};
 
 	if ( window.localStorage[ name ] === undefined ) {

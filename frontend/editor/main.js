@@ -101,6 +101,32 @@ const sidebar = new Sidebar( editor );
 sidebarWrapper.appendChild( sidebar.dom );
 mainContent.appendChild( sidebarWrapper );
 
+
+// Restore saved layout state
+const savedSidebarWidth = editor.config.getKey( 'layout/sidebarWidth' );
+const savedViewportHeight = editor.config.getKey( 'layout/viewportHeight' );
+
+if ( savedSidebarWidth ) {
+	sidebarWrapper.style.width = savedSidebarWidth + 'px';
+}
+
+if ( savedViewportHeight ) {
+	viewportWrapper.style.height = savedViewportHeight + 'px';
+	viewportWrapper.style.flex = 'none';
+}
+
+// Trigger interaction editor canvas resize after layout restoration
+setTimeout(() => {
+	if ( window.interactionEditor && window.interactionEditor.isOpen() && window.interactionEditor.interactionEditor ) {
+		if ( window.interactionEditor.interactionEditor.resize ) {
+			window.interactionEditor.interactionEditor.resize();
+		}
+		if ( window.interactionEditor.interactionEditor.canvas && window.interactionEditor.interactionEditor.canvas.render ) {
+			window.interactionEditor.interactionEditor.canvas.render();
+		}
+	}
+}, 100);
+
 // Add resize functionality for horizontal resizer (left container <-> sidebar)
 let isResizingHorizontal = false;
 let isResizingVertical = false;
@@ -125,6 +151,9 @@ function handleHorizontalPointerUp( event ) {
 
 	isResizingHorizontal = false;
 	document.body.style.cursor = '';
+
+	// Save sidebar width to config
+	editor.config.setKey( 'layout/sidebarWidth', sidebarWrapper.offsetWidth );
 
 	document.removeEventListener( 'pointermove', handleHorizontalPointerMove );
 	document.removeEventListener( 'pointerup', handleHorizontalPointerUp );
@@ -177,6 +206,9 @@ function handleVerticalPointerUp( event ) {
 	isResizingVertical = false;
 	document.body.style.cursor = '';
 
+	// Save viewport height to config
+	editor.config.setKey( 'layout/viewportHeight', viewportWrapper.offsetHeight );
+
 	document.removeEventListener( 'pointermove', handleVerticalPointerMove );
 	document.removeEventListener( 'pointerup', handleVerticalPointerUp );
 
@@ -225,13 +257,14 @@ Object.defineProperty(editor, 'patchEditor', {
 // Expose interaction editor globally for menu access
 window.interactionEditor = interactionEditor;
 
-// Prevent Chrome swipe navigation with proper passive: false handling
-leftContainer.addEventListener('wheel', (e) => {
-	// Only prevent default for horizontal scroll events that could trigger navigation
-	if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+// Prevent browser back navigation at document level with capture phase
+// This intercepts ALL wheel events before they can trigger browser navigation
+document.addEventListener('wheel', (e) => {
+	// Only prevent default within the editor interface
+	if (editorContainer.contains(e.target)) {
 		e.preventDefault();
 	}
-}, { passive: false });
+}, { passive: false, capture: true });
 
 
 //

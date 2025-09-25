@@ -4,8 +4,9 @@
  */
 
 export class PatchCanvas {
-    constructor(container) {
+    constructor(container, editor = null) {
         this.container = container;
+        this.editor = editor;
         this.canvas = null;
         this.ctx = null;
         this.nodes = new Map();
@@ -52,6 +53,7 @@ export class PatchCanvas {
 
     init() {
         this.createCanvas();
+        this.restoreViewportState();
         this.setupEventListeners();
         this.render();
     }
@@ -181,6 +183,7 @@ export class PatchCanvas {
             this.viewport.y += deltaY;
 
             this.lastPanPos = { x, y };
+            this.saveViewportState();
             this.render();
         }
     }
@@ -236,15 +239,18 @@ export class PatchCanvas {
             this.viewport.x = mouseX - (mouseX - this.viewport.x) * zoomChange;
             this.viewport.y = mouseY - (mouseY - this.viewport.y) * zoomChange;
             this.viewport.zoom = newZoom;
+            this.saveViewportState();
         } else if (e.shiftKey) {
             // Shift + scroll for horizontal panning (Figma-style for mouse users)
             // Convert vertical scroll to horizontal pan
             this.viewport.x -= e.deltaY;
+            this.saveViewportState();
         } else {
             // Two-finger pan (trackpad scroll without modifiers)
             // Regular mouse wheel or trackpad scroll
             this.viewport.x -= e.deltaX;
             this.viewport.y -= e.deltaY;
+            this.saveViewportState();
         }
 
         this.render();
@@ -960,6 +966,32 @@ export class PatchCanvas {
         if (this.eventListeners.has(event)) {
             this.eventListeners.get(event).forEach(callback => callback(...args));
         }
+    }
+
+    restoreViewportState() {
+        if (!this.editor || !this.editor.config) return;
+
+        const savedX = this.editor.config.getKey('layout/interactionEditor/viewportX');
+        const savedY = this.editor.config.getKey('layout/interactionEditor/viewportY');
+        const savedZoom = this.editor.config.getKey('layout/interactionEditor/viewportZoom');
+
+        if (savedX !== null && savedX !== undefined) {
+            this.viewport.x = savedX;
+        }
+        if (savedY !== null && savedY !== undefined) {
+            this.viewport.y = savedY;
+        }
+        if (savedZoom !== null && savedZoom !== undefined) {
+            this.viewport.zoom = savedZoom;
+        }
+    }
+
+    saveViewportState() {
+        if (!this.editor || !this.editor.config) return;
+
+        this.editor.config.setKey('layout/interactionEditor/viewportX', this.viewport.x);
+        this.editor.config.setKey('layout/interactionEditor/viewportY', this.viewport.y);
+        this.editor.config.setKey('layout/interactionEditor/viewportZoom', this.viewport.zoom);
     }
 
     destroy() {
