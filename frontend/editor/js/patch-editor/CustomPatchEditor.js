@@ -33,11 +33,15 @@ export class CustomPatchEditor {
 
         // Listen for graph events to update UI
         this.interactionGraph.on('nodeAdded', (node) => {
+            // Add to our local nodes map so dragging works
+            this.nodes.set(node.id, node);
             this.canvas.addNode(node);
             this.canvas.render();
         });
 
         this.interactionGraph.on('nodeRemoved', (nodeId) => {
+            // Remove from our local nodes map
+            this.nodes.delete(nodeId);
             this.canvas.removeNode(nodeId);
             this.canvas.render();
         });
