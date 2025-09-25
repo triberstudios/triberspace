@@ -139,6 +139,8 @@ export class ObjectScaleNode extends PatchNode {
     deserialize(data) {
         super.deserialize(data);
         this.objectName = data.objectName || 'Object';
+        // Sync with current object state to show fresh values instead of stale cached ones
+        this.syncFromObject();
     }
 
     // Get display name for UI

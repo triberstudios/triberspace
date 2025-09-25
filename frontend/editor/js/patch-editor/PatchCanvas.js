@@ -680,6 +680,19 @@ export class PatchCanvas {
         }
     }
 
+    // Format number for display (limit to 2 decimal places)
+    formatNumber(value) {
+        if (typeof value !== 'number') return value.toString();
+
+        // Handle very small numbers (close to zero)
+        if (Math.abs(value) < 0.001) {
+            return '0.00';
+        }
+
+        // Format to 2 decimal places
+        return Number(value.toFixed(2)).toString();
+    }
+
     drawCompactNumberField(x, y, value, node, input) {
         const fieldWidth = 40;
         const fieldHeight = 12;
@@ -698,11 +711,11 @@ export class PatchCanvas {
         this.ctx.fill();
         this.ctx.stroke();
 
-        // Draw value text
+        // Draw value text with formatted number
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(value.toString(), x + fieldWidth / 2, fieldY + fieldHeight / 2 + 3);
+        this.ctx.fillText(this.formatNumber(value), x + fieldWidth / 2, fieldY + fieldHeight / 2 + 3);
         this.ctx.textAlign = 'left';
 
         // Store field bounds for click detection

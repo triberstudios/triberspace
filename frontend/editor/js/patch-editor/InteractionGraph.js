@@ -11,8 +11,6 @@ export class InteractionGraph {
         this.sceneObjectMap = new Map(); // Maps Three.js objects to patch nodes
         this.evaluationQueue = [];
         this.isEvaluating = false;
-        this.instanceId = Math.random().toString(36).substr(2, 9);
-        console.log(`InteractionGraph.constructor: Created new instance ${this.instanceId}`);
 
         // Bind to editor signals for scene synchronization
         this.setupSceneBindings();
@@ -49,25 +47,16 @@ export class InteractionGraph {
     }
 
     setupAutoSaveListener() {
-        // Set up the auto-save listener to save when interaction graph changes
         if (this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged) {
-            console.log(`InteractionGraph.setupAutoSaveListener [${this.instanceId}]: Setting up auto-save listener`);
-
-            // Create the save function that matches the main.js pattern
             const saveInteractionGraphState = () => {
-                console.log(`InteractionGraph.saveInteractionGraphState [${this.instanceId}]: Auto-save triggered`);
-
-                // Call editor's storage save (same as main.js saveState function)
                 if (this.editor.storage) {
                     this.editor.storage.set(this.editor.toJSON());
                 }
             };
 
-            // Add the listener
             this.editor.signals.interactionGraphChanged.add(saveInteractionGraphState);
-            console.log(`InteractionGraph.setupAutoSaveListener [${this.instanceId}]: Auto-save listener added successfully`);
         } else {
-            console.warn(`InteractionGraph.setupAutoSaveListener [${this.instanceId}]: Cannot set up auto-save - editor or signals not available`);
+            console.warn('InteractionGraph: Cannot set up auto-save - editor or signals not available');
         }
     }
 
@@ -175,8 +164,6 @@ export class InteractionGraph {
         };
 
         this.connections.push(connection);
-        console.log(`InteractionGraph.addConnection [${this.instanceId || 'unknown'}]: Added connection ${connection.id}. Total connections: ${this.connections.length}`);
-        console.log(`InteractionGraph.addConnection [${this.instanceId || 'unknown'}]: Connection details:`, connection);
 
         // Connect the nodes
         const fromNode = this.nodes.get(fromNodeId);
@@ -214,16 +201,7 @@ export class InteractionGraph {
 
         // Dispatch editor signal for autosave
         if (this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged) {
-            console.log('InteractionGraph.addConnection: Dispatching interactionGraphChanged signal for auto-save');
-            console.log('InteractionGraph.addConnection: Signal has', this.editor.signals.interactionGraphChanged._listeners?.length || 0, 'listeners');
             this.editor.signals.interactionGraphChanged.dispatch();
-            console.log('InteractionGraph.addConnection: Signal dispatched successfully');
-        } else {
-            console.warn('InteractionGraph.addConnection: Cannot dispatch interactionGraphChanged signal:', {
-                hasEditor: !!this.editor,
-                hasSignals: !!(this.editor && this.editor.signals),
-                hasInteractionGraphChanged: !!(this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged)
-            });
         }
 
         return connection;
@@ -535,18 +513,13 @@ export class InteractionGraph {
         }
     }
 
-    // Serialization for persistence
     serialize() {
-        console.log(`InteractionGraph.serialize [${this.instanceId}]: Called from:`, new Error().stack.split('\n')[2]);
         const nodesData = {};
         this.nodes.forEach((node, id) => {
             if (node.serialize) {
                 nodesData[id] = node.serialize();
             }
         });
-
-        console.log(`InteractionGraph.serialize [${this.instanceId || 'unknown'}]: Saving ${this.nodes.size} nodes and ${this.connections.length} connections`);
-        console.log(`InteractionGraph.serialize [${this.instanceId || 'unknown'}]: Connection details:`, this.connections);
 
         return {
             nodes: nodesData,
@@ -648,9 +621,8 @@ export class InteractionGraph {
     }
 
     async deserialize(data) {
-        console.log('InteractionGraph.deserialize: Starting with data:', data);
         if (!data) {
-            console.warn('InteractionGraph.deserialize: No data provided');
+            console.warn('InteractionGraph: No data provided for deserialization');
             return;
         }
 
@@ -658,7 +630,6 @@ export class InteractionGraph {
         this.nodes.clear();
         this.connections.length = 0;
         this.sceneObjectMap.clear();
-        console.log('InteractionGraph.deserialize: Cleared existing state');
 
         // Restore nodes first (must complete before connections)
         if (data.nodes) {
@@ -679,7 +650,6 @@ export class InteractionGraph {
             createdNodes.forEach((node, index) => {
                 if (node) {
                     const nodeData = nodeDataArray[index];
-                    const originalId = node.id;
 
                     // Restore the original node ID and properties
                     if (node.deserialize) {
@@ -687,34 +657,17 @@ export class InteractionGraph {
                     }
 
                     this.addNode(node);
-                    console.log(`InteractionGraph.deserialize: Restored node ${originalId} -> ${node.id} (type: ${node.type})`);
-
-                    // Debug: Verify the node is findable in the map
-                    const testFind = this.nodes.get(node.id);
-                    console.log(`InteractionGraph.deserialize: Node ${node.id} findable in map:`, !!testFind);
                 }
             });
-
-            // Debug: Show all available node IDs after restoration
-            console.log(`InteractionGraph.deserialize: All available node IDs:`, Array.from(this.nodes.keys()));
         }
 
         // Restore connections after all nodes are created
         if (data.connections) {
-            console.log(`InteractionGraph.deserialize: Restoring ${data.connections.length} connections...`);
-            let successfulConnections = 0;
-            let failedConnections = 0;
-
-            data.connections.forEach((connectionData, index) => {
-                console.log(`InteractionGraph.deserialize: Connection ${index + 1}:`, connectionData);
-
-                // Validate that both nodes exist before creating connection
+            data.connections.forEach(connectionData => {
                 const fromNode = this.nodes.get(connectionData.fromNodeId);
                 const toNode = this.nodes.get(connectionData.toNodeId);
 
                 if (fromNode && toNode) {
-                    console.log(`InteractionGraph.deserialize: Found both nodes for connection - from: ${fromNode.id} (${fromNode.type}), to: ${toNode.id} (${toNode.type})`);
-
                     try {
                         this.addConnection(
                             connectionData.fromNodeId,
@@ -722,38 +675,24 @@ export class InteractionGraph {
                             connectionData.toNodeId,
                             connectionData.toInputIndex
                         );
-                        successfulConnections++;
-                        console.log(`InteractionGraph.deserialize: Connection ${index + 1} restored successfully`);
                     } catch (error) {
-                        failedConnections++;
-                        console.error(`InteractionGraph.deserialize: Connection ${index + 1} failed:`, error);
+                        console.warn('InteractionGraph: Failed to restore connection:', error);
                     }
                 } else {
-                    failedConnections++;
-                    console.warn(`InteractionGraph.deserialize: Connection ${index + 1} failed - Missing nodes:`, {
-                        fromNodeId: connectionData.fromNodeId,
-                        toNodeId: connectionData.toNodeId,
-                        fromNodeExists: !!fromNode,
-                        toNodeExists: !!toNode,
-                        availableNodes: Array.from(this.nodes.keys())
+                    console.warn('InteractionGraph: Connection restoration failed - missing nodes:', {
+                        from: connectionData.fromNodeId,
+                        to: connectionData.toNodeId
                     });
                 }
             });
-
-            console.log(`InteractionGraph.deserialize: Connection restoration complete - ${successfulConnections} successful, ${failedConnections} failed`);
         }
-
-        console.log(`InteractionGraph: Restored ${this.nodes.size} nodes and ${this.connections.length} connections`);
 
         // Update PatchNode counter to prevent ID conflicts with future nodes
         this.updatePatchNodeCounter();
     }
 
-    // Update PatchNode counter to prevent ID conflicts
     updatePatchNodeCounter() {
-        // Import PatchNode to access its static counter
         import('./PatchNode.js').then(({ PatchNode }) => {
-            // Find the highest node ID number from existing nodes
             let highestNodeNumber = 0;
 
             this.nodes.forEach(node => {
@@ -765,13 +704,11 @@ export class InteractionGraph {
                 }
             });
 
-            // Update the static counter to be higher than any existing node
             if (highestNodeNumber > 0) {
                 PatchNode.nodeCounter = highestNodeNumber;
-                console.log(`InteractionGraph.updatePatchNodeCounter: Updated PatchNode.nodeCounter to ${PatchNode.nodeCounter}`);
             }
         }).catch(error => {
-            console.warn('InteractionGraph.updatePatchNodeCounter: Failed to update node counter:', error);
+            console.warn('InteractionGraph: Failed to update node counter:', error);
         });
     }
 
