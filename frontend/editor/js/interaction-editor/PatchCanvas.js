@@ -145,6 +145,7 @@ export class PatchCanvas {
             this.draggedNode = clickedNode.id;
             this.dragStartPos = { x, y };
             this.emit('nodeClick', clickedNode.id);
+            this.emit('nodeDragStart', clickedNode.id);
         } else {
             // Priority 4: Start panning if no specific element was clicked
             this.isPanning = true;
@@ -211,6 +212,11 @@ export class PatchCanvas {
             this.connectingFrom = null;
             this.connectionPreview = null;
             this.render();
+        }
+
+        // Emit drag end event before resetting state
+        if (this.isDragging && this.draggedNode) {
+            this.emit('nodeDragEnd', this.draggedNode);
         }
 
         this.isDragging = false;

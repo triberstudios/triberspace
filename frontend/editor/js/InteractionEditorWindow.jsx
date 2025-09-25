@@ -1,4 +1,5 @@
 import { CustomInteractionEditor } from './interaction-editor/CustomInteractionEditor.js';
+import { AddInteractionNodeCommand } from './commands/AddInteractionNodeCommand.js';
 
 /**
  * Interaction Editor Window - Independent resizable panel for node-based editing
@@ -339,55 +340,62 @@ class InteractionEditorWindow {
 		const x = position.x;
 		const y = position.y;
 
-		// Create node based on type
-		let node = null;
+		// Create node based on type using command system
 		switch (nodeType) {
 			case 'Spin':
 				import('./interaction-editor/nodes/SpinNode.js').then(({ SpinNode }) => {
-					node = new SpinNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new SpinNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Pulse':
 				import('./interaction-editor/nodes/PulseNode.js').then(({ PulseNode }) => {
-					node = new PulseNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new PulseNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Float':
 				import('./interaction-editor/nodes/FloatNode.js').then(({ FloatNode }) => {
-					node = new FloatNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new FloatNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Fade':
 				import('./interaction-editor/nodes/FadeNode.js').then(({ FadeNode }) => {
-					node = new FadeNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new FadeNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Clock':
 				import('./interaction-editor/nodes/ClockNode.js').then(({ ClockNode }) => {
-					node = new ClockNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new ClockNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Time':
 				import('./interaction-editor/nodes/TimeNode.js').then(({ TimeNode }) => {
-					node = new TimeNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new TimeNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Position':
 				import('./interaction-editor/nodes/PositionNode.js').then(({ PositionNode }) => {
-					node = new PositionNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new PositionNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Multiply':
 				import('./interaction-editor/nodes/MultiplyNode.js').then(({ MultiplyNode }) => {
-					node = new MultiplyNode(x, y);
-					this.interactionEditor.addNode(node);
+					const node = new MultiplyNode(x, y);
+					const command = new AddInteractionNodeCommand(this.editor, node);
+					this.editor.history.execute(command);
 				});
 				break;
 			case 'Add':

@@ -3,6 +3,8 @@
  * Manages bidirectional binding between patch nodes and Three.js objects
  */
 
+import { AddInteractionNodeCommand } from '../commands/AddInteractionNodeCommand.js';
+
 export class InteractionGraph {
     constructor(editor) {
         this.editor = editor;
@@ -473,7 +475,14 @@ export class InteractionGraph {
         // Add the node to the graph when the import resolves
         nodePromise.then(node => {
             if (node) {
-                this.addNode(node);
+                // Use command system for undoable property node creation
+                if (this.editor && this.editor.history) {
+                    const command = new AddInteractionNodeCommand(this.editor, node);
+                    this.editor.history.execute(command);
+                } else {
+                    // Fallback to direct addition if no editor/history available
+                    this.addNode(node);
+                }
                 console.log(`Created ${propertyType} patch for object: ${object.name}`);
             }
         }).catch(error => {

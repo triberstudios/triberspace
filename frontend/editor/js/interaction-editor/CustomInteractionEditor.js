@@ -7,6 +7,10 @@ import { PatchCanvas } from './PatchCanvas.js';
 import { ClockNode } from './nodes/ClockNode.js';
 import { PositionNode } from './nodes/PositionNode.js';
 import { InteractionGraph } from './InteractionGraph.js';
+import { RemoveInteractionNodeCommand } from '../commands/RemoveInteractionNodeCommand.js';
+import { MoveInteractionNodeCommand } from '../commands/MoveInteractionNodeCommand.js';
+import { AddInteractionConnectionCommand } from '../commands/AddInteractionConnectionCommand.js';
+import { RemoveInteractionConnectionCommand } from '../commands/RemoveInteractionConnectionCommand.js';
 
 export class CustomInteractionEditor {
     constructor(container, editor = null) {
@@ -18,6 +22,7 @@ export class CustomInteractionEditor {
         this.selectedNodes = new Set();
         this.selectedConnections = new Set();
         this.isInitialized = false;
+        this.dragStartPosition = null;
 
         // Create interaction graph if editor is provided
         if (this.editor) {
@@ -74,6 +79,13 @@ export class CustomInteractionEditor {
 
         // Set up event listeners
         this.setupEventListeners();
+
+        // Listen for interaction graph changes from undo/redo operations
+        if (this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged) {
+            this.editor.signals.interactionGraphChanged.add(() => {
+                this.canvas.render();
+            });
+        }
 
         this.isInitialized = true;
         console.log('Custom Patch Editor initialized successfully');
@@ -141,12 +153,47 @@ export class CustomInteractionEditor {
             this.createConnection(connectionData);
         });
 
+        // Store original position when drag starts
+        this.canvas.on('nodeDragStart', (nodeId) => {
+            const node = this.nodes.get(nodeId);
+            if (node) {
+                this.dragStartPosition = {
+                    x: node.position.x,
+                    y: node.position.y
+                };
+            }
+        });
+
+        // Update position immediately for real-time visual feedback
         this.canvas.on('nodeDrag', (nodeId, delta) => {
             const node = this.nodes.get(nodeId);
             if (node) {
+                // Direct position update for immediate visual feedback
                 node.position.x += delta.x;
                 node.position.y += delta.y;
                 this.canvas.render();
+            }
+        });
+
+        // Create undoable command when drag completes
+        this.canvas.on('nodeDragEnd', (nodeId) => {
+            const node = this.nodes.get(nodeId);
+            if (node && this.dragStartPosition) {
+                // Only create command if position actually changed
+                if (node.position.x !== this.dragStartPosition.x ||
+                    node.position.y !== this.dragStartPosition.y) {
+
+                    if (this.editor && this.editor.history) {
+                        const command = new MoveInteractionNodeCommand(
+                            this.editor,
+                            node, // Actual node object
+                            { x: node.position.x, y: node.position.y }, // New position
+                            this.dragStartPosition // Original position as optional parameter
+                        );
+                        this.editor.history.execute(command);
+                    }
+                }
+                this.dragStartPosition = null;
             }
         });
 
@@ -210,40 +257,75 @@ export class CustomInteractionEditor {
             return;
         }
 
-        // Create the connection through interaction graph if available
-        if (this.interactionGraph) {
-            this.interactionGraph.addConnection(
-                connectionData.fromNodeId,
-                connectionData.fromOutputIndex,
-                connectionData.toNodeId,
-                connectionData.toInputIndex
-            );
+        // Use command system for undoable connection creation
+        if (this.editor && this.editor.history) {
+            const command = new AddInteractionConnectionCommand(this.editor, connectionData);
+            this.editor.history.execute(command);
         } else {
-            // Fallback to direct canvas connection if no graph
-            const connection = this.canvas.addConnection(
-                connectionData.fromNodeId,
-                connectionData.fromOutputIndex,
-                connectionData.toNodeId,
-                connectionData.toInputIndex
-            );
-            this.canvas.render();
+            // Fallback: Create the connection through interaction graph if available
+            if (this.interactionGraph) {
+                this.interactionGraph.addConnection(
+                    connectionData.fromNodeId,
+                    connectionData.fromOutputIndex,
+                    connectionData.toNodeId,
+                    connectionData.toInputIndex
+                );
+            } else {
+                // Fallback to direct canvas connection if no graph
+                const connection = this.canvas.addConnection(
+                    connectionData.fromNodeId,
+                    connectionData.fromOutputIndex,
+                    connectionData.toNodeId,
+                    connectionData.toInputIndex
+                );
+                this.canvas.render();
+            }
         }
     }
 
     deleteSelectedNodes() {
-        for (const nodeId of this.selectedNodes) {
-            this.removeNode(nodeId);
+        // Use command system for undoable deletion
+        if (this.editor && this.editor.history) {
+            for (const nodeId of this.selectedNodes) {
+                // Get the actual node object first
+                const node = this.nodes.get(nodeId);
+                if (node) {
+                    const command = new RemoveInteractionNodeCommand(this.editor, node);
+                    this.editor.history.execute(command);
+                }
+            }
+        } else {
+            // Fallback to direct removal if no editor/history available
+            for (const nodeId of this.selectedNodes) {
+                this.removeNode(nodeId);
+            }
         }
         this.selectedNodes.clear();
     }
 
     deleteSelectedConnections() {
         for (const connectionId of this.selectedConnections) {
-            // Try InteractionGraph first (proper way)
-            if (this.interactionGraph) {
-                this.interactionGraph.removeConnection(connectionId);
+            // Use command system for undoable connection deletion
+            if (this.editor && this.editor.history && this.interactionGraph) {
+                // Find the connection data to store for restoration
+                const connection = this.interactionGraph.connections.find(conn => conn.id === connectionId);
+                if (connection) {
+                    const connectionData = {
+                        fromNodeId: connection.fromNodeId,
+                        fromOutputIndex: connection.fromOutputIndex,
+                        toNodeId: connection.toNodeId,
+                        toInputIndex: connection.toInputIndex
+                    };
+                    const command = new RemoveInteractionConnectionCommand(this.editor, connectionId, connectionData);
+                    this.editor.history.execute(command);
+                }
             } else {
-                this.canvas.removeConnection(connectionId);
+                // Fallback: Try InteractionGraph first (proper way)
+                if (this.interactionGraph) {
+                    this.interactionGraph.removeConnection(connectionId);
+                } else {
+                    this.canvas.removeConnection(connectionId);
+                }
             }
         }
         this.selectedConnections.clear();

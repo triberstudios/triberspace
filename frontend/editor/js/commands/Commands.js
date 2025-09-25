@@ -1,4 +1,9 @@
+export { AddInteractionNodeCommand } from './AddInteractionNodeCommand.js';
+export { AddInteractionConnectionCommand } from './AddInteractionConnectionCommand.js';
 export { AddObjectCommand } from './AddObjectCommand.js';
+export { MoveInteractionNodeCommand } from './MoveInteractionNodeCommand.js';
+export { RemoveInteractionNodeCommand } from './RemoveInteractionNodeCommand.js';
+export { RemoveInteractionConnectionCommand } from './RemoveInteractionConnectionCommand.js';
 export { AddScriptCommand } from './AddScriptCommand.js';
 export { MoveObjectCommand } from './MoveObjectCommand.js';
 export { MultiCmdsCommand } from './MultiCmdsCommand.js';
