@@ -346,14 +346,254 @@ editor.history.redo();
 5. **Validate editor state**: `editor.selected`, `editor.scene.children`
 6. **Monitor performance**: Check for infinite loops in signal handlers
 
+## Working with the Interaction Editor System
+
+The integrated interaction editor provides node-based visual programming. Here's how to extend it:
+
+### 5. Adding New Node Types
+
+**Use Case**: Custom behaviors, math operations, data processors
+
+**Steps**:
+1. Create new file: `js/patch-editor/nodes/YourCustomNode.js`
+2. Extend PatchNode base class:
+   ```javascript
+   import { PatchNode } from '../PatchNode.js';
+
+   export class YourCustomNode extends PatchNode {
+       constructor(x = 0, y = 0, editor = null) {
+           super('Your Node Name', x, y);
+           this.editor = editor;
+
+           // Define inputs and outputs
+           this.addInput('input1', 'number', 0);
+           this.addInput('input2', 'number', 1);
+           this.addOutput('result', 'number');
+
+           // Initial processing
+           this.process();
+       }
+
+       process() {
+           const val1 = this.getInputValue('input1');
+           const val2 = this.getInputValue('input2');
+           const result = val1 + val2; // Your custom logic
+
+           this.setOutputValue('result', result);
+
+           // If node affects scene objects, notify editor
+           if (this.editor && this.editor.signals) {
+               this.editor.signals.sceneGraphChanged.dispatch();
+           }
+       }
+
+       // Override for custom serialization if needed
+       serialize() {
+           const baseData = super.serialize();
+           return {
+               ...baseData,
+               type: 'YourCustomNode',
+               // Add custom data if needed
+           };
+       }
+   }
+   ```
+3. Register in node creation system (InteractionGraph.js):
+   ```javascript
+   import { YourCustomNode } from './nodes/YourCustomNode.js';
+
+   // Add to createNode method
+   case 'YourCustom':
+       return new YourCustomNode(x, y, this.editor);
+   ```
+
+**Key Considerations**:
+- Always call `this.process()` in constructor for initial state
+- Use `setOutputValue()` to trigger propagation to connected nodes
+- Handle scene object updates via editor signals
+- Store only serializable data in node properties
+
+### 6. Object Property Nodes Pattern
+
+**Use Case**: Controlling Three.js object properties (position, rotation, scale, materials)
+
+**Critical Pattern - State Synchronization**:
+```javascript
+export class ObjectPropertyNode extends PatchNode {
+    constructor(sceneObject, x = 0, y = 0, editor = null) {
+        const objectName = sceneObject ? (sceneObject.name || 'Object') : 'Object';
+        super(`${objectName} Property`, x, y);
+
+        this.sceneObject = sceneObject;
+        this.objectName = objectName;
+        this.editor = editor;
+
+        // IMPORTANT: Use current object values as defaults
+        this.addInput('value', 'number',
+            sceneObject ? sceneObject.property : defaultValue);
+        this.addOutput('value', 'number');
+
+        this.process();
+    }
+
+    process() {
+        if (!this.sceneObject) return;
+
+        const newValue = this.getInputValue('value');
+
+        // Apply to Three.js object
+        this.sceneObject.property = newValue;
+        this.sceneObject.updateMatrix();
+        this.sceneObject.updateMatrixWorld();
+
+        // Update outputs
+        this.setOutputValue('value', newValue);
+
+        // Notify editor for UI updates
+        if (this.editor && this.editor.signals) {
+            this.editor.signals.objectChanged.dispatch(this.sceneObject);
+            this.editor.signals.sceneGraphChanged.dispatch();
+        }
+    }
+
+    // CRITICAL: Sync with current object state after loading
+    deserialize(data) {
+        super.deserialize(data);
+        this.objectName = data.objectName || 'Object';
+        // This prevents stale cached values after page refresh
+        this.syncFromObject();
+    }
+
+    syncFromObject() {
+        if (!this.sceneObject) return;
+        this.setInputValue('value', this.sceneObject.property);
+    }
+
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            type: 'ObjectProperty',
+            propertyType: 'yourProperty',
+            objectUuid: this.sceneObject ? this.sceneObject.uuid : null,
+            objectName: this.objectName
+        };
+    }
+}
+```
+
+### Key Patterns for Interaction Editor Extensions
+
+**1. Persistence Integration**:
+```javascript
+// Always store UUIDs, not direct object references
+serialize() {
+    return {
+        objectUuid: this.sceneObject?.uuid,
+        // other serializable data
+    };
+}
+
+// Handle async object relinking during deserialization
+async deserialize(data) {
+    super.deserialize(data);
+    if (data.objectUuid && this.editor) {
+        this.sceneObject = this.editor.scene.getObjectByProperty('uuid', data.objectUuid);
+    }
+    // Sync with current state after relinking
+    this.syncFromObject();
+}
+```
+
+**2. Number Formatting for UI**:
+```javascript
+// In PatchCanvas.js or custom rendering
+formatNumber(value) {
+    if (typeof value !== 'number') return value.toString();
+    if (Math.abs(value) < 0.001) return '0.00';
+    return Number(value.toFixed(2)).toString();
+}
+```
+
+**3. Signal Integration**:
+```javascript
+// Listen to editor changes
+constructor(editor) {
+    // ... setup code
+
+    if (editor && editor.signals) {
+        editor.signals.objectSelected.add(this.onObjectSelected.bind(this));
+        editor.signals.sceneGraphChanged.add(this.onSceneChanged.bind(this));
+    }
+}
+
+// Dispatch changes to editor
+process() {
+    // ... processing logic
+
+    if (this.editor && this.editor.signals) {
+        this.editor.signals.interactionGraphChanged.dispatch();
+    }
+}
+```
+
+**4. Canvas Interaction Handling**:
+```javascript
+// In custom canvas components
+handleMouseEvent(event) {
+    // Get canvas-relative coordinates
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Handle interactions (node selection, connection dragging, etc.)
+    // Always call render() after state changes
+    this.render();
+}
+```
+
+## Debugging Interaction Editor Extensions
+
+### Common Issues and Solutions
+
+**1. Nodes Not Persisting**:
+- Check: `interactionGraphChanged` signal is dispatched when nodes are modified
+- Verify: `setupAutoSaveListener()` is called in InteractionGraph constructor
+- Debug: Look for "Saved state to IndexedDB" console messages
+
+**2. Object References Breaking**:
+- Ensure you store UUIDs, not direct object references
+- Handle cases where referenced objects might not exist during loading
+- Use async deserialization patterns for object relinking
+
+**3. Value Synchronization Issues**:
+- Always call `syncFromObject()` in deserialize methods for property nodes
+- Use current object values as input defaults in constructors
+- Test save/load cycles thoroughly
+
+**4. Performance Issues**:
+- Avoid excessive signal dispatching in render loops
+- Use `requestAnimationFrame` for smooth canvas animations
+- Implement dirty flags to minimize unnecessary updates
+
+### Testing Checklist
+
+- [ ] Create nodes and connections → Save → Reload → Verify state restored
+- [ ] Test with different object types and property values
+- [ ] Verify undo/redo works with your custom nodes
+- [ ] Check performance with large node graphs (50+ nodes)
+- [ ] Test edge cases: deleted objects, empty scenes, corrupted data
+
 ## Future Feature Considerations
 
-For the upcoming patch editor and template system:
+The interaction editor system provides a solid foundation for:
 
-- **Patch Editor**: Will need complex node-based UI (use pure DOM)
-- **Templates**: Will need asset management integration
-- **Collaboration**: Will need real-time signal synchronization
+- **Advanced Node Types**: Conditional logic, loops, array operations
+- **Timeline Integration**: Keyframe-based animations with node connections
+- **Template System**: Pre-built node graphs for common behaviors
+- **Collaboration**: Real-time node graph sharing between users
+- **Performance Profiling**: Visual debugging for node execution timing
 
 These advanced features should follow the patterns documented here while extending the editor's capabilities.
 
-Remember: The editor's strength is its proven architecture. Work with it, not against it!
+Remember: The interaction editor integrates deeply with the Three.js editor's architecture. Work with the established patterns for seamless integration!

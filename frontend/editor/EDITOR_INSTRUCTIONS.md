@@ -641,3 +641,249 @@ export { NewFeatureCommand } from './NewFeatureCommand.js';
 - Dispose of Three.js objects properly (geometries, materials, textures)
 
 This architectural foundation ensures that new features integrate seamlessly with the editor's existing systems and maintain the performance and reliability standards of the codebase.
+
+---
+
+# **12. Interaction Editor System Architecture**
+
+The interaction editor is a node-based visual programming system integrated into the Three.js editor. This section documents the architecture, key learnings, and troubleshooting approaches.
+
+## **System Overview**
+
+The interaction editor consists of several interconnected components:
+
+**Core Components:**
+- **InteractionGraph.js**: Central coordinator, manages nodes and connections, handles persistence
+- **PatchNode.js**: Base class for all node types with inputs, outputs, and processing logic
+- **PatchCanvas.js**: Canvas-based rendering system with user interaction handling
+- **PatchEditorWindow.jsx**: React wrapper component for integration into editor layout
+- **Node Types**: Specialized nodes (ObjectRotation, ObjectPosition, ObjectScale, Math operations)
+
+## **Architecture Patterns**
+
+### **Node System Architecture**
+```javascript
+// Base node pattern
+export class CustomNode extends PatchNode {
+    constructor(sceneObject, x = 0, y = 0, editor = null) {
+        super('Node Name', x, y);
+
+        // Store references
+        this.sceneObject = sceneObject;
+        this.editor = editor;
+
+        // Define inputs/outputs
+        this.addInput('inputName', 'dataType', defaultValue);
+        this.addOutput('outputName', 'dataType');
+
+        // Initial processing
+        this.process();
+    }
+
+    process() {
+        // Core node logic
+        const inputValue = this.getInputValue('inputName');
+        this.setOutputValue('outputName', processedValue);
+
+        // Apply to scene object
+        if (this.sceneObject) {
+            this.sceneObject.property = processedValue;
+            this.sceneObject.updateMatrix();
+        }
+
+        // Notify editor of changes
+        if (this.editor && this.editor.signals) {
+            this.editor.signals.objectChanged.dispatch(this.sceneObject);
+        }
+    }
+}
+```
+
+### **Persistence Architecture**
+The interaction editor integrates with the Three.js editor's save/load system:
+
+**Key Integration Points:**
+- **Auto-save Trigger**: `setupAutoSaveListener()` connects to `interactionGraphChanged` signal
+- **Serialization**: Nodes serialize to JSON with UUID references to scene objects
+- **Deserialization**: Async system reconnects nodes to scene objects after loading
+- **State Sync**: ObjectProperty nodes sync with current Three.js object state on restore
+
+**Critical Pattern - Auto-save Integration:**
+```javascript
+// In InteractionGraph.js
+setupAutoSaveListener() {
+    if (this.editor && this.editor.signals && this.editor.signals.interactionGraphChanged) {
+        const saveInteractionGraphState = () => {
+            if (this.editor.storage) {
+                this.editor.storage.set(this.editor.toJSON());
+            }
+        };
+        this.editor.signals.interactionGraphChanged.add(saveInteractionGraphState);
+    }
+}
+```
+
+## **Key Technical Solutions**
+
+### **1. Object Property Node Value Sync**
+**Problem**: ObjectProperty nodes (Rotation, Position, Scale) displayed stale cached values after page refresh instead of current Three.js object values.
+
+**Root Cause**: The `deserialize()` method restored cached input values but didn't sync with current object state.
+
+**Solution Pattern**:
+```javascript
+// In ObjectRotationNode.js, ObjectPositionNode.js, ObjectScaleNode.js
+deserialize(data) {
+    super.deserialize(data);
+    this.objectName = data.objectName || 'Object';
+    // CRITICAL: Sync with current object state after restoration
+    this.syncFromObject();
+}
+
+syncFromObject() {
+    if (!this.sceneObject) return;
+    this.setInputValue('x', this.sceneObject.rotation.x);
+    this.setInputValue('y', this.sceneObject.rotation.y);
+    this.setInputValue('z', this.sceneObject.rotation.z);
+}
+```
+
+### **2. Number Formatting for UI Display**
+**Problem**: Numbers displayed with excessive decimal places (e.g., `-2.220446049250313e-16` instead of `0.00`).
+
+**Solution**: Number formatting utility in PatchCanvas.js:
+```javascript
+// Format number for display (limit to 2 decimal places)
+formatNumber(value) {
+    if (typeof value !== 'number') return value.toString();
+
+    // Handle very small numbers (close to zero)
+    if (Math.abs(value) < 0.001) {
+        return '0.00';
+    }
+
+    // Format to 2 decimal places
+    return Number(value.toFixed(2)).toString();
+}
+
+// Usage in canvas rendering
+this.ctx.fillText(this.formatNumber(value), x + fieldWidth / 2, fieldY + fieldHeight / 2 + 3);
+```
+
+## **Debugging and Troubleshooting Patterns**
+
+### **Common Issues and Solutions**
+
+**1. Node Graphs Not Persisting After Refresh**
+- **Check**: `interactionGraphChanged` signal has listeners (`signals.interactionGraphChanged._bindings.length`)
+- **Fix**: Ensure `setupAutoSaveListener()` is called in InteractionGraph constructor
+- **Verify**: Console should show "Saved state to IndexedDB" messages
+
+**2. Connections Not Restoring**
+- **Check**: Node IDs are preserved during deserialization
+- **Fix**: Ensure `node.deserialize(nodeData)` is called to restore original IDs
+- **Debug**: Log node IDs before/after deserialization
+
+**3. ObjectProperty Nodes Show Wrong Values**
+- **Check**: Nodes display current object values vs cached values
+- **Fix**: Call `syncFromObject()` in deserialize method
+- **Pattern**: Always sync property nodes with current scene object state after restoration
+
+### **Development Debugging Approach**
+When implementing interaction editor features, follow this systematic approach:
+
+1. **Add Debug Logging**: Track signal dispatching and listener counts
+2. **Test Save/Load Cycle**: Create node graphs → Save → Reload → Verify state
+3. **Check Signal Integration**: Ensure `interactionGraphChanged` fires on modifications
+4. **Verify Object Linking**: Confirm scene object UUID references are maintained
+5. **Test Edge Cases**: Empty scenes, deleted objects, modified objects
+
+**Debug Logging Pattern**:
+```javascript
+// Temporary debugging (remove after verification)
+console.log('Signal listeners:', this.editor.signals.interactionGraphChanged._bindings.length);
+console.log('Saving interaction graph:', this.serialize());
+console.log('Node deserialized:', nodeData.id, 'Current object state:', this.sceneObject.rotation);
+```
+
+## **Performance Considerations**
+
+**1. Canvas Rendering Optimization**:
+- Batch canvas operations in `render()` methods
+- Use `requestAnimationFrame` for smooth interactions
+- Implement dirty flag pattern to avoid unnecessary re-renders
+
+**2. Node Processing Efficiency**:
+- Only process nodes when inputs change
+- Use debouncing for high-frequency updates
+- Cache expensive calculations in node properties
+
+**3. Signal System Performance**:
+- Minimize signal dispatching frequency
+- Use `interactionGraphChanged` for batch updates, not individual node changes
+- Clean up signal listeners when components are destroyed
+
+## **Integration with Three.js Editor**
+
+### **Signal System Integration**
+The interaction editor integrates with the editor's signal system:
+
+**Key Signals Used:**
+- `interactionGraphChanged`: Triggers auto-save when node graph is modified
+- `objectChanged`: Updates editor UI when objects are modified by nodes
+- `sceneGraphChanged`: Notifies editor when scene structure changes
+
+**Integration Pattern**:
+```javascript
+// Dispatch signals to keep editor in sync
+if (this.editor && this.editor.signals) {
+    this.editor.signals.objectChanged.dispatch(this.sceneObject);
+    this.editor.signals.sceneGraphChanged.dispatch();
+}
+```
+
+### **Layout Integration**
+The interaction editor is integrated into the editor's panel system:
+
+**Key Files:**
+- **main.js**: Creates vertical split layout with viewport and interaction editor
+- **PatchEditorWindow.jsx**: Handles React component lifecycle and resize events
+- **InteractionGraph.js**: Manages the interaction system lifecycle
+
+**Resize Handling Pattern**:
+```javascript
+// In main.js - handle vertical panel resizing
+if (window.interactionEditor && window.interactionEditor.isOpen()) {
+    if (window.interactionEditor.interactionEditor && window.interactionEditor.interactionEditor.resize) {
+        setTimeout(() => {
+            window.interactionEditor.interactionEditor.resize();
+            if (window.interactionEditor.interactionEditor.canvas) {
+                window.interactionEditor.interactionEditor.canvas.render();
+            }
+        }, 10);
+    }
+}
+```
+
+## **Future Development Guidelines**
+
+### **Adding New Node Types**
+1. **Extend PatchNode**: Create new class extending PatchNode base class
+2. **Define I/O**: Specify inputs, outputs, and data types in constructor
+3. **Implement Process**: Core logic in `process()` method
+4. **Handle Serialization**: Override serialize/deserialize if needed for special data
+5. **Register Node**: Add to node creation system for user access
+
+### **Extending Persistence**
+1. **Property Storage**: Use `setProperty()` for custom node data
+2. **Object References**: Store UUIDs for Three.js objects, not direct references
+3. **Async Loading**: Handle cases where referenced objects might not exist during deserialization
+4. **Migration**: Plan for backwards compatibility when changing node structure
+
+### **Performance Scaling**
+1. **Node Limits**: Consider performance impact of large node graphs
+2. **Update Batching**: Batch multiple node updates into single render cycles
+3. **Memory Management**: Clean up nodes, connections, and event listeners properly
+4. **Canvas Optimization**: Implement viewport culling for large graphs
+
+This comprehensive system provides a solid foundation for building complex visual programming features while maintaining integration with the Three.js editor's established architecture patterns.
