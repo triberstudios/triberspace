@@ -80,12 +80,16 @@ export class CustomInteractionEditor {
     }
 
     addTestNodes() {
-        // Add a clock node
-        const clockNode = new ClockNode(100, 100);
+        // Add a clock node using smart positioning
+        const clockTempNode = { type: 'Clock' };
+        const clockPosition = this.interactionGraph ? this.interactionGraph.findSmartPosition(clockTempNode) : { x: 100, y: 100 };
+        const clockNode = new ClockNode(clockPosition.x, clockPosition.y);
         this.addNode(clockNode);
 
-        // Add a position node
-        const positionNode = new PositionNode(300, 150);
+        // Add a position node using smart positioning
+        const positionTempNode = { type: 'Position' };
+        const positionPosition = this.interactionGraph ? this.interactionGraph.findSmartPosition(positionTempNode) : { x: 300, y: 150 };
+        const positionNode = new PositionNode(positionPosition.x, positionPosition.y);
         this.addNode(positionNode);
 
         // Add a test connection between clock and position

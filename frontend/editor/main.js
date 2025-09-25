@@ -10,6 +10,7 @@ import { Sidebar } from './js/Sidebar.js';
 import { Menubar } from './js/Menubar.js';
 import { Resizer } from './js/Resizer.js';
 import { InteractionEditorWindow } from './js/InteractionEditorWindow.jsx';
+import { AddObjectCommand } from './js/commands/AddObjectCommand.js';
 
 window.URL = window.URL || window.webkitURL;
 window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
@@ -278,6 +279,35 @@ if ( isLoadingFromHash ) return;
 if ( state !== undefined ) {
 
 	await editor.fromJSON( state );
+
+} else {
+
+	// First time user - add default objects to scene
+
+	// Create a basic cube
+	const cubeGeometry = new THREE.BoxGeometry( 1, 1, 1 );
+	const cubeMaterial = new THREE.MeshStandardMaterial( { color: 0xcccccc } );
+	const cube = new THREE.Mesh( cubeGeometry, cubeMaterial );
+	cube.name = 'Cube';
+	cube.position.set( 0, 0.5, 0 );
+
+	// Create a directional light
+	const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
+	directionalLight.name = 'DirectionalLight';
+	directionalLight.position.set( 5, 8, 3 );
+	directionalLight.castShadow = true;
+	directionalLight.shadow.mapSize.width = 2048;
+	directionalLight.shadow.mapSize.height = 2048;
+	directionalLight.shadow.camera.near = 0.1;
+	directionalLight.shadow.camera.far = 50;
+	directionalLight.shadow.camera.left = -10;
+	directionalLight.shadow.camera.right = 10;
+	directionalLight.shadow.camera.top = 10;
+	directionalLight.shadow.camera.bottom = -10;
+
+	// Add objects to scene using the editor's command system
+	editor.execute( new AddObjectCommand( editor, cube ) );
+	editor.execute( new AddObjectCommand( editor, directionalLight ) );
 
 }
 

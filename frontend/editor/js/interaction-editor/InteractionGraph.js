@@ -434,8 +434,9 @@ export class InteractionGraph {
             return existingNode;
         }
 
-        // Find a good position for the new node
-        const position = this.findAvailablePosition();
+        // Find a good position for the new node using smart positioning
+        const tempNode = { type: 'ObjectProperty', propertyType };
+        const position = this.findSmartPosition(tempNode);
 
         // Import the appropriate property node class dynamically
         let nodePromise;
@@ -482,23 +483,137 @@ export class InteractionGraph {
         return nodePromise;
     }
 
-    // Find an available position for new nodes to avoid overlaps
-    findAvailablePosition() {
-        const gridSize = 160; // Base grid spacing
-        const maxColumns = 5;
-        let x = 100;
-        let y = 100;
-        let column = 0;
+    // Get canvas viewport information for positioning calculations
+    getCanvasViewport() {
+        // Try to get canvas bounds from the CustomInteractionEditor
+        // Path: editor.interactionEditor (InteractionEditorWindow) -> interactionEditor (CustomInteractionEditor) -> canvas (PatchCanvas)
+        if (this.editor && this.editor.interactionEditor && this.editor.interactionEditor.interactionEditor && this.editor.interactionEditor.interactionEditor.canvas) {
+            const canvas = this.editor.interactionEditor.interactionEditor.canvas;
 
-        // Simple grid layout to avoid overlaps
+            if (canvas.getViewportBounds) {
+                // Use the dedicated viewport bounds method for accurate positioning
+                return canvas.getViewportBounds();
+            } else if (canvas.container) {
+                const rect = canvas.container.getBoundingClientRect();
+                return {
+                    width: rect.width,
+                    height: rect.height,
+                    viewportX: canvas.viewport ? canvas.viewport.x : 0,
+                    viewportY: canvas.viewport ? canvas.viewport.y : 0,
+                    zoom: canvas.viewport ? canvas.viewport.zoom : 1
+                };
+            }
+        }
+
+        // Fallback to default canvas size
+        return { width: 800, height: 600, viewportX: 0, viewportY: 0, zoom: 1 };
+    }
+
+    // Smart positioning algorithm based on node types and relationships
+    findSmartPosition(newNode) {
+        const canvas = this.getCanvasViewport();
+
+        // If empty canvas, place at center of current view
+        if (this.nodes.size === 0) {
+            const centerX = (-canvas.viewportX / canvas.zoom) + (canvas.width / canvas.zoom / 2) - 75;
+            const centerY = (-canvas.viewportY / canvas.zoom) + (canvas.height / canvas.zoom / 2) - 25;
+            return { x: centerX, y: centerY };
+        }
+
+        // Analyze existing nodes
+        const allNodes = Array.from(this.nodes.values());
+        const propertyNodes = allNodes.filter(n => n.type === 'ObjectProperty');
+        const nonPropertyNodes = allNodes.filter(n => n.type !== 'ObjectProperty');
+
+        const isPropertyNode = newNode && (newNode.type === 'ObjectProperty');
+
+        if (isPropertyNode && nonPropertyNodes.length > 0) {
+            // Property node: place to RIGHT of non-property nodes
+            const rightmostNode = nonPropertyNodes.reduce((max, node) =>
+                node.position.x > max.position.x ? node : max);
+            const x = rightmostNode.position.x + 350; // Increased spacing for easier connections
+            const y = this.findBestY(x, rightmostNode.position.y);
+            return { x, y };
+        } else if (!isPropertyNode && propertyNodes.length > 0) {
+            // Non-property node: place to LEFT of property nodes
+            const leftmostNode = propertyNodes.reduce((min, node) =>
+                node.position.x < min.position.x ? node : min);
+            const x = leftmostNode.position.x - 350; // Increased spacing for easier connections
+            const y = this.findBestY(x, leftmostNode.position.y);
+            return { x, y };
+        }
+
+        // Fallback: intelligent grid placement around center
+        return this.findGridPosition();
+    }
+
+    // Find best Y position to avoid overlaps at given X coordinate
+    findBestY(targetX, preferredY = null) {
+        const nodeSpacing = 150; // Minimum vertical spacing
+        const tolerance = 50; // X tolerance for considering nodes in same column
+
+        // Find nodes near this X position
+        const nearbyNodes = Array.from(this.nodes.values())
+            .filter(node => Math.abs(node.position.x - targetX) < tolerance)
+            .sort((a, b) => a.position.y - b.position.y);
+
+        // If no nearby nodes, use preferred Y or default
+        if (nearbyNodes.length === 0) {
+            return preferredY || 100;
+        }
+
+        // If preferred Y is available (no conflicts), use it
+        if (preferredY !== null) {
+            const hasConflict = nearbyNodes.some(node =>
+                Math.abs(node.position.y - preferredY) < nodeSpacing);
+            if (!hasConflict) {
+                return preferredY;
+            }
+        }
+
+        // Find gaps between nodes or place at end
+        let bestY = nearbyNodes[0].position.y - nodeSpacing;
+        if (bestY < 50) { // Don't go too high
+            // Look for gaps between nodes
+            for (let i = 0; i < nearbyNodes.length - 1; i++) {
+                const gap = nearbyNodes[i + 1].position.y - nearbyNodes[i].position.y;
+                if (gap >= nodeSpacing * 2) {
+                    bestY = nearbyNodes[i].position.y + nodeSpacing;
+                    break;
+                }
+            }
+            // If no gaps found, place after last node
+            if (bestY < 50) {
+                bestY = nearbyNodes[nearbyNodes.length - 1].position.y + nodeSpacing;
+            }
+        }
+
+        return Math.max(bestY, 50); // Ensure minimum Y position
+    }
+
+    // Fallback grid positioning for when smart positioning doesn't apply
+    findGridPosition() {
+        const canvas = this.getCanvasViewport();
+        const gridSpacing = 160;
+        const maxColumns = 4;
+
+        // Position relative to current viewport center
+        const baseX = (-canvas.viewportX / canvas.zoom) + 100;
+        const baseY = (-canvas.viewportY / canvas.zoom) + 100;
+
         const nodeCount = this.nodes.size;
-        column = nodeCount % maxColumns;
+        const column = nodeCount % maxColumns;
         const row = Math.floor(nodeCount / maxColumns);
 
-        x = 100 + (column * gridSize);
-        y = 100 + (row * 140);
+        return {
+            x: baseX + (column * gridSpacing),
+            y: baseY + (row * 140)
+        };
+    }
 
-        return { x, y };
+    // Legacy method - now redirects to smart positioning
+    findAvailablePosition(newNode = null) {
+        return this.findSmartPosition(newNode);
     }
 
     updateNodeFromObject(node, object) {

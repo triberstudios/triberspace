@@ -994,6 +994,17 @@ export class PatchCanvas {
         this.editor.config.setKey('layout/interactionEditor/viewportZoom', this.viewport.zoom);
     }
 
+    getViewportBounds() {
+        const rect = this.container.getBoundingClientRect();
+        return {
+            width: rect.width,
+            height: rect.height,
+            viewportX: this.viewport.x,
+            viewportY: this.viewport.y,
+            zoom: this.viewport.zoom
+        };
+    }
+
     destroy() {
         // Clean up input dialogs
         this.removeNumberInputDialog();

@@ -330,10 +330,14 @@ class InteractionEditorWindow {
 	createNode(nodeType) {
 		if (!this.interactionEditor) return;
 
-		// Calculate center position for new node
-		const canvasRect = this.interactionCanvas.getBoundingClientRect();
-		const x = canvasRect.width / 2 - 50;
-		const y = canvasRect.height / 2 - 25;
+		// Use smart positioning to place new node intelligently
+		const interactionGraph = this.interactionEditor.getInteractionGraph();
+		const tempNode = { type: nodeType };
+		const position = interactionGraph ? interactionGraph.findSmartPosition(tempNode) :
+			{ x: this.interactionCanvas.getBoundingClientRect().width / 2 - 50,
+			  y: this.interactionCanvas.getBoundingClientRect().height / 2 - 25 };
+		const x = position.x;
+		const y = position.y;
 
 		// Create node based on type
 		let node = null;
