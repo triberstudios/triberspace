@@ -679,7 +679,8 @@ Editor.prototype = {
 			const rotationNode = new ObjectRotationNode(cubeObject, rotationX, centerY, this);
 			interactionGraph.addNode(rotationNode);
 
-			// Connect SpinNode rotation output to ObjectRotationNode Y input
+			// Connect SpinNode rotation output to ObjectRotationNode X and Y inputs
+			interactionGraph.addConnection(spinNode.id, 0, rotationNode.id, 0); // Output 0 (rotation) -> Input 0 (X)
 			interactionGraph.addConnection(spinNode.id, 0, rotationNode.id, 1); // Output 0 (rotation) -> Input 1 (Y)
 
 		} catch (error) {
