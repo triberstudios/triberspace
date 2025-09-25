@@ -8,7 +8,7 @@ import { ClockNode } from './nodes/ClockNode.js';
 import { PositionNode } from './nodes/PositionNode.js';
 import { InteractionGraph } from './InteractionGraph.js';
 
-export class CustomPatchEditor {
+export class CustomInteractionEditor {
     constructor(container, editor = null) {
         this.container = container;
         this.editor = editor;
@@ -129,7 +129,7 @@ export class CustomPatchEditor {
         });
 
         this.canvas.on('connectionClick', (connectionId) => {
-            console.log('CustomPatchEditor received connectionClick:', connectionId);
+            console.log('CustomInteractionEditor received connectionClick:', connectionId);
             this.selectConnection(connectionId);
         });
 
@@ -152,9 +152,9 @@ export class CustomPatchEditor {
 
         // Keyboard shortcuts - use capture phase to run before other handlers
         document.addEventListener('keydown', (e) => {
-            console.log('PatchEditor key pressed:', e.key, 'Code:', e.code); // Debug any key press
+            console.log('InteractionEditor key pressed:', e.key, 'Code:', e.code); // Debug any key press
             if (e.key === 'Delete' || e.key === 'Backspace') { // Also try Backspace
-                console.log('PatchEditor Delete/Backspace key pressed. Selected nodes:', this.selectedNodes.size, 'Selected connections:', this.selectedConnections.size);
+                console.log('InteractionEditor Delete/Backspace key pressed. Selected nodes:', this.selectedNodes.size, 'Selected connections:', this.selectedConnections.size);
                 if (this.selectedNodes.size > 0) {
                     e.preventDefault();
                     e.stopPropagation();

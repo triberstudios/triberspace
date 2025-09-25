@@ -1,4 +1,4 @@
-import { CustomPatchEditor } from './patch-editor/CustomPatchEditor.js';
+import { CustomInteractionEditor } from './interaction-editor/CustomInteractionEditor.js';
 
 /**
  * Interaction Editor Window - Independent resizable panel for node-based editing
@@ -125,10 +125,10 @@ class InteractionEditorWindow {
 	initCustomInteractionEditor() {
 		// Initialize custom vanilla JS interaction editor
 		if (!this.interactionEditor) {
-			console.log('PatchEditorWindow: Creating CustomPatchEditor...');
-			this.interactionEditor = new CustomPatchEditor(this.interactionCanvas, this.editor);
-			console.log('PatchEditorWindow: CustomPatchEditor created successfully', this.interactionEditor);
-			console.log('PatchEditorWindow: InteractionGraph available:', this.interactionEditor.getInteractionGraph());
+			console.log('InteractionEditorWindow: Creating CustomInteractionEditor...');
+			this.interactionEditor = new CustomInteractionEditor(this.interactionCanvas, this.editor);
+			console.log('InteractionEditorWindow: CustomInteractionEditor created successfully', this.interactionEditor);
+			console.log('InteractionEditorWindow: InteractionGraph available:', this.interactionEditor.getInteractionGraph());
 		}
 	}
 
@@ -323,49 +323,49 @@ class InteractionEditorWindow {
 		let node = null;
 		switch (nodeType) {
 			case 'Spin':
-				import('./patch-editor/nodes/SpinNode.js').then(({ SpinNode }) => {
+				import('./interaction-editor/nodes/SpinNode.js').then(({ SpinNode }) => {
 					node = new SpinNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Pulse':
-				import('./patch-editor/nodes/PulseNode.js').then(({ PulseNode }) => {
+				import('./interaction-editor/nodes/PulseNode.js').then(({ PulseNode }) => {
 					node = new PulseNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Float':
-				import('./patch-editor/nodes/FloatNode.js').then(({ FloatNode }) => {
+				import('./interaction-editor/nodes/FloatNode.js').then(({ FloatNode }) => {
 					node = new FloatNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Fade':
-				import('./patch-editor/nodes/FadeNode.js').then(({ FadeNode }) => {
+				import('./interaction-editor/nodes/FadeNode.js').then(({ FadeNode }) => {
 					node = new FadeNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Clock':
-				import('./patch-editor/nodes/ClockNode.js').then(({ ClockNode }) => {
+				import('./interaction-editor/nodes/ClockNode.js').then(({ ClockNode }) => {
 					node = new ClockNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Time':
-				import('./patch-editor/nodes/TimeNode.js').then(({ TimeNode }) => {
+				import('./interaction-editor/nodes/TimeNode.js').then(({ TimeNode }) => {
 					node = new TimeNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Position':
-				import('./patch-editor/nodes/PositionNode.js').then(({ PositionNode }) => {
+				import('./interaction-editor/nodes/PositionNode.js').then(({ PositionNode }) => {
 					node = new PositionNode(x, y);
 					this.interactionEditor.addNode(node);
 				});
 				break;
 			case 'Multiply':
-				import('./patch-editor/nodes/MultiplyNode.js').then(({ MultiplyNode }) => {
+				import('./interaction-editor/nodes/MultiplyNode.js').then(({ MultiplyNode }) => {
 					node = new MultiplyNode(x, y);
 					this.interactionEditor.addNode(node);
 				});

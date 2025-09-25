@@ -9,7 +9,7 @@ import { Player } from './js/Player.js';
 import { Sidebar } from './js/Sidebar.js';
 import { Menubar } from './js/Menubar.js';
 import { Resizer } from './js/Resizer.js';
-import { InteractionEditorWindow } from './js/PatchEditorWindow.jsx';
+import { InteractionEditorWindow } from './js/InteractionEditorWindow.jsx';
 
 window.URL = window.URL || window.webkitURL;
 window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;

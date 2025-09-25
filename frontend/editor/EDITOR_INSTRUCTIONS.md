@@ -656,7 +656,7 @@ The interaction editor consists of several interconnected components:
 - **InteractionGraph.js**: Central coordinator, manages nodes and connections, handles persistence
 - **PatchNode.js**: Base class for all node types with inputs, outputs, and processing logic
 - **PatchCanvas.js**: Canvas-based rendering system with user interaction handling
-- **PatchEditorWindow.jsx**: React wrapper component for integration into editor layout
+- **InteractionEditorWindow.jsx**: React wrapper component for integration into editor layout
 - **Node Types**: Specialized nodes (ObjectRotation, ObjectPosition, ObjectScale, Math operations)
 
 ## **Architecture Patterns**
@@ -847,7 +847,7 @@ The interaction editor is integrated into the editor's panel system:
 
 **Key Files:**
 - **main.js**: Creates vertical split layout with viewport and interaction editor
-- **PatchEditorWindow.jsx**: Handles React component lifecycle and resize events
+- **InteractionEditorWindow.jsx**: Handles React component lifecycle and resize events
 - **InteractionGraph.js**: Manages the interaction system lifecycle
 
 **Resize Handling Pattern**:

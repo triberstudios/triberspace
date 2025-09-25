@@ -355,7 +355,7 @@ The integrated interaction editor provides node-based visual programming. Here's
 **Use Case**: Custom behaviors, math operations, data processors
 
 **Steps**:
-1. Create new file: `js/patch-editor/nodes/YourCustomNode.js`
+1. Create new file: `js/interaction-editor/nodes/YourCustomNode.js`
 2. Extend PatchNode base class:
    ```javascript
    import { PatchNode } from '../PatchNode.js';
