@@ -13,6 +13,7 @@ export class InteractionGraph {
         this.sceneObjectMap = new Map(); // Maps Three.js objects to patch nodes
         this.evaluationQueue = [];
         this.isEvaluating = false;
+        this.hasActiveAnimations = false;
 
         // Bind to editor signals for scene synchronization
         this.setupSceneBindings();
@@ -329,10 +330,27 @@ export class InteractionGraph {
                 this.isEvaluating = false;
             }
 
-            requestAnimationFrame(evaluate);
         };
 
-        requestAnimationFrame(evaluate);
+        // No longer auto-start the loop - evaluation now happens in Viewport animate loop
+    }
+
+    // Direct evaluation method for Viewport integration
+    evaluate() {
+        // Always process SpinNode and other time-based nodes
+        const animationNodes = [];
+
+        for (const node of this.nodes.values()) {
+            // SpinNode and other time-based animation nodes need continuous processing
+            if (node.constructor.name === 'SpinNode' || node.constructor.name === 'TimeNode') {
+                node.process();
+                this.propagateNodeChanges(node);
+                animationNodes.push(node);
+            }
+        }
+
+        // Update animation state
+        this.hasActiveAnimations = animationNodes.length > 0;
     }
 
     // Real-time change detection for scene objects

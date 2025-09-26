@@ -14,6 +14,7 @@ export class ObjectRotationNode extends PatchNode {
         this.objectName = objectName;
         this.editor = editor;
 
+
         // Inputs for rotation control
         this.addInput('x', 'number', sceneObject ? sceneObject.rotation.x : 0);
         this.addInput('y', 'number', sceneObject ? sceneObject.rotation.y : 0);
@@ -58,12 +59,6 @@ export class ObjectRotationNode extends PatchNode {
         this.setOutputValue('x', x);
         this.setOutputValue('y', y);
         this.setOutputValue('z', z);
-
-        // Notify editor using proper signals for real-time updates
-        if (this.editor && this.editor.signals) {
-            this.editor.signals.objectChanged.dispatch(this.sceneObject);
-            this.editor.signals.sceneGraphChanged.dispatch();
-        }
     }
 
     // Override onOutputChanged for immediate scene updates
@@ -86,13 +81,8 @@ export class ObjectRotationNode extends PatchNode {
         // Update Three.js transform matrices
         this.sceneObject.updateMatrix();
         this.sceneObject.updateMatrixWorld();
-
-        // Notify editor using proper signals for real-time updates
-        if (this.editor && this.editor.signals) {
-            this.editor.signals.objectChanged.dispatch(this.sceneObject);
-            this.editor.signals.sceneGraphChanged.dispatch();
-        }
     }
+
 
     // Sync from object changes (when object is rotated manually)
     syncFromObject() {

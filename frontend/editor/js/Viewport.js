@@ -775,6 +775,20 @@ function Viewport( editor ) {
 
 		}
 
+		// Interaction Graph - evaluate nodes for animations
+
+		if ( editor.patchEditor && editor.patchEditor.interactionGraph ) {
+
+			const hadAnimationBefore = editor.patchEditor.interactionGraph.hasActiveAnimations;
+			editor.patchEditor.interactionGraph.evaluate();
+
+			// Mark as needing update if we have active animations
+			if ( editor.patchEditor.interactionGraph.hasActiveAnimations ) {
+				needsUpdate = true;
+			}
+
+		}
+
 		// View Helper
 
 		if ( viewHelper.animating === true ) {
@@ -1087,19 +1101,26 @@ function Viewport( editor ) {
 	});
 
 	// Hide floating input when chat tab is active with smooth fade
+	let lastTabState = null;
+	let updateFloatingInputDebounceTimer = null;
+
 	function updateFloatingInputVisibility() {
 		// Don't interfere if user is manually toggling
 		if (isManualToggle) {
-			console.log('Manual toggle in progress, skipping automatic update');
 			return;
 		}
-		
+
 		const sidebar = document.getElementById('sidebar');
 		const activeTab = sidebar?.querySelector('.Tab.selected');
 		const isChatActive = activeTab?.textContent === 'Chat';
-		
+
+		// Only update if state actually changed
+		if (lastTabState === isChatActive) {
+			return;
+		}
+		lastTabState = isChatActive;
+
 		if (isChatActive) {
-			console.log('AI tab opened, hiding floating input');
 			// Fade out and hide the floating input
 			floatingChatContainer.style.opacity = '0';
 			floatingChatContainer.style.pointerEvents = 'none';
@@ -1107,7 +1128,6 @@ function Viewport( editor ) {
 				floatingChatContainer.style.display = 'none';
 			}, 300); // Wait for fade animation
 		} else {
-			console.log('AI tab closed, showing floating input');
 			// Show and fade in the floating input
 			floatingChatContainer.style.display = 'flex';
 			floatingChatContainer.style.pointerEvents = 'auto';
@@ -1118,9 +1138,20 @@ function Viewport( editor ) {
 		}
 	}
 
-	// Monitor tab changes
-	const observer = new MutationObserver(updateFloatingInputVisibility);
-	observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+	// Debounced version to prevent excessive calls
+	function debouncedUpdateFloatingInputVisibility() {
+		if (updateFloatingInputDebounceTimer) {
+			clearTimeout(updateFloatingInputDebounceTimer);
+		}
+		updateFloatingInputDebounceTimer = setTimeout(updateFloatingInputVisibility, 100);
+	}
+
+	// Monitor tab changes - only observe sidebar instead of entire document
+	const observer = new MutationObserver(debouncedUpdateFloatingInputVisibility);
+	const sidebar = document.getElementById('sidebar');
+	if (sidebar) {
+		observer.observe(sidebar, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+	}
 	
 	// Initial visibility check
 	setTimeout(updateFloatingInputVisibility, 100);

@@ -22,9 +22,6 @@ export class SpinNode extends PatchNode {
 
         // Start processing immediately
         this.process();
-
-        // Set up continuous update loop
-        this.setupUpdateLoop();
     }
 
     process() {
@@ -48,12 +45,6 @@ export class SpinNode extends PatchNode {
         this.setOutputValue('rotation', rotation);
     }
 
-    setupUpdateLoop() {
-        // Update at 60fps for smooth animation
-        this.updateInterval = setInterval(() => {
-            this.process();
-        }, 1000 / 60);
-    }
 
     // Override onInputChanged to restart timing when speed changes
     onInputChanged(inputName, newValue, oldValue) {
@@ -85,7 +76,6 @@ export class SpinNode extends PatchNode {
         if (data.startTime) {
             this.startTime = data.startTime;
         }
-        this.setupUpdateLoop();
     }
 
     // Get display name for UI
@@ -107,10 +97,6 @@ export class SpinNode extends PatchNode {
 
     // Cleanup when node is destroyed
     destroy() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-            this.updateInterval = null;
-        }
         super.destroy && super.destroy();
     }
 }
