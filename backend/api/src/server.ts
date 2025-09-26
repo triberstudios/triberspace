@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
-import { resolve } from 'path';
+import { resolve, join } from 'path';
+import { readFileSync } from 'fs';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
@@ -25,12 +26,29 @@ const start = async () => {
     await fastify.register(cors, {
       origin: [
         'http://localhost:3000',
+        'http://localhost:3001', // Backend API port
+        'http://localhost:3003', // Editor port
         'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:3003',
         process.env.FRONTEND_URL || 'http://localhost:3000'
       ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    });
+
+    // Serve Sketchfab OAuth callback page
+    // This route serves the callback.html file when Sketchfab redirects back
+    fastify.get('/auth/sketchfab/callback', async (request, reply) => {
+      try {
+        const callbackPath = join(__dirname, '../../..', 'frontend/editor/auth/sketchfab/callback.html');
+        const html = readFileSync(callbackPath, 'utf-8');
+        return reply.type('text/html').send(html);
+      } catch (error) {
+        fastify.log.error('Failed to serve Sketchfab callback:', error);
+        return reply.status(500).send('Failed to load callback page');
+      }
     });
 
     // Register Swagger

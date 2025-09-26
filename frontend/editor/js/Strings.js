@@ -116,6 +116,7 @@ function Strings( config ) {
 			'sidebar/animations/timescale': 'مقیاس زمانی',
 
 			'sidebar/scene': 'صحنه',
+			'sidebar/sketchfab': 'اسکچ‌فب',
 			'sidebar/scene/background': 'پس زمینه',
 			'sidebar/scene/environment': 'محیط',
 			'sidebar/scene/fog': 'مه',
@@ -523,6 +524,7 @@ function Strings( config ) {
 			'sidebar/animations/timescale': 'Time Scale',
 
 			'sidebar/scene': 'Scene',
+			'sidebar/sketchfab': 'Sketchfab',
 			'sidebar/scene/background': 'Background',
 			'sidebar/scene/environment': 'Environment',
 			'sidebar/scene/fog': 'Fog',
@@ -926,6 +928,7 @@ function Strings( config ) {
 			'sidebar/animations/timescale': 'Time Scale',
 
 			'sidebar/scene': 'Scène',
+			'sidebar/sketchfab': 'Sketchfab',
 			'sidebar/scene/background': 'Arrière Plan',
 			'sidebar/scene/environment': 'Environment',
 			'sidebar/scene/fog': 'Brouillard',
@@ -1329,6 +1332,7 @@ function Strings( config ) {
 			'sidebar/animations/timescale': '时间缩放',
 
 			'sidebar/scene': '场景',
+			'sidebar/sketchfab': 'Sketchfab',
 			'sidebar/scene/background': '背景',
 			'sidebar/scene/environment': '环境',
 			'sidebar/scene/fog': '雾',
@@ -1732,6 +1736,7 @@ function Strings( config ) {
 			'sidebar/animations/timescale': 'タイムスケール',
 
 			'sidebar/scene': 'シーン',
+			'sidebar/sketchfab': 'Sketchfab',
 			'sidebar/scene/background': '背景',
 			'sidebar/scene/environment': '環境',
 			'sidebar/scene/fog': '霧',
@@ -2134,6 +2139,7 @@ function Strings( config ) {
 			'sidebar/animations/timescale': '시간 스케일',
 
 			'sidebar/scene': '장면',
+			'sidebar/sketchfab': 'Sketchfab',
 			'sidebar/scene/background': '배경',
 			'sidebar/scene/environment': '환경',
 			'sidebar/scene/fog': '안개',

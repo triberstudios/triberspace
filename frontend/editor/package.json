@@ -23,6 +23,7 @@
     "vite": "^7.1.6"
   },
   "dependencies": {
+    "@zip.js/zip.js": "^2.8.2",
     "three": "^0.162.0",
     "three-gpu-pathtracer": "^0.0.23"
   }
