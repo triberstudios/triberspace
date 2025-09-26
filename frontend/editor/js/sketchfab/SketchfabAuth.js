@@ -12,6 +12,8 @@ class SketchfabAuth {
 		this.clientId = 'UgSa28CamwcPrTFJJz9mvkewOvKmVSaQKfvwp6yR';
 		// Use exact registered redirect URIs (no trailing slash)
 		if (this.isDevelopment()) {
+			// NOTE: This URI must be registered with Sketchfab OAuth app settings
+			// Using port 3001 as it appears to be the registered redirect URI
 			this.redirectUri = 'http://localhost:3001/auth/sketchfab/callback';
 		} else {
 			this.redirectUri = 'https://api.triber.space/auth/sketchfab/callback';

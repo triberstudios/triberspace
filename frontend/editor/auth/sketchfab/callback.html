@@ -58,7 +58,8 @@
                 errorDescription = urlParams.get('error_description');
             }
 
-            const editorUrl = window.location.origin + '/';
+            // Redirect to editor on port 3003 (editor is on different port than callback)
+            const editorUrl = 'http://localhost:3003/';
 
             if (authCode) {
                 // Exchange authorization code for access token via backend
@@ -91,7 +92,7 @@
 
         // Exchange authorization code for access token via backend API
         async function exchangeCodeForToken(code) {
-            const apiUrl = 'http://localhost:3002/api/v1/sketchfab/token';
+            const apiUrl = 'http://localhost:3001/api/v1/sketchfab/token';
             const redirectUri = window.location.href.split('?')[0]; // Current callback URL
 
             const response = await fetch(apiUrl, {
