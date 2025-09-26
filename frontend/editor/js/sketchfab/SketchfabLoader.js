@@ -12,6 +12,17 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 import { AddObjectCommand } from '../commands/AddObjectCommand.js';
 
+// Configuration constants
+const SKETCHFAB_CONFIG = {
+	DOWNLOAD_TIMEOUT: 120000, // 2 minutes
+	TARGET_MODEL_SIZE: 2, // Target size in units
+	AUTO_SCALE_THRESHOLD: 2, // Scale if model is bigger/smaller than target * threshold
+	BLOB_URL_BATCH_SIZE: 5, // Process blob URLs in batches to prevent UI blocking
+	YIELD_INTERVAL: 0, // Yield control to UI (setTimeout with 0ms)
+	MAX_RETRY_ATTEMPTS: 3, // Maximum retry attempts for downloads
+	RETRY_DELAY: 1000 // Delay between retries (ms)
+};
+
 class SketchfabLoader {
 
 	constructor( editor ) {
@@ -20,8 +31,7 @@ class SketchfabLoader {
 		this.loadingManager = new THREE.LoadingManager();
 		this.gltfLoader = null;
 		this.downloadCache = new Map(); // Cache for downloaded models
-
-		this.setupLoaders();
+		this.loadersInitialized = false;
 
 	}
 
@@ -30,27 +40,76 @@ class SketchfabLoader {
 	 */
 	setupLoaders() {
 
+		if ( this.loadersInitialized ) return;
+
 		// Setup DRACO loader
 		const dracoLoader = new DRACOLoader();
 		dracoLoader.setDecoderPath( 'https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/libs/draco/gltf/' );
 
-		// Setup KTX2 loader
-		const ktx2Loader = new KTX2Loader( this.loadingManager );
-		ktx2Loader.setTranscoderPath( 'https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/libs/basis/' );
-
-		// Setup GLTF loader with extensions
+		// Setup basic GLTF loader first
 		this.gltfLoader = new GLTFLoader( this.loadingManager );
 		this.gltfLoader.setDRACOLoader( dracoLoader );
-		this.gltfLoader.setKTX2Loader( ktx2Loader );
 		this.gltfLoader.setMeshoptDecoder( MeshoptDecoder );
 
-		// Detect KTX2 support
-		if ( this.editor.signals && this.editor.signals.rendererDetectKTX2Support ) {
+		// Only set up KTX2 if renderer exists and has proper capabilities
+		if ( this.editor.renderer && this.editor.renderer.capabilities && this.editor.renderer.capabilities.isWebGL2 ) {
 
-			this.editor.signals.rendererDetectKTX2Support.dispatch( ktx2Loader );
+			try {
+
+				// Setup KTX2 loader
+				const ktx2Loader = new KTX2Loader( this.loadingManager );
+				ktx2Loader.setTranscoderPath( 'https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/libs/basis/' );
+
+				this.gltfLoader.setKTX2Loader( ktx2Loader );
+
+				// Detect KTX2 support
+				if ( this.editor.signals && this.editor.signals.rendererDetectKTX2Support ) {
+
+					this.editor.signals.rendererDetectKTX2Support.dispatch( ktx2Loader );
+
+				}
+
+			} catch ( error ) {
+
+				// Gracefully handle KTX2 setup errors - GLTF loader will still work without it
+
+			}
 
 		}
 
+		this.loadersInitialized = true;
+
+	}
+
+	/**
+	 * Retry wrapper for network operations
+	 */
+	async retryOperation( operation, maxRetries = SKETCHFAB_CONFIG.MAX_RETRY_ATTEMPTS ) {
+		let lastError;
+
+		for ( let attempt = 1; attempt <= maxRetries; attempt++ ) {
+			try {
+				return await operation();
+			} catch ( error ) {
+				lastError = error;
+
+				// Don't retry on certain error types
+				if ( error.name === 'AbortError' ||
+					 error.message.includes( '401' ) ||
+					 error.message.includes( '403' ) ||
+					 error.message.includes( '404' ) ) {
+					throw error;
+				}
+
+				if ( attempt < maxRetries ) {
+					// Exponential backoff
+					const delay = SKETCHFAB_CONFIG.RETRY_DELAY * Math.pow( 2, attempt - 1 );
+					await new Promise( resolve => setTimeout( resolve, delay ) );
+				}
+			}
+		}
+
+		throw lastError;
 	}
 
 	/**
@@ -59,6 +118,9 @@ class SketchfabLoader {
 	async loadModel( downloadData, modelData, onProgress ) {
 
 		try {
+
+			// Ensure loaders are set up before loading
+			this.setupLoaders();
 
 			// Show loading indicator
 			this.showLoadingIndicator( modelData.name );
@@ -74,10 +136,12 @@ class SketchfabLoader {
 
 			} else {
 
-				// Download and extract the model archive with progress
-				extractedFiles = await this.downloadAndExtract( downloadData.gltf.url, ( progress ) => {
-					this.updateLoadingProgress( progress.phase, progress.progress );
-					if ( onProgress ) onProgress( progress );
+				// Download and extract the model archive with progress and retry logic
+				extractedFiles = await this.retryOperation( async () => {
+					return await this.downloadAndExtract( downloadData.gltf.url, ( progress ) => {
+						this.updateLoadingProgress( progress.phase, progress.progress );
+						if ( onProgress ) onProgress( progress );
+					} );
 				} );
 
 				// Cache the extracted files
@@ -93,8 +157,8 @@ class SketchfabLoader {
 
 			}
 
-			// Create blob URLs for all files
-			const fileUrls = this.createBlobUrls( extractedFiles );
+			// Create blob URLs for all files asynchronously
+			const fileUrls = await this.createBlobUrls( extractedFiles );
 
 			// Update scene file to use blob URLs
 			const updatedSceneData = await this.updateSceneReferences( sceneFile, fileUrls );
@@ -126,6 +190,8 @@ class SketchfabLoader {
 	 */
 	async downloadAndExtract( url, onProgress ) {
 
+		const DOWNLOAD_TIMEOUT = SKETCHFAB_CONFIG.DOWNLOAD_TIMEOUT;
+
 		try {
 			if ( onProgress ) {
 				onProgress( {
@@ -134,10 +200,30 @@ class SketchfabLoader {
 				} );
 			}
 
-			// Download with progress tracking
-			const response = await fetch( url );
-			if ( !response.ok ) {
-				throw new Error( `Download failed: ${response.status} ${response.statusText}` );
+			// Create abort controller for timeout
+			const controller = new AbortController();
+			const timeoutId = setTimeout( () => {
+				controller.abort();
+			}, DOWNLOAD_TIMEOUT );
+
+			let response;
+			try {
+				// Download with progress tracking and timeout
+				response = await fetch( url, {
+					signal: controller.signal
+				} );
+
+				clearTimeout( timeoutId );
+
+				if ( !response.ok ) {
+					throw new Error( `Download failed: ${response.status} ${response.statusText}` );
+				}
+			} catch ( fetchError ) {
+				clearTimeout( timeoutId );
+				if ( fetchError.name === 'AbortError' ) {
+					throw new Error( 'Download timeout after 2 minutes' );
+				}
+				throw fetchError;
 			}
 
 			const contentLength = response.headers.get( 'content-length' );
@@ -181,6 +267,12 @@ class SketchfabLoader {
 			// Extract ZIP efficiently
 			const zipReader = new ZipReader( new Uint8ArrayReader( arrayBuffer ) );
 			const entries = await zipReader.getEntries();
+
+			// Validate ZIP structure
+			if ( ! this.validateZipStructure( entries ) ) {
+				throw new Error( 'Invalid model archive: missing required glTF files' );
+			}
+
 			const extractedFiles = {};
 
 			// Only extract files we need (glTF, textures, etc.)
@@ -225,6 +317,40 @@ class SketchfabLoader {
 	}
 
 	/**
+	 * Validate ZIP structure has required files
+	 */
+	validateZipStructure( entries ) {
+		// Check for at least one .gltf file
+		const hasGltf = entries.some( entry =>
+			! entry.directory && entry.filename.toLowerCase().endsWith( '.gltf' )
+		);
+
+		if ( ! hasGltf ) {
+			return false;
+		}
+
+		// Check for reasonable file count (not empty, not too many files)
+		const fileCount = entries.filter( entry => ! entry.directory ).length;
+		if ( fileCount === 0 || fileCount > 1000 ) {
+			return false;
+		}
+
+		// Check for suspicious file names (basic security check)
+		const hasSuspiciousFiles = entries.some( entry => {
+			const filename = entry.filename.toLowerCase();
+			return filename.includes( '..' ) ||
+				   ( filename.includes( '/' ) && filename.startsWith( '/' ) ) ||
+				   filename.includes( '\\' );
+		} );
+
+		if ( hasSuspiciousFiles ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Find the main glTF scene file
 	 */
 	findSceneFile( files ) {
@@ -252,16 +378,23 @@ class SketchfabLoader {
 	}
 
 	/**
-	 * Create blob URLs for all files
+	 * Create blob URLs for all files asynchronously to prevent UI blocking
 	 */
-	createBlobUrls( files ) {
+	async createBlobUrls( files ) {
 
 		const urls = {};
+		const filenames = Object.keys( files );
 
-		for ( const filename in files ) {
+		for ( let i = 0; i < filenames.length; i++ ) {
 
+			const filename = filenames[ i ];
 			const file = files[ filename ];
 			urls[ filename ] = URL.createObjectURL( file.blob );
+
+			// Yield control every N files to prevent UI blocking
+			if ( i % SKETCHFAB_CONFIG.BLOB_URL_BATCH_SIZE === 0 && i > 0 ) {
+				await new Promise( resolve => setTimeout( resolve, SKETCHFAB_CONFIG.YIELD_INTERVAL ) );
+			}
 
 		}
 
@@ -391,10 +524,11 @@ class SketchfabLoader {
 		const size = box.getSize( new THREE.Vector3() );
 		const maxDimension = Math.max( size.x, size.y, size.z );
 
-		// Target size of ~2 units
-		const targetSize = 2;
+		// Target size from config
+		const targetSize = SKETCHFAB_CONFIG.TARGET_MODEL_SIZE;
+		const threshold = SKETCHFAB_CONFIG.AUTO_SCALE_THRESHOLD;
 
-		if ( maxDimension > targetSize * 2 || maxDimension < targetSize / 2 ) {
+		if ( maxDimension > targetSize * threshold || maxDimension < targetSize / threshold ) {
 
 			const scale = targetSize / maxDimension;
 			model.scale.setScalar( scale );
@@ -547,7 +681,33 @@ class SketchfabLoader {
 	 */
 	clearCache() {
 
+		// Clean up any blob URLs in cached files
+		for ( const [ key, files ] of this.downloadCache.entries() ) {
+			for ( const filename in files ) {
+				if ( files[ filename ].blobUrl ) {
+					URL.revokeObjectURL( files[ filename ].blobUrl );
+				}
+			}
+		}
+
 		this.downloadCache.clear();
+
+	}
+
+	/**
+	 * Dispose of loader and clean up resources
+	 */
+	dispose() {
+
+		this.clearCache();
+
+		// Clean up loaders
+		if ( this.gltfLoader && this.gltfLoader.dracoLoader ) {
+			this.gltfLoader.dracoLoader.dispose();
+		}
+
+		this.gltfLoader = null;
+		this.loadersInitialized = false;
 
 	}
 
