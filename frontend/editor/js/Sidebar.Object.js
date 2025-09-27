@@ -24,6 +24,71 @@ function SidebarObject( editor ) {
 	container.setPaddingTop( '20px' );
 	container.setDisplay( 'none' );
 
+	// Helper functions for property patch buttons
+	function checkPropertyPatchExists( object, propertyType ) {
+		if ( !object || !editor.patchEditor || !editor.patchEditor.getInteractionGraph ) {
+			return false;
+		}
+
+		const interactionGraph = editor.patchEditor.getInteractionGraph();
+		if ( !interactionGraph || !interactionGraph.nodes ) {
+			return false;
+		}
+
+		// Check if a property patch for this object already exists
+		const existingNode = Array.from( interactionGraph.nodes.values() ).find( node =>
+			node.sceneObject === object &&
+			node.type === 'ObjectProperty' &&
+			node.propertyType === propertyType
+		);
+
+		return !!existingNode;
+	}
+
+	function updatePropertyButtonState( button, object, propertyType ) {
+		const isActive = checkPropertyPatchExists( object, propertyType );
+
+		if ( isActive ) {
+			button.setClass( 'Button property-patch-button active' );
+		} else {
+			button.setClass( 'Button property-patch-button' );
+		}
+	}
+
+	function createPropertyPatchButton( propertyType ) {
+		const button = new UIButton( '' ).setWidth( '20px' ).setMarginLeft( '5px' );
+		button.setClass( 'Button property-patch-button' );
+
+		button.onClick( function() {
+			const object = editor.selected;
+			if ( !object || !editor.patchEditor ) return;
+
+			// Don't allow creating duplicate patches
+			if ( checkPropertyPatchExists( object, propertyType ) ) return;
+
+			editor.patchEditor.createPropertyPatch( object, propertyType );
+
+			// Update button state after creating patch
+			setTimeout(() => {
+				updateAllPropertyButtonStates();
+			}, 100);
+		});
+
+		return button;
+	}
+
+	// Store references to buttons for state updates
+	let positionArrow, rotationArrow, scaleArrow;
+
+	function updateAllPropertyButtonStates() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		if ( positionArrow ) updatePropertyButtonState( positionArrow, object, 'position' );
+		if ( rotationArrow ) updatePropertyButtonState( rotationArrow, object, 'rotation' );
+		if ( scaleArrow ) updatePropertyButtonState( scaleArrow, object, 'scale' );
+	}
+
 	// Actions
 
 	/*
@@ -116,14 +181,8 @@ function SidebarObject( editor ) {
 	const objectPositionY = new UINumber().setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 	const objectPositionZ = new UINumber().setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 
-	// Property patch arrow button for position
-	const positionArrow = new UIButton( '→' ).setWidth( '20px' ).setMarginLeft( '5px' );
-	positionArrow.onClick( function() {
-		const object = editor.selected;
-		if ( object && editor.patchEditor ) {
-			editor.patchEditor.createPropertyPatch( object, 'position' );
-		}
-	});
+	// Property patch button for position
+	positionArrow = createPropertyPatchButton( 'position' );
 
 	objectPositionRow.add( new UIText( strings.getKey( 'sidebar/object/position' ) ).setClass( 'Label' ) );
 	objectPositionRow.add( positionArrow );
@@ -138,14 +197,8 @@ function SidebarObject( editor ) {
 	const objectRotationY = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
 	const objectRotationZ = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
 
-	// Property patch arrow button for rotation
-	const rotationArrow = new UIButton( '→' ).setWidth( '20px' ).setMarginLeft( '5px' );
-	rotationArrow.onClick( function() {
-		const object = editor.selected;
-		if ( object && editor.patchEditor ) {
-			editor.patchEditor.createPropertyPatch( object, 'rotation' );
-		}
-	});
+	// Property patch button for rotation
+	rotationArrow = createPropertyPatchButton( 'rotation' );
 
 	objectRotationRow.add( new UIText( strings.getKey( 'sidebar/object/rotation' ) ).setClass( 'Label' ) );
 	objectRotationRow.add( rotationArrow );
@@ -160,14 +213,8 @@ function SidebarObject( editor ) {
 	const objectScaleY = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 	const objectScaleZ = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 
-	// Property patch arrow button for scale
-	const scaleArrow = new UIButton( '→' ).setWidth( '20px' ).setMarginLeft( '5px' );
-	scaleArrow.onClick( function() {
-		const object = editor.selected;
-		if ( object && editor.patchEditor ) {
-			editor.patchEditor.createPropertyPatch( object, 'scale' );
-		}
-	});
+	// Property patch button for scale
+	scaleArrow = createPropertyPatchButton( 'scale' );
 
 	objectScaleRow.add( new UIText( strings.getKey( 'sidebar/object/scale' ) ).setClass( 'Label' ) );
 	objectScaleRow.add( scaleArrow );
@@ -751,6 +798,7 @@ function SidebarObject( editor ) {
 
 			updateRows( object );
 			updateUI( object );
+			updateAllPropertyButtonStates();
 
 		} else {
 
@@ -758,6 +806,11 @@ function SidebarObject( editor ) {
 
 		}
 
+	} );
+
+	// Listen for interaction graph changes to update button states
+	signals.interactionGraphChanged.add( function () {
+		updateAllPropertyButtonStates();
 	} );
 
 	signals.objectChanged.add( function ( object ) {

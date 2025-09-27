@@ -1243,3 +1243,54 @@ div.shortcut-row input {
 	width: 120px;
 }
 
+/* Property Patch Button Styles */
+.property-patch-button {
+	width: 20px !important;
+	height: 20px !important;
+	border-radius: 6px !important;
+	border: 1px solid #555 !important;
+	background-color: #333 !important;
+	color: #333 !important;
+	font-size: 12px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	margin-left: 5px !important;
+	padding: 0 !important;
+	position: relative !important;
+	cursor: pointer !important;
+	transition: all 0.2s ease !important;
+}
+
+.property-patch-button::before {
+	content: '•' !important;
+	color: #888 !important;
+	font-size: 12px !important;
+	line-height: 1 !important;
+}
+
+.property-patch-button:hover {
+	background-color: #444 !important;
+	border-color: #666 !important;
+}
+
+.property-patch-button:hover::before {
+	color: #aaa !important;
+}
+
+/* Active state - yellow background when property patch exists */
+.property-patch-button.active {
+	background-color: #ffa500 !important;
+	border-color: #ff8c00 !important;
+	cursor: not-allowed !important;
+}
+
+.property-patch-button.active::before {
+	color: #333 !important;
+}
+
+.property-patch-button.active:hover {
+	background-color: #ffb733 !important;
+	border-color: #ffa500 !important;
+}
+

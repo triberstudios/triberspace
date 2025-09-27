@@ -36,6 +36,8 @@ export class PatchCanvas {
             nodeHeight: 80,
             socketSize: 8,
             socketHitRadius: 12, // Larger click area for easier socket interaction
+            snapDistance: 20, // Distance within which sockets snap when connecting
+            socketHoverColor: '#7db3f0', // Lighter blue for hover/snap target state
             connectionColor: '#666666',
             connectionSelectedColor: '#4a90e2',
             connectionWidth: 2,
@@ -52,6 +54,7 @@ export class PatchCanvas {
         this.connectionPreview = null;
         this.isReconnecting = false;
         this.reconnectingConnection = null;
+        this.snapTargetSocket = null; // Socket that connection is currently snapped to
     }
 
     init() {
@@ -199,10 +202,54 @@ export class PatchCanvas {
         const y = e.clientY - rect.top;
 
         if (this.isConnecting || this.isReconnecting) {
-            // Update connection preview
-            const worldX = (x - this.viewport.x) / this.viewport.zoom;
-            const worldY = (y - this.viewport.y) / this.viewport.zoom;
-            this.connectionPreview = { x: worldX, y: worldY };
+            // Check for nearby input sockets to snap to
+            let snapTarget = null;
+            let minDistance = this.styles.snapDistance / this.viewport.zoom;
+
+            // Search through all nodes for nearby input sockets
+            for (const [nodeId, node] of this.nodes) {
+                const startY = node.position.y + 35; // After title
+                const lineHeight = 20;
+
+                node.inputs.forEach((input, index) => {
+                    const socketX = node.position.x;
+                    const socketY = startY + (index * lineHeight);
+
+                    // Transform screen coordinates to world coordinates for distance calculation
+                    const worldMouseX = (x - this.viewport.x) / this.viewport.zoom;
+                    const worldMouseY = (y - this.viewport.y) / this.viewport.zoom;
+
+                    const distance = Math.sqrt(
+                        Math.pow(worldMouseX - socketX, 2) +
+                        Math.pow(worldMouseY - socketY, 2)
+                    );
+
+                    // Check if this socket is closer and within snap distance
+                    if (distance < minDistance) {
+                        snapTarget = {
+                            nodeId: nodeId,
+                            socketIndex: index,
+                            position: { x: socketX, y: socketY },
+                            socketType: 'input'
+                        };
+                        minDistance = distance;
+                    }
+                });
+            }
+
+            // Update snap target and connection preview
+            this.snapTargetSocket = snapTarget;
+
+            if (snapTarget) {
+                // Snap to the socket position
+                this.connectionPreview = { x: snapTarget.position.x, y: snapTarget.position.y };
+            } else {
+                // Free movement
+                const worldX = (x - this.viewport.x) / this.viewport.zoom;
+                const worldY = (y - this.viewport.y) / this.viewport.zoom;
+                this.connectionPreview = { x: worldX, y: worldY };
+            }
+
             this.render();
         } else if (this.isDragging && this.draggedNode) {
             const delta = {
@@ -253,6 +300,7 @@ export class PatchCanvas {
             this.connectingFrom = null;
             this.connectionPreview = null;
             this.reconnectingConnection = null;
+            this.snapTargetSocket = null;
             this.render();
         }
 
@@ -709,9 +757,27 @@ export class PatchCanvas {
         node.inputs.forEach((input, index) => {
             const y = startY + (index * lineHeight);
 
-            this.ctx.fillStyle = input.connection ? '#4a90e2' : '#666';
+            // Check if this socket is the current snap target
+            const isSnapTarget = this.snapTargetSocket &&
+                                 this.snapTargetSocket.nodeId === node.id &&
+                                 this.snapTargetSocket.socketIndex === index;
+
+            // Choose color based on state
+            let socketColor;
+            if (isSnapTarget) {
+                socketColor = this.styles.socketHoverColor; // Lighter blue for hover/snap
+            } else if (input.connection) {
+                socketColor = '#4a90e2'; // Connected blue
+            } else {
+                socketColor = '#666'; // Unconnected gray
+            }
+
+            this.ctx.fillStyle = socketColor;
             this.ctx.beginPath();
-            this.ctx.arc(node.position.x, y, socketSize / 2, 0, Math.PI * 2);
+
+            // Slightly larger radius when snapped for better visual feedback
+            const radius = isSnapTarget ? (socketSize / 2) * 1.2 : socketSize / 2;
+            this.ctx.arc(node.position.x, y, radius, 0, Math.PI * 2);
             this.ctx.fill();
         });
 
