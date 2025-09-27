@@ -890,214 +890,82 @@ This comprehensive system provides a solid foundation for building complex visua
 
 ---
 
-# **13. Critical CSS Injection System & Scrolling Architecture**
+# **13. Sidebar Scrolling Architecture (RESOLVED)**
 
-## **The Essential CSS Override System**
+## **Historical Context: The Scrolling Issue**
 
-The Three.js Editor has a fundamental architectural challenge: its built-in CSS system doesn't properly support modern scrollable content within the UITabbedPanel system. To solve this, a critical CSS injection system is implemented in `Sidebar.AI.js` that **must be preserved** for proper scrolling functionality.
+The Three.js Editor historically had incomplete CSS for the UITabbedPanel system that prevented proper scrolling in sidebar panels. This led to a complex JavaScript CSS injection workaround that was fragile and timing-dependent.
 
-### **The Core CSS Injection**
+### **The Original Problem**
 
-```javascript
-// In Sidebar.AI.js - CRITICAL for scrolling functionality
-const style = document.createElement('style');
-style.textContent = `
-    .TabbedPanel .Panels {
-        position: absolute;
-        top: 40px;
-        bottom: 0;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        height: calc(100% - 40px);
-        overflow: hidden;
-    }
-    #ai-panel {
-        overflow: hidden !important;
-    }
-`;
-document.head.appendChild(style);
-```
-
-### **Why This CSS Injection is Essential**
-
-**1. Three.js Editor Layout Limitations**
-- The UITabbedPanel system was designed for simple forms, not complex scrollable content
-- Default CSS doesn't properly calculate heights for content that extends beyond visible area
-- Tab headers (40px) need to be accounted for in layout calculations
-
-**2. CSS Cascade and Specificity Issues**
-- Three.js Editor has existing CSS that conflicts with modern layout needs
-- Static CSS files get overridden by the editor's internal styles
-- JavaScript-injected CSS has higher specificity and loads after editor styles
-
-**3. Runtime Override Necessity**
-- The injection happens **at runtime** when AI tab loads
-- This ensures it executes **after** the Three.js Editor's CSS has loaded
-- Provides **guaranteed override** of conflicting styles
-
-### **The Technical Solution Breakdown**
-
-**Height Calculation Fix:**
+The Three.js Editor's default CSS was missing critical properties:
 ```css
+/* ORIGINAL INCOMPLETE CSS */
 .TabbedPanel .Panels {
-    height: calc(100% - 40px);  /* Exact calculation for tab headers */
-    position: absolute;          /* Remove from normal document flow */
-    top: 40px;                  /* Start below 40px tab headers */
-    bottom: 0;                  /* Stretch to container bottom */
-    overflow: hidden;           /* Prevent panel-level scrolling */
+    position: absolute;
+    top: 40px;
+    display: block;
+    width: 100%;
+    /* Missing: height, bottom, overflow control */
 }
 ```
 
-**Panel-Specific Overrides:**
+This caused scrolling to break when panels contained modern content like chat interfaces or complex forms.
+
+### **The Solution (Implemented)**
+
+The issue has been properly fixed in `css/main.css`:
 ```css
-#ai-panel {
-    overflow: hidden !important;  /* Force override any conflicting styles */
+/* CORRECTED CSS */
+.TabbedPanel .Panels {
+    position: absolute;
+    top: 40px;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100% - 40px);
+    overflow: hidden;
 }
 ```
 
-## **Critical Lesson: Layout Persistence Interference**
+This provides:
+- **Proper height calculation** accounting for 40px tab headers
+- **Flexbox layout** for modern content
+- **Overflow control** for scrollable areas
+- **Full container stretch** with `bottom: 0`
 
-### **Root Cause Analysis of Scrolling Breakage**
+## **Lessons Learned**
 
-**The Breaking Commit (234ba6f):**
-- **Title**: "window and patch history saves"
-- **Impact**: Added layout persistence functionality to main.js (+43 lines)
-- **Result**: Broke scrolling across ALL sidebar tabs
+### **1. Root Cause Analysis**
+When UI issues arise in the Three.js Editor:
+- Check if the base CSS is complete
+- Look for missing height/overflow properties
+- Verify flexbox vs block display needs
 
-**The Interference Pattern:**
-The layout persistence code didn't remove the CSS injection, but **interfered with its effectiveness** by:
-
-1. **Timing Conflicts**: Layout restoration executing at wrong time relative to CSS injection
-2. **Inline Style Overrides**: Saved layout state setting inline styles that conflicted with injected CSS
-3. **DOM Manipulation Order**: Layout code changing DOM structure before CSS injection took effect
-
-### **Key Insight: Persistence vs. CSS Injection Order**
-
-```javascript
-// In main.js - Layout persistence code added in 234ba6f
-if (savedSidebarWidth) {
-    sidebarWrapper.style.width = savedSidebarWidth + 'px';
-}
-if (savedViewportHeight) {
-    viewportWrapper.style.height = savedViewportHeight + 'px';
-    viewportWrapper.style.flex = 'none';  // <- This type of change can interfere
-}
-```
-
-**The Problem:**
-- Layout persistence sets **inline styles** on container elements
-- These inline styles have higher CSS specificity than injected stylesheets
-- Layout changes can modify DOM structure before CSS injection executes
-- Timing mismatches can cause CSS injection to target wrong elements
-
-## **Debugging Methodology for CSS/Layout Issues**
-
-### **1. Systematic Commit Analysis**
-When layout breaks mysteriously:
+### **2. Debugging Approach**
 ```bash
-# Find the exact breaking commit
+# Use git bisect to find breaking commits
 git bisect start
 git bisect bad [broken-commit]
-git bisect good [last-working-commit]
+git bisect good [working-commit]
 
-# Check commit differences
-git show [breaking-commit] --stat
-git diff [working-commit]..[breaking-commit] -- main.js
+# Check what changed
+git show [commit] --stat
 ```
 
-### **2. CSS Injection Verification**
-```javascript
-// Debug CSS injection presence
-console.log('Injected styles:', document.querySelectorAll('style').length);
-console.log('TabbedPanel styles:', getComputedStyle(document.querySelector('.TabbedPanel .Panels')));
-```
+### **3. Best Practices**
+- **Fix CSS in CSS files**, not JavaScript
+- **Test all tabs** after layout changes
+- **Avoid inline styles** that override CSS
+- **Document fixes** for future developers
 
-### **3. Layout Persistence Debug Pattern**
-```javascript
-// Check for layout interference
-console.log('Layout restoration:', {
-    sidebarWidth: savedSidebarWidth,
-    viewportHeight: savedViewportHeight,
-    timing: performance.now()
-});
+## **Current State**
 
-// Verify DOM state after restoration
-setTimeout(() => {
-    console.log('DOM state after layout restoration:', {
-        panelsHeight: document.querySelector('.TabbedPanel .Panels')?.style.height,
-        computedHeight: getComputedStyle(document.querySelector('.TabbedPanel .Panels')).height
-    });
-}, 100);
-```
+The scrolling system now works correctly without any JavaScript workarounds. The CSS properly handles:
+- All sidebar tabs (AI, Scene, Settings)
+- Dynamic content heights
+- Scrollable areas within panels
+- Layout persistence without conflicts
 
-## **Prevention Guidelines**
-
-### **1. When Adding Layout Persistence**
-- **Test scrolling** in all sidebar tabs after implementation
-- **Verify CSS injection timing** - ensure it executes after layout restoration
-- **Check for inline style conflicts** - avoid setting styles that override injected CSS
-- **Use CSS classes** instead of inline styles when possible
-
-### **2. When Modifying Main Layout**
-- **Preserve DOM structure** that CSS injection targets (`.TabbedPanel .Panels`)
-- **Maintain element hierarchy** - don't restructure containers unexpectedly
-- **Test with empty cache** - layout persistence can mask issues during development
-
-### **3. Code Review Checklist**
-For any changes to main.js, Sidebar.js, or layout-related files:
-- [ ] Does this modify DOM structure?
-- [ ] Does this set inline styles on containers?
-- [ ] Does this change element positioning or sizing?
-- [ ] Does this affect CSS loading order or timing?
-- [ ] Have you tested scrolling in AI, Scene, and Settings tabs?
-
-## **Recovery Patterns**
-
-### **1. The Reset and Restore Method**
-When complex layout issues arise:
-1. **Reset to known working commit** (like 941e750)
-2. **Incrementally restore features** one commit at a time
-3. **Test scrolling after each addition**
-4. **Identify the specific change** that breaks functionality
-
-### **2. CSS Injection Reinforcement**
-If CSS injection becomes unreliable:
-```javascript
-// Enhanced CSS injection with debugging
-function injectCriticalCSS() {
-    const existingStyle = document.querySelector('#critical-tabbed-panel-css');
-    if (existingStyle) {
-        existingStyle.remove();
-    }
-
-    const style = document.createElement('style');
-    style.id = 'critical-tabbed-panel-css';
-    style.textContent = `
-        .TabbedPanel .Panels {
-            position: absolute !important;
-            top: 40px !important;
-            bottom: 0 !important;
-            height: calc(100% - 40px) !important;
-            overflow: hidden !important;
-        }
-    `;
-    document.head.appendChild(style);
-
-    console.log('Critical CSS injected at:', performance.now());
-}
-
-// Inject immediately and after DOM changes
-injectCriticalCSS();
-setTimeout(injectCriticalCSS, 100);
-```
-
-## **Key Takeaways**
-
-1. **CSS Injection is Non-Negotiable**: The JavaScript CSS injection in Sidebar.AI.js is **essential infrastructure**, not optional styling
-2. **Layout Persistence Must Be Careful**: Any code that modifies layout timing or DOM structure can break scrolling
-3. **Timing Matters**: The order of CSS injection vs. layout restoration is critical
-4. **Test Comprehensively**: Always test scrolling in all tabs after layout changes
-5. **Incremental Debugging**: When multiple changes interact, use systematic commit analysis
-
-This system represents a **necessary hack** to work around fundamental limitations in the Three.js Editor's layout architecture. Preserve it carefully and test rigorously when making related changes.
+No special handling or CSS injection is required anymore - the system works as originally intended.

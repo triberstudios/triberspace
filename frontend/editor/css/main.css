@@ -155,8 +155,12 @@ textarea, input { outline: none; } /* osx */
 	.TabbedPanel .Panels {
 		position: absolute;
 		top: 40px;
-		display: block;
+		bottom: 0;
+		display: flex;
+		flex-direction: column;
 		width: 100%;
+		height: calc(100% - 40px);
+		overflow: hidden;
 	}
 
 /* Listbox */

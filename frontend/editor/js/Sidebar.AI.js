@@ -8,26 +8,9 @@ function SidebarAI( editor ) {
 	const container = new UIPanel();
 	container.setId( 'ai-panel' );
 	
-	// Basic positioning works! The issue must be in the content structure.
-	
-	// Fix the TabbedPanel Panels layout and prevent whole-panel scrolling
-	const style = document.createElement('style');
-	style.textContent = `
-		.TabbedPanel .Panels {
-			position: absolute;
-			top: 40px;
-			bottom: 0;
-			display: flex;
-			flex-direction: column;
-			width: 100%;
-			height: calc(100% - 40px);
-			overflow: hidden;
-		}
-		#ai-panel {
-			overflow: hidden !important;
-		}
-	`;
-	document.head.appendChild(style);
+	// CSS injection no longer needed - fixed properly in main.css!
+	// The .TabbedPanel .Panels CSS now includes proper height calculation,
+	// flexbox layout, and overflow control.
 
 
 	// Initialize AI system
