@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
+import { SketchfabBrowser } from './sketchfab/SketchfabBrowser.js';
 
 function MenubarFile( editor ) {
 
@@ -206,6 +207,63 @@ function MenubarFile( editor ) {
 	option.onClick( function () {
 
 		fileInput.click();
+
+	} );
+	options.add( option );
+
+	// Sketchfab Import
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( 'Import from Sketchfab' );
+	option.onClick( function () {
+
+		// Create and show Sketchfab browser
+		const sketchfabBrowser = new SketchfabBrowser( editor );
+		const browserWindow = document.createElement( 'div' );
+		browserWindow.style.cssText = `
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.8);
+			z-index: 1000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		`;
+
+		const browserContainer = document.createElement( 'div' );
+		browserContainer.style.cssText = `
+			width: 80%;
+			height: 80%;
+			background: #2a2a2a;
+			border-radius: 8px;
+			overflow: hidden;
+			position: relative;
+		`;
+
+		// Add close button
+		const closeButton = document.createElement( 'button' );
+		closeButton.textContent = '×';
+		closeButton.style.cssText = `
+			position: absolute;
+			top: 10px;
+			right: 15px;
+			background: none;
+			border: none;
+			color: white;
+			font-size: 24px;
+			cursor: pointer;
+			z-index: 1001;
+		`;
+		closeButton.onclick = () => document.body.removeChild( browserWindow );
+
+		browserContainer.appendChild( sketchfabBrowser.dom );
+		browserContainer.appendChild( closeButton );
+		browserWindow.appendChild( browserContainer );
+		document.body.appendChild( browserWindow );
 
 	} );
 	options.add( option );

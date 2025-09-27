@@ -51,7 +51,7 @@ const viewportWrapper = document.createElement( 'div' );
 viewportWrapper.className = 'viewport-wrapper panel-container';
 viewportWrapper.style.cssText = `
 	flex: none;
-	height: calc(100% - 300px);
+	height: calc(100% - 56px);
 	display: flex;
 	flex-direction: column;
 	min-height: 200px;
@@ -101,7 +101,6 @@ sidebarWrapper.style.width = '350px';
 const sidebar = new Sidebar( editor );
 sidebarWrapper.appendChild( sidebar.dom );
 mainContent.appendChild( sidebarWrapper );
-
 
 // Restore saved layout state
 const savedSidebarWidth = editor.config.getKey( 'layout/sidebarWidth' );
@@ -244,6 +243,9 @@ document.body.appendChild( resizer.dom );
 const interactionEditor = new InteractionEditorWindow( editor );
 leftContainer.appendChild( interactionEditor.getContainer() );
 
+// Expose interaction editor globally for menu access
+window.interactionEditor = interactionEditor;
+
 // Set the interaction editor reference in the editor for persistence
 editor.interactionEditor = interactionEditor;
 
@@ -254,18 +256,6 @@ Object.defineProperty(editor, 'patchEditor', {
 			this.interactionEditor.interactionEditor : null;
 	}
 });
-
-// Expose interaction editor globally for menu access
-window.interactionEditor = interactionEditor;
-
-// Prevent browser back navigation at document level with capture phase
-// This intercepts ALL wheel events before they can trigger browser navigation
-document.addEventListener('wheel', (e) => {
-	// Only prevent default within the editor interface
-	if (editorContainer.contains(e.target)) {
-		e.preventDefault();
-	}
-}, { passive: false, capture: true });
 
 
 //
@@ -282,35 +272,25 @@ if ( state !== undefined ) {
 
 } else {
 
-	// First time user - add default objects to scene
+	// Create default scene setup for new users
+	const geometry = new THREE.BoxGeometry( 1, 1, 1, 1, 1, 1 );
+	const mesh = new THREE.Mesh( geometry, new THREE.MeshStandardMaterial() );
+	mesh.name = 'Cube';
+	mesh.position.set( 0, 0.5, 0 );
 
-	// Create a basic cube
-	const cubeGeometry = new THREE.BoxGeometry( 1, 1, 1 );
-	const cubeMaterial = new THREE.MeshStandardMaterial( { color: 0xcccccc } );
-	const cube = new THREE.Mesh( cubeGeometry, cubeMaterial );
-	cube.name = 'Cube';
-	cube.position.set( 0, 0.5, 0 );
+	// Add default lighting
+	const light = new THREE.DirectionalLight( 0xffffff, 1 );
+	light.name = 'DirectionalLight';
+	light.position.set( 5, 8, 3 );
 
-	// Create a directional light
-	const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
-	directionalLight.name = 'DirectionalLight';
-	directionalLight.position.set( 5, 8, 3 );
-	directionalLight.castShadow = true;
-	directionalLight.shadow.mapSize.width = 2048;
-	directionalLight.shadow.mapSize.height = 2048;
-	directionalLight.shadow.camera.near = 0.1;
-	directionalLight.shadow.camera.far = 50;
-	directionalLight.shadow.camera.left = -10;
-	directionalLight.shadow.camera.right = 10;
-	directionalLight.shadow.camera.top = 10;
-	directionalLight.shadow.camera.bottom = -10;
+	editor.execute( new AddObjectCommand( editor, mesh ) );
+	editor.execute( new AddObjectCommand( editor, light ) );
+	editor.select( mesh );
 
-	// Add objects to scene using the editor's command system
-	editor.execute( new AddObjectCommand( editor, cube ) );
-	editor.execute( new AddObjectCommand( editor, directionalLight ) );
-
-	// Create default spinning cube interactions
-	editor.createDefaultInteractions();
+	// Create default spinning interactions for the cube
+	setTimeout(() => {
+		editor.createDefaultInteractions();
+	}, 100);
 
 }
 
@@ -367,7 +347,6 @@ timeout = setTimeout( function () {
 	signals.sceneGraphChanged.add( saveState );
 	signals.scriptChanged.add( saveState );
 	signals.historyChanged.add( saveState );
-	signals.interactionGraphChanged.add( saveState );
 
 } );
 
@@ -409,12 +388,6 @@ function onWindowResize() {
 window.addEventListener( 'resize', onWindowResize );
 
 onWindowResize();
-
-// Removed createSpinningCube function - users can create objects manually via Add menu
-
-// Removed setupCubePatchAnimation function - users can connect nodes manually
-
-// Removed auto-creation of spinning cube - user can create objects manually
 
 //
 
