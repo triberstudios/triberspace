@@ -693,8 +693,9 @@ export class PatchCanvas {
         // Draw node title
         this.ctx.fillStyle = this.styles.nodeTextColor;
         this.ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        const displayName = node.getDisplayName ? node.getDisplayName() : node.type;
         this.ctx.fillText(
-            node.type,
+            displayName,
             node.position.x + 8,
             node.position.y + 20
         );
@@ -1119,6 +1120,105 @@ export class PatchCanvas {
             viewportY: this.viewport.y,
             zoom: this.viewport.zoom
         };
+    }
+
+    // Focus on a specific node by smoothly panning/zooming to center it
+    focusOnNode(nodeId) {
+        console.log('🎬 focusOnNode called with nodeId:', nodeId);
+
+        if (!nodeId) {
+            console.log('❌ focusOnNode early exit: no nodeId provided');
+            return;
+        }
+
+        // Find the node in our local nodes map (which gets populated by CustomInteractionEditor)
+        const node = this.nodes.get(nodeId);
+        console.log('🔎 Found node for focus:', node);
+        console.log('📊 Available nodes in canvas:', Array.from(this.nodes.keys()));
+
+        if (!node) {
+            console.log('❌ Node not found with id:', nodeId);
+            console.log('Available node IDs:', Array.from(this.nodes.keys()));
+            return;
+        }
+
+        console.log('✅ Starting focus animation for node at position:', node.position);
+
+        // Get node bounds for proper centering
+        let nodeBounds;
+        if (node.getBounds && typeof node.getBounds === 'function') {
+            nodeBounds = node.getBounds();
+            console.log('📐 Using node.getBounds():', nodeBounds);
+        } else {
+            // Fall back to default dimensions
+            nodeBounds = {
+                x: node.position.x,
+                y: node.position.y,
+                width: this.styles.nodeMinWidth || 120,
+                height: this.styles.nodeHeight || 80
+            };
+            console.log('📐 Using default bounds:', nodeBounds);
+        }
+
+        // Calculate the visual center of the node (not just top-left corner)
+        const nodeCenterX = nodeBounds.x + (nodeBounds.width / 2);
+        const nodeCenterY = nodeBounds.y + (nodeBounds.height / 2);
+        console.log('🎯 Node center calculated:', { nodeCenterX, nodeCenterY });
+
+        // Get canvas dimensions
+        const rect = this.container.getBoundingClientRect();
+        const canvasWidth = rect.width;
+        const canvasHeight = rect.height;
+
+        // Calculate where to center the node (center of canvas)
+        const targetX = canvasWidth / 2;
+        const targetY = canvasHeight / 2;
+
+        // Set target zoom level for better detail view (1.4x zoom)
+        const targetZoom = 1.4;
+        console.log('🔍 Target zoom level:', targetZoom);
+
+        // Calculate the viewport position needed to center the node at the target zoom
+        // screenX = worldX * zoom + viewportX
+        // So: viewportX = screenX - worldX * zoom
+        const newViewportX = targetX - nodeCenterX * targetZoom;
+        const newViewportY = targetY - nodeCenterY * targetZoom;
+
+        // Smoothly animate to the new position and zoom
+        const duration = 500; // 500ms animation
+        const startTime = performance.now();
+        const startX = this.viewport.x;
+        const startY = this.viewport.y;
+        const startZoom = this.viewport.zoom;
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Use easeOutQuad for smooth animation
+            const eased = 1 - (1 - progress) * (1 - progress);
+
+            // Animate both position and zoom simultaneously
+            this.viewport.x = startX + (newViewportX - startX) * eased;
+            this.viewport.y = startY + (newViewportY - startY) * eased;
+            this.viewport.zoom = startZoom + (targetZoom - startZoom) * eased;
+
+            this.render();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Save final viewport state including zoom
+                this.saveViewportState();
+                console.log('🎬 Focus animation completed!', {
+                    finalX: this.viewport.x,
+                    finalY: this.viewport.y,
+                    finalZoom: this.viewport.zoom
+                });
+            }
+        };
+
+        requestAnimationFrame(animate);
     }
 
     destroy() {

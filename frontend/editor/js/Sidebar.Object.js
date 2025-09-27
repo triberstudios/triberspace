@@ -55,23 +55,97 @@ function SidebarObject( editor ) {
 		}
 	}
 
+	function focusOnPropertyPatch( object, propertyType ) {
+		console.log('🔍 focusOnPropertyPatch called:', { object: object?.name, propertyType });
+
+		if ( !object || !editor.patchEditor || !editor.patchEditor.getInteractionGraph ) {
+			console.log('❌ Early exit - missing requirements:', {
+				object: !!object,
+				patchEditor: !!editor.patchEditor,
+				getInteractionGraph: !!(editor.patchEditor && editor.patchEditor.getInteractionGraph)
+			});
+			return;
+		}
+
+		const interactionGraph = editor.patchEditor.getInteractionGraph();
+		console.log('📊 InteractionGraph:', interactionGraph);
+
+		if ( !interactionGraph || !interactionGraph.nodes ) {
+			console.log('❌ No interaction graph or nodes:', {
+				interactionGraph: !!interactionGraph,
+				nodes: !!(interactionGraph && interactionGraph.nodes)
+			});
+			return;
+		}
+
+		console.log('🔎 Searching through nodes:', interactionGraph.nodes.size, 'total nodes');
+
+		// Find the existing property patch node
+		const existingNode = Array.from( interactionGraph.nodes.values() ).find( node => {
+			const matches = node.sceneObject === object &&
+				node.type === 'ObjectProperty' &&
+				node.propertyType === propertyType;
+			console.log('🎯 Checking node:', {
+				nodeId: node.id,
+				nodeType: node.type,
+				nodePropertyType: node.propertyType,
+				sceneObjectMatch: node.sceneObject === object,
+				matches
+			});
+			return matches;
+		});
+
+		console.log('🎯 Found existing node:', existingNode);
+
+		if ( existingNode && editor.patchEditor.canvas ) {
+			console.log('✅ Calling focusOnNode with:', existingNode.id);
+			console.log('📍 Canvas object:', editor.patchEditor.canvas);
+			// Focus on the node using the focusOnNode method we added to PatchCanvas
+			editor.patchEditor.canvas.focusOnNode( existingNode.id );
+		} else {
+			console.log('❌ Cannot focus - missing requirements:', {
+				existingNode: !!existingNode,
+				canvas: !!(editor.patchEditor && editor.patchEditor.canvas)
+			});
+		}
+	}
+
 	function createPropertyPatchButton( propertyType ) {
 		const button = new UIButton( '' ).setWidth( '20px' ).setMarginLeft( '5px' );
 		button.setClass( 'Button property-patch-button' );
 
 		button.onClick( function() {
+			console.log('🔘 Property patch button clicked for:', propertyType);
+
 			const object = editor.selected;
-			if ( !object || !editor.patchEditor ) return;
+			console.log('📦 Selected object:', object?.name);
 
-			// Don't allow creating duplicate patches
-			if ( checkPropertyPatchExists( object, propertyType ) ) return;
+			if ( !object || !editor.patchEditor ) {
+				console.log('❌ Button click early exit:', {
+					object: !!object,
+					patchEditor: !!editor.patchEditor
+				});
+				return;
+			}
 
-			editor.patchEditor.createPropertyPatch( object, propertyType );
+			// Check if a patch already exists
+			const patchExists = checkPropertyPatchExists( object, propertyType );
+			console.log('🔍 Patch exists check:', patchExists);
 
-			// Update button state after creating patch
-			setTimeout(() => {
-				updateAllPropertyButtonStates();
-			}, 100);
+			if ( patchExists ) {
+				console.log('🎯 Patch exists - calling focusOnPropertyPatch');
+				// If patch exists, focus on it in the interaction editor
+				focusOnPropertyPatch( object, propertyType );
+			} else {
+				console.log('➕ No patch exists - creating new one');
+				// If no patch exists, create one (original behavior)
+				editor.patchEditor.createPropertyPatch( object, propertyType );
+
+				// Update button state after creating patch (original behavior)
+				setTimeout(() => {
+					updateAllPropertyButtonStates();
+				}, 100);
+			}
 		});
 
 		return button;

@@ -1282,7 +1282,7 @@ div.shortcut-row input {
 .property-patch-button.active {
 	background-color: #ffa500 !important;
 	border-color: #ff8c00 !important;
-	cursor: not-allowed !important;
+	cursor: pointer !important;
 }
 
 .property-patch-button.active::before {
