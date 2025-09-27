@@ -19,7 +19,7 @@ function SketchfabBrowser( editor ) {
 	let isLoading = false;
 
 	const container = new UIPanel();
-	container.setClass( 'sidebar' );
+	container.setClass( 'sketchfab-modal-content' );
 	container.setId( 'sketchfab-browser' );
 
 	// Header

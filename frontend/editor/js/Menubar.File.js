@@ -260,7 +260,7 @@ function MenubarFile( editor ) {
 		`;
 		closeButton.onclick = () => document.body.removeChild( browserWindow );
 
-		browserContainer.appendChild( sketchfabBrowser.dom );
+		browserContainer.appendChild( sketchfabBrowser.container.dom );
 		browserContainer.appendChild( closeButton );
 		browserWindow.appendChild( browserContainer );
 		document.body.appendChild( browserWindow );

@@ -347,6 +347,7 @@ timeout = setTimeout( function () {
 	signals.sceneGraphChanged.add( saveState );
 	signals.scriptChanged.add( saveState );
 	signals.historyChanged.add( saveState );
+	signals.interactionGraphChanged.add( saveState );
 
 } );
 
