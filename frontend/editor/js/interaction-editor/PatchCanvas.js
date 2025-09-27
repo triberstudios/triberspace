@@ -35,6 +35,7 @@ export class PatchCanvas {
             nodeMinWidth: 120,
             nodeHeight: 80,
             socketSize: 8,
+            socketHitRadius: 12, // Larger click area for easier socket interaction
             connectionColor: '#666666',
             connectionSelectedColor: '#4a90e2',
             connectionWidth: 2,
@@ -49,6 +50,8 @@ export class PatchCanvas {
         this.isConnecting = false;
         this.connectingFrom = null;
         this.connectionPreview = null;
+        this.isReconnecting = false;
+        this.reconnectingConnection = null;
     }
 
     init() {
@@ -130,6 +133,40 @@ export class PatchCanvas {
             return;
         }
 
+        if (clickedSocket && clickedSocket.socketType === 'connected-input') {
+            // Start reconnection from connected input socket
+            this.isReconnecting = true;
+            this.reconnectingConnection = clickedSocket.connection;
+
+            // Find the source of this connection to get the output position
+            const sourceConnection = this.connections.find(conn =>
+                conn.toNodeId === clickedSocket.nodeId &&
+                conn.toInputIndex === clickedSocket.socketIndex
+            );
+
+            if (sourceConnection) {
+                const sourceNode = this.nodes.get(sourceConnection.fromNodeId);
+                if (sourceNode) {
+                    const nodeWidth = this.getNodeWidth(sourceNode);
+                    const startY = sourceNode.position.y + 35;
+                    const lineHeight = 20;
+                    const outputSocketY = startY + (sourceConnection.fromOutputIndex * lineHeight);
+
+                    this.connectingFrom = {
+                        nodeId: sourceConnection.fromNodeId,
+                        socketIndex: sourceConnection.fromOutputIndex,
+                        position: { x: sourceNode.position.x + nodeWidth, y: outputSocketY }
+                    };
+                    this.connectionPreview = { x: clickedSocket.position.x, y: clickedSocket.position.y };
+
+                    // Delete the existing connection immediately
+                    this.emit('connectionDelete', sourceConnection.id);
+                    this.emit('connectionStart', this.connectingFrom);
+                }
+            }
+            return;
+        }
+
         // Priority 2: Check for connection click (for selection)
         const clickedConnection = this.getConnectionAtPosition(x, y);
         if (clickedConnection) {
@@ -161,7 +198,7 @@ export class PatchCanvas {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (this.isConnecting) {
+        if (this.isConnecting || this.isReconnecting) {
             // Update connection preview
             const worldX = (x - this.viewport.x) / this.viewport.zoom;
             const worldY = (y - this.viewport.y) / this.viewport.zoom;
@@ -190,7 +227,7 @@ export class PatchCanvas {
     }
 
     onMouseUp(e) {
-        if (this.isConnecting) {
+        if (this.isConnecting || this.isReconnecting) {
             // Check if we're dropping on a valid input socket
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -205,12 +242,17 @@ export class PatchCanvas {
                     toNodeId: targetSocket.nodeId,
                     toInputIndex: targetSocket.socketIndex
                 });
+            } else if (this.isReconnecting && this.reconnectingConnection) {
+                // If we were reconnecting but didn't drop on a valid input, delete the connection
+                this.emit('connectionDelete', this.reconnectingConnection.id);
             }
 
             // Reset connection state
             this.isConnecting = false;
+            this.isReconnecting = false;
             this.connectingFrom = null;
             this.connectionPreview = null;
+            this.reconnectingConnection = null;
             this.render();
         }
 
@@ -292,7 +334,7 @@ export class PatchCanvas {
         // Check all nodes for socket hits
         for (const node of this.nodes.values()) {
             const nodeWidth = this.getNodeWidth(node);
-            const socketRadius = this.styles.socketSize / 2;
+            const socketHitRadius = this.styles.socketHitRadius;
             const startY = node.position.y + 35; // After title (matches new layout)
             const lineHeight = 20;
 
@@ -306,12 +348,14 @@ export class PatchCanvas {
                     Math.pow(worldY - socketY, 2)
                 );
 
-                if (distance <= socketRadius) {
+                if (distance <= socketHitRadius) {
+                    const input = node.inputs[i];
                     return {
                         nodeId: node.id,
-                        socketType: 'input',
+                        socketType: input.connection ? 'connected-input' : 'input',
                         socketIndex: i,
-                        position: { x: socketX, y: socketY }
+                        position: { x: socketX, y: socketY },
+                        connection: input.connection
                     };
                 }
             }
@@ -326,7 +370,7 @@ export class PatchCanvas {
                     Math.pow(worldY - socketY, 2)
                 );
 
-                if (distance <= socketRadius) {
+                if (distance <= socketHitRadius) {
                     return {
                         nodeId: node.id,
                         socketType: 'output',
@@ -532,8 +576,8 @@ export class PatchCanvas {
             this.drawConnection(connection);
         }
 
-        // Draw connection preview if connecting
-        if (this.isConnecting && this.connectionPreview) {
+        // Draw connection preview if connecting or reconnecting
+        if ((this.isConnecting || this.isReconnecting) && this.connectionPreview) {
             this.drawConnectionPreview();
         }
 

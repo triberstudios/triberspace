@@ -285,9 +285,9 @@ if ( state !== undefined ) {
 
 	editor.execute( new AddObjectCommand( editor, mesh ) );
 	editor.execute( new AddObjectCommand( editor, light ) );
-	editor.select( mesh );
 
 	// Create default spinning interactions for the cube
+	// Delay to ensure interaction editor is fully initialized and sized
 	setTimeout(() => {
 		editor.createDefaultInteractions();
 	}, 100);

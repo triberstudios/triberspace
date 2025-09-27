@@ -660,23 +660,44 @@ Editor.prototype = {
 		if (!cubeObject) return; // No cube found
 
 		try {
+			// Ensure canvas is properly sized first
+			if (this.interactionEditor.interactionEditor.resize) {
+				this.interactionEditor.interactionEditor.resize();
+			}
+
 			// Calculate center position for the pair of nodes
 			const canvas = interactionGraph.getCanvasViewport();
+
+			// Debug logging to understand viewport values
+			console.log('Canvas viewport values:', {
+				viewportX: canvas.viewportX,
+				viewportY: canvas.viewportY,
+				width: canvas.width,
+				height: canvas.height,
+				zoom: canvas.zoom
+			});
+
 			const centerX = (-canvas.viewportX / canvas.zoom) + (canvas.width / canvas.zoom / 2);
-			const centerY = (-canvas.viewportY / canvas.zoom) + (canvas.height / canvas.zoom / 2) - 25;
+			const centerY = (-canvas.viewportY / canvas.zoom) + (canvas.height / canvas.zoom / 2);
+
+			console.log('Calculated center position:', { centerX, centerY });
 
 			// Position nodes as a centered pair (SpinNode on left, ObjectRotationNode on right)
 			const spacing = 350; // Same spacing as smart positioning uses
+			const nodeHeight = 80; // Default node height from PatchNode
 			const spinX = centerX - spacing / 2 - 75; // Offset left by half spacing + node width/2
 			const rotationX = centerX + spacing / 2 - 75; // Offset right by half spacing + node width/2
+			const adjustedY = centerY - nodeHeight / 2; // Center nodes by offsetting by half their height
+
+			console.log('Final node positions:', { spinX, rotationX, y: adjustedY });
 
 			// Create and add first node (SpinNode)
-			const spinNode = new SpinNode(spinX, centerY);
+			const spinNode = new SpinNode(spinX, adjustedY);
 			spinNode.setInputValue('speed', 5); // 5 RPM
 			interactionGraph.addNode(spinNode);
 
 			// Create and add second node (ObjectRotationNode)
-			const rotationNode = new ObjectRotationNode(cubeObject, rotationX, centerY, this);
+			const rotationNode = new ObjectRotationNode(cubeObject, rotationX, adjustedY, this);
 			interactionGraph.addNode(rotationNode);
 
 			// Connect SpinNode rotation output to ObjectRotationNode X and Y inputs

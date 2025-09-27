@@ -153,6 +153,10 @@ export class CustomInteractionEditor {
             this.createConnection(connectionData);
         });
 
+        this.canvas.on('connectionDelete', (connectionId) => {
+            this.deleteConnection(connectionId);
+        });
+
         // Store original position when drag starts
         this.canvas.on('nodeDragStart', (nodeId) => {
             const node = this.nodes.get(nodeId);
@@ -303,33 +307,37 @@ export class CustomInteractionEditor {
         this.selectedNodes.clear();
     }
 
+    deleteConnection(connectionId) {
+        // Use command system for undoable connection deletion
+        if (this.editor && this.editor.history && this.interactionGraph) {
+            // Find the connection data to store for restoration
+            const connection = this.interactionGraph.connections.find(conn => conn.id === connectionId);
+            if (connection) {
+                const connectionData = {
+                    fromNodeId: connection.fromNodeId,
+                    fromOutputIndex: connection.fromOutputIndex,
+                    toNodeId: connection.toNodeId,
+                    toInputIndex: connection.toInputIndex
+                };
+                const command = new RemoveInteractionConnectionCommand(this.editor, connectionId, connectionData);
+                this.editor.history.execute(command);
+            }
+        } else {
+            // Fallback: Try InteractionGraph first (proper way)
+            if (this.interactionGraph) {
+                this.interactionGraph.removeConnection(connectionId);
+            } else {
+                this.canvas.removeConnection(connectionId);
+            }
+            this.canvas.render();
+        }
+    }
+
     deleteSelectedConnections() {
         for (const connectionId of this.selectedConnections) {
-            // Use command system for undoable connection deletion
-            if (this.editor && this.editor.history && this.interactionGraph) {
-                // Find the connection data to store for restoration
-                const connection = this.interactionGraph.connections.find(conn => conn.id === connectionId);
-                if (connection) {
-                    const connectionData = {
-                        fromNodeId: connection.fromNodeId,
-                        fromOutputIndex: connection.fromOutputIndex,
-                        toNodeId: connection.toNodeId,
-                        toInputIndex: connection.toInputIndex
-                    };
-                    const command = new RemoveInteractionConnectionCommand(this.editor, connectionId, connectionData);
-                    this.editor.history.execute(command);
-                }
-            } else {
-                // Fallback: Try InteractionGraph first (proper way)
-                if (this.interactionGraph) {
-                    this.interactionGraph.removeConnection(connectionId);
-                } else {
-                    this.canvas.removeConnection(connectionId);
-                }
-            }
+            this.deleteConnection(connectionId);
         }
         this.selectedConnections.clear();
-        this.canvas.render();
     }
 
     resize() {
