@@ -38,11 +38,14 @@ export class SpinNode extends PatchNode {
         // Apply direction
         const direction = clockwise ? 1 : -1;
 
-        // Calculate current rotation based on elapsed time
-        const rotation = elapsedSeconds * radiansPerSecond * direction;
+        // Calculate current rotation based on elapsed time (in radians)
+        const rotationRadians = elapsedSeconds * radiansPerSecond * direction;
 
-        // Update output
-        this.setOutputValue('rotation', rotation);
+        // Convert to degrees for user-friendly output
+        const rotationDegrees = rotationRadians * (180 / Math.PI);
+
+        // Update output in degrees
+        this.setOutputValue('rotation', rotationDegrees);
     }
 
 

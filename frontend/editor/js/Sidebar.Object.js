@@ -89,6 +89,110 @@ function SidebarObject( editor ) {
 		if ( scaleArrow ) updatePropertyButtonState( scaleArrow, object, 'scale' );
 	}
 
+	// Helper function to normalize angles to 0-360 degree range
+	function normalizeAngle( angleDegrees ) {
+		// Normalize to 0-360 range and round to 2 decimal places
+		let normalized = angleDegrees % 360;
+		if ( normalized < 0 ) normalized += 360;
+		return Math.round( normalized * 100 ) / 100;
+	}
+
+	// Real-time update variables
+	let lastUpdateTime = 0;
+	const UPDATE_THROTTLE_MS = 100; // Update every 100ms max
+	let previousValues = {
+		position: { x: null, y: null, z: null },
+		rotation: { x: null, y: null, z: null },
+		scale: { x: null, y: null, z: null }
+	};
+
+	// Input state tracking for manual editing detection
+	let isManuallyEditing = {
+		position: { x: false, y: false, z: false },
+		rotation: { x: false, y: false, z: false },
+		scale: { x: false, y: false, z: false }
+	};
+
+	// Function to check if object has active property patches
+	function hasActivePropertyPatches( object ) {
+		if ( !object || !editor.patchEditor || !editor.patchEditor.getInteractionGraph ) {
+			return false;
+		}
+		const interactionGraph = editor.patchEditor.getInteractionGraph();
+		return Array.from( interactionGraph.nodes.values() ).some( node =>
+			node.sceneObject === object &&
+			node.type === 'ObjectProperty' &&
+			( node.propertyType === 'position' || node.propertyType === 'rotation' || node.propertyType === 'scale' )
+		);
+	}
+
+	// Throttled real-time update function
+	function throttledUpdateUI() {
+		const now = Date.now();
+		if ( now - lastUpdateTime < UPDATE_THROTTLE_MS ) return;
+		lastUpdateTime = now;
+
+		const object = editor.selected;
+		if ( !object ) return;
+
+		// Only update if there are active property patches for performance
+		if ( !hasActivePropertyPatches( object ) ) return;
+
+		// Check position changes
+		const newPosX = Math.round( object.position.x * 1000 ) / 1000;
+		const newPosY = Math.round( object.position.y * 1000 ) / 1000;
+		const newPosZ = Math.round( object.position.z * 1000 ) / 1000;
+
+		if ( newPosX !== previousValues.position.x ) {
+			objectPositionX.setValue( newPosX );
+			previousValues.position.x = newPosX;
+		}
+		if ( newPosY !== previousValues.position.y ) {
+			objectPositionY.setValue( newPosY );
+			previousValues.position.y = newPosY;
+		}
+		if ( newPosZ !== previousValues.position.z ) {
+			objectPositionZ.setValue( newPosZ );
+			previousValues.position.z = newPosZ;
+		}
+
+		// Check rotation changes with normalization (skip if manually editing)
+		const newRotX = normalizeAngle( object.rotation.x * THREE.MathUtils.RAD2DEG );
+		const newRotY = normalizeAngle( object.rotation.y * THREE.MathUtils.RAD2DEG );
+		const newRotZ = normalizeAngle( object.rotation.z * THREE.MathUtils.RAD2DEG );
+
+		if ( !isManuallyEditing.rotation.x && newRotX !== previousValues.rotation.x ) {
+			objectRotationX.setValue( newRotX );
+			previousValues.rotation.x = newRotX;
+		}
+		if ( !isManuallyEditing.rotation.y && newRotY !== previousValues.rotation.y ) {
+			objectRotationY.setValue( newRotY );
+			previousValues.rotation.y = newRotY;
+		}
+		if ( !isManuallyEditing.rotation.z && newRotZ !== previousValues.rotation.z ) {
+			objectRotationZ.setValue( newRotZ );
+			previousValues.rotation.z = newRotZ;
+		}
+
+		// Check scale changes
+		const newScaleX = Math.round( object.scale.x * 1000 ) / 1000;
+		const newScaleY = Math.round( object.scale.y * 1000 ) / 1000;
+		const newScaleZ = Math.round( object.scale.z * 1000 ) / 1000;
+
+		if ( newScaleX !== previousValues.scale.x ) {
+			objectScaleX.setValue( newScaleX );
+			previousValues.scale.x = newScaleX;
+		}
+		if ( newScaleY !== previousValues.scale.y ) {
+			objectScaleY.setValue( newScaleY );
+			previousValues.scale.y = newScaleY;
+		}
+		if ( newScaleZ !== previousValues.scale.z ) {
+			objectScaleZ.setValue( newScaleZ );
+			previousValues.scale.z = newScaleZ;
+		}
+	}
+
 	// Actions
 
 	/*
@@ -196,6 +300,14 @@ function SidebarObject( editor ) {
 	const objectRotationX = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
 	const objectRotationY = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
 	const objectRotationZ = new UINumber().setStep( 10 ).setNudge( 0.1 ).setUnit( '°' ).setWidth( '50px' ).onChange( update );
+
+	// Add focus/blur handlers to track manual editing
+	objectRotationX.dom.addEventListener( 'focus', () => { isManuallyEditing.rotation.x = true; } );
+	objectRotationX.dom.addEventListener( 'blur', () => { isManuallyEditing.rotation.x = false; } );
+	objectRotationY.dom.addEventListener( 'focus', () => { isManuallyEditing.rotation.y = true; } );
+	objectRotationY.dom.addEventListener( 'blur', () => { isManuallyEditing.rotation.y = false; } );
+	objectRotationZ.dom.addEventListener( 'focus', () => { isManuallyEditing.rotation.z = true; } );
+	objectRotationZ.dom.addEventListener( 'blur', () => { isManuallyEditing.rotation.z = false; } );
 
 	// Property patch button for rotation
 	rotationArrow = createPropertyPatchButton( 'rotation' );
@@ -800,6 +912,11 @@ function SidebarObject( editor ) {
 			updateUI( object );
 			updateAllPropertyButtonStates();
 
+			// Reset cached values for new object selection
+			previousValues.position = { x: null, y: null, z: null };
+			previousValues.rotation = { x: null, y: null, z: null };
+			previousValues.scale = { x: null, y: null, z: null };
+
 		} else {
 
 			container.setDisplay( 'none' );
@@ -829,6 +946,11 @@ function SidebarObject( editor ) {
 
 	} );
 
+	// Listen for real-time rendering updates for property patch values
+	signals.sceneRendered.add( function () {
+		throttledUpdateUI();
+	} );
+
 	function updateUI( object ) {
 
 		objectType.setValue( object.type );
@@ -840,9 +962,10 @@ function SidebarObject( editor ) {
 		objectPositionY.setValue( object.position.y );
 		objectPositionZ.setValue( object.position.z );
 
-		objectRotationX.setValue( object.rotation.x * THREE.MathUtils.RAD2DEG );
-		objectRotationY.setValue( object.rotation.y * THREE.MathUtils.RAD2DEG );
-		objectRotationZ.setValue( object.rotation.z * THREE.MathUtils.RAD2DEG );
+		// Only normalize for initial display, not when values come from user input
+		objectRotationX.setValue( normalizeAngle( object.rotation.x * THREE.MathUtils.RAD2DEG ) );
+		objectRotationY.setValue( normalizeAngle( object.rotation.y * THREE.MathUtils.RAD2DEG ) );
+		objectRotationZ.setValue( normalizeAngle( object.rotation.z * THREE.MathUtils.RAD2DEG ) );
 
 		objectScaleX.setValue( object.scale.x );
 		objectScaleY.setValue( object.scale.y );

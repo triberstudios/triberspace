@@ -15,10 +15,10 @@ export class ObjectRotationNode extends PatchNode {
         this.editor = editor;
 
 
-        // Inputs for rotation control
-        this.addInput('x', 'number', sceneObject ? sceneObject.rotation.x : 0);
-        this.addInput('y', 'number', sceneObject ? sceneObject.rotation.y : 0);
-        this.addInput('z', 'number', sceneObject ? sceneObject.rotation.z : 0);
+        // Inputs for rotation control (in degrees for user-friendliness)
+        this.addInput('x', 'number', sceneObject ? sceneObject.rotation.x * (180 / Math.PI) : 0);
+        this.addInput('y', 'number', sceneObject ? sceneObject.rotation.y * (180 / Math.PI) : 0);
+        this.addInput('z', 'number', sceneObject ? sceneObject.rotation.z * (180 / Math.PI) : 0);
 
         // Outputs for rotation values
         this.addOutput('rotation', 'vector3');
@@ -26,12 +26,12 @@ export class ObjectRotationNode extends PatchNode {
         this.addOutput('y', 'number');
         this.addOutput('z', 'number');
 
-        // Store initial rotation
+        // Store initial rotation (in degrees for consistency)
         if (sceneObject) {
             this.setProperty('initialRotation', {
-                x: sceneObject.rotation.x,
-                y: sceneObject.rotation.y,
-                z: sceneObject.rotation.z
+                x: sceneObject.rotation.x * (180 / Math.PI),
+                y: sceneObject.rotation.y * (180 / Math.PI),
+                z: sceneObject.rotation.z * (180 / Math.PI)
             });
         }
 
@@ -42,39 +42,44 @@ export class ObjectRotationNode extends PatchNode {
     process() {
         if (!this.sceneObject) return;
 
-        // Get input values or use current object values as defaults
-        const x = this.getInputValue('x');
-        const y = this.getInputValue('y');
-        const z = this.getInputValue('z');
+        // Get input values in degrees
+        const xDegrees = this.getInputValue('x');
+        const yDegrees = this.getInputValue('y');
+        const zDegrees = this.getInputValue('z');
 
-        // Apply to Three.js object immediately
-        this.sceneObject.rotation.set(x, y, z);
+        // Convert degrees to radians for Three.js
+        const xRadians = xDegrees * (Math.PI / 180);
+        const yRadians = yDegrees * (Math.PI / 180);
+        const zRadians = zDegrees * (Math.PI / 180);
+
+        // Apply to Three.js object in radians
+        this.sceneObject.rotation.set(xRadians, yRadians, zRadians);
 
         // Update Three.js transform matrices
         this.sceneObject.updateMatrix();
         this.sceneObject.updateMatrixWorld();
 
-        // Update outputs
-        this.setOutputValue('rotation', { x, y, z });
-        this.setOutputValue('x', x);
-        this.setOutputValue('y', y);
-        this.setOutputValue('z', z);
+        // Output values in degrees for consistency
+        this.setOutputValue('rotation', { x: xDegrees, y: yDegrees, z: zDegrees });
+        this.setOutputValue('x', xDegrees);
+        this.setOutputValue('y', yDegrees);
+        this.setOutputValue('z', zDegrees);
     }
 
     // Override onOutputChanged for immediate scene updates
     onOutputChanged(outputName, newValue, oldValue) {
         if (!this.sceneObject) return;
 
-        // Apply changes immediately to the Three.js object
+        // Convert degrees to radians and apply changes immediately to the Three.js object
         switch (outputName) {
             case 'x':
-                this.sceneObject.rotation.x = newValue;
+                this.sceneObject.rotation.x = newValue * (Math.PI / 180);
                 break;
             case 'y':
-                this.sceneObject.rotation.y = newValue;
+                this.sceneObject.rotation.y = newValue * (Math.PI / 180);
                 break;
             case 'z':
-                this.sceneObject.rotation.z = newValue;
+                this.sceneObject.rotation.z = newValue * (Math.PI / 180);
                 break;
         }
 
