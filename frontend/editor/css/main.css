@@ -6,13 +6,17 @@
 	display: none !important;
 }
 
+html {
+	overscroll-behavior: none;
+	touch-action: none;
+}
+
 body {
 	font-family: 'Work Sans', sans-serif;
 	font-size: 14px;
 	margin: 0;
 	overflow: hidden;
-	background-color: #1a1a1a; /* Dark background like Blender */
-	overscroll-behavior-x: none; /* Prevent Chrome swipe navigation */
+	background-color: #1a1a1a;
 }
 
 /* Blender-style modular container system */
@@ -22,7 +26,6 @@ body {
 	display: flex;
 	flex-direction: column;
 	background-color: #1a1a1a;
-	overscroll-behavior-x: none; /* Additional protection against swipe navigation */
 }
 
 .main-content {

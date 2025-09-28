@@ -410,6 +410,35 @@ loader.load( file, function ( text ) {
 
 } );
 
+// Prevent browser back/forward navigation gestures (like Figma)
+( function() {
+
+	// Block horizontal wheel events that trigger browser navigation
+	function blockHorizontalScroll(e) {
+		if (e.deltaX !== 0) {
+			e.preventDefault();
+			e.stopPropagation();
+			return false;
+		}
+	}
+
+	// Add listener at window level with capture phase
+	window.addEventListener('wheel', blockHorizontalScroll, { passive: false, capture: true });
+
+	// Prevent keyboard navigation shortcuts
+	window.addEventListener( 'keydown', function ( event ) {
+		// Prevent Cmd/Ctrl + Arrow keys (browser navigation)
+		if ( ( event.metaKey || event.ctrlKey ) && ( event.key === 'ArrowLeft' || event.key === 'ArrowRight' ) ) {
+			event.preventDefault();
+		}
+		// Prevent Backspace navigation (when not in input)
+		if ( event.key === 'Backspace' && !( event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ) ) {
+			event.preventDefault();
+		}
+	}, { passive: false, capture: true } );
+
+} )();
+
 isLoadingFromHash = true;
 
 	}

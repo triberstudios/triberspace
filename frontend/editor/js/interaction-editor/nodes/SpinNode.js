@@ -83,9 +83,7 @@ export class SpinNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        const speed = this.getInputValue('speed');
-        const direction = this.getInputValue('clockwise') ? 'CW' : 'CCW';
-        return `Spin (${speed} rpm ${direction})`;
+        return 'Spin';
     }
 
     // Custom bounds
