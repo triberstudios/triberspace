@@ -140,7 +140,7 @@ export class ObjectRotationNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        return 'Rotation';
+        return `${this.objectName} Rotation`;
     }
 
     // Custom size for property nodes

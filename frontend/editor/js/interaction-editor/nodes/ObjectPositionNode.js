@@ -145,7 +145,7 @@ export class ObjectPositionNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        return 'Position';
+        return `${this.objectName} Position`;
     }
 
     // Custom size for property nodes
