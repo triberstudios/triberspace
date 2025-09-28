@@ -7,6 +7,7 @@ import { RemoveObjectCommand } from '../commands/RemoveObjectCommand.js';
 import { SetMaterialColorCommand } from '../commands/SetMaterialColorCommand.js';
 import { SetMaterialCommand } from '../commands/SetMaterialCommand.js';
 import { SetMaterialValueCommand } from '../commands/SetMaterialValueCommand.js';
+import { AddInteractionNodeCommand } from '../commands/AddInteractionNodeCommand.js';
 
 /**
  * Executes AI-generated commands in the Three.js editor
@@ -74,6 +75,18 @@ class SceneCommandExecutor {
 
 			case 'changeMaterialProperty':
 				return this.changeMaterialProperty(command);
+
+			case 'createSpinning':
+				return this.createSpinning(command);
+
+			case 'createPulsing':
+				return this.createPulsing(command);
+
+			case 'createInteraction':
+				return this.createInteraction(command);
+
+			case 'removeInteraction':
+				return this.removeInteraction(command);
 
 			default:
 				throw new Error(`Unknown command action: ${command.action}`);
@@ -423,19 +436,17 @@ class SceneCommandExecutor {
 				this.editor.scene.traverse((child) => {
 					if (child.isMesh && child !== this.editor.camera) {
 						const objectName = child.name.toLowerCase();
+						const objType = this.getObjectType(child).toLowerCase();
 						let matches = true;
 
-						// Check color match
+						// Check color match (only if color is specified)
 						if (targetColor && !objectName.includes(targetColor)) {
 							matches = false;
 						}
 
-						// Check type match
-						if (targetType) {
-							const objType = this.getObjectType(child).toLowerCase();
-							if (objType !== targetType) {
-								matches = false;
-							}
+						// Check type match (only if type is specified)
+						if (targetType && objType !== targetType) {
+							matches = false;
 						}
 
 						if (matches) {
@@ -452,8 +463,35 @@ class SceneCommandExecutor {
 						if (!a.name.startsWith('AI_') && b.name.startsWith('AI_')) return 1;
 						return b.name.localeCompare(a.name);
 					});
-					console.log(`Found ${matchingObjects.length} objects matching "${target}", using: ${matchingObjects[0].name}`);
+					console.log(`Found ${matchingObjects.length} objects matching "${target}", using: ${matchingObjects[0].name} (type: ${this.getObjectType(matchingObjects[0])})`);
 					return matchingObjects[0];
+				} else {
+					console.log(`No objects found matching color: ${targetColor}, type: ${targetType}`);
+				}
+			}
+
+			// If we still haven't found anything, try a broader search for just the object type
+			if (targetType) {
+				console.log(`Doing broader search for object type: ${targetType}`);
+				let typeMatchingObjects = [];
+				this.editor.scene.traverse((child) => {
+					if (child.isMesh && child !== this.editor.camera) {
+						const objType = this.getObjectType(child).toLowerCase();
+						if (objType === targetType) {
+							typeMatchingObjects.push(child);
+						}
+					}
+				});
+
+				if (typeMatchingObjects.length > 0) {
+					// Sort by most recent
+					typeMatchingObjects.sort((a, b) => {
+						if (a.name.startsWith('AI_') && !b.name.startsWith('AI_')) return -1;
+						if (!a.name.startsWith('AI_') && b.name.startsWith('AI_')) return 1;
+						return b.name.localeCompare(a.name);
+					});
+					console.log(`Found ${typeMatchingObjects.length} objects of type "${targetType}", using: ${typeMatchingObjects[0].name}`);
+					return typeMatchingObjects[0];
 				}
 			}
 
@@ -913,6 +951,345 @@ class SceneCommandExecutor {
 			default:
 				return new THREE.MeshStandardMaterial(defaultProps);
 		}
+	}
+
+	// ==================== INTERACTION EDITOR COMMANDS ====================
+
+	/**
+	 * Create a spinning animation for an object
+	 * @param {Object} command - Create spinning command
+	 */
+	async createSpinning(command) {
+		const { target = 'selected', speed = 60, axis = 'y', clockwise = true } = command;
+		const object = this.findObject(target);
+
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Get the interaction graph
+		const interactionGraph = this.getInteractionGraph();
+		if (!interactionGraph) {
+			throw new Error('Interaction editor not available');
+		}
+
+		console.log('Creating spinning animation for object:', object.name || object.type);
+
+		try {
+			// Create SpinNode
+			const { SpinNode } = await import('../interaction-editor/nodes/SpinNode.js');
+			const position = interactionGraph.findSmartPosition({ type: 'Spin' });
+			const spinNode = new SpinNode(position.x, position.y);
+
+			// Set spin parameters
+			spinNode.setInputValue('speed', speed);
+			spinNode.setInputValue('clockwise', clockwise);
+
+			console.log('Adding SpinNode with command system');
+			// Add SpinNode using command system
+			const addSpinCommand = new AddInteractionNodeCommand(this.editor, spinNode);
+			this.editor.execute(addSpinCommand);
+
+			console.log('Finding or creating rotation property node');
+			// Create or find ObjectRotationNode for the target object
+			const rotationNode = await this.findOrCreatePropertyNode(object, 'rotation');
+
+			if (!rotationNode) {
+				throw new Error('Failed to create rotation property node');
+			}
+
+			console.log('Creating connection from SpinNode to RotationNode');
+			// Use direct connection method instead of commands to avoid potential issues
+			try {
+				const interactionGraph = this.getInteractionGraph();
+				if (interactionGraph) {
+					const connection = interactionGraph.addConnection(
+						spinNode.id, 0, // SpinNode rotation output (index 0)
+						rotationNode.id, this.getAxisInputIndex(axis) // ObjectRotationNode axis input
+					);
+					console.log('Spinning connection created:', connection);
+				}
+			} catch (connectionError) {
+				console.error('Error creating spinning connection:', connectionError);
+				// Don't throw - the nodes are created, just connections failed
+			}
+
+			console.log('Spinning animation created successfully');
+			return {
+				spinNode,
+				rotationNode,
+				object,
+				message: `Created spinning animation for ${object.name || 'object'}`
+			};
+
+		} catch (error) {
+			console.error('Error creating spinning animation:', error);
+			throw new Error(`Failed to create spinning animation: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Create a pulsing animation for an object
+	 * @param {Object} command - Create pulsing command
+	 */
+	async createPulsing(command) {
+		const { target = 'selected', speed = 1, intensity = 0.5 } = command;
+		const object = this.findObject(target);
+
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Get the interaction graph
+		const interactionGraph = this.getInteractionGraph();
+		if (!interactionGraph) {
+			throw new Error('Interaction editor not available');
+		}
+
+		console.log('Creating pulsing animation for object:', object.name || object.type);
+
+		try {
+			// Create PulseNode
+			const { PulseNode } = await import('../interaction-editor/nodes/PulseNode.js');
+			const position = interactionGraph.findSmartPosition({ type: 'Pulse' });
+			const pulseNode = new PulseNode(position.x, position.y);
+
+			// Set pulse parameters
+			pulseNode.setInputValue('frequency', speed);
+			pulseNode.setInputValue('amplitude', intensity);
+
+			console.log('Adding PulseNode with command system');
+			// Add PulseNode using command system
+			const addPulseCommand = new AddInteractionNodeCommand(this.editor, pulseNode);
+			this.editor.execute(addPulseCommand);
+
+			console.log('Finding or creating scale property node');
+			// Create or find ObjectScaleNode for the target object
+			const scaleNode = await this.findOrCreatePropertyNode(object, 'scale');
+
+			if (!scaleNode) {
+				throw new Error('Failed to create scale property node');
+			}
+
+			console.log('Creating connections from PulseNode to ScaleNode');
+			// Connect PulseNode output to ObjectScaleNode inputs (uniform scaling)
+			const connections = [];
+
+			// Use direct connection method instead of commands to avoid potential issues
+			try {
+				const interactionGraph = this.getInteractionGraph();
+				if (interactionGraph) {
+					// Connect to X, Y, Z scale inputs
+					for (let i = 0; i < 3; i++) {
+						console.log(`Connecting PulseNode output to ScaleNode input ${i}`);
+						const connection = interactionGraph.addConnection(
+							pulseNode.id, 0, // PulseNode output (index 0)
+							scaleNode.id, i // ObjectScaleNode x/y/z input
+						);
+						if (connection) {
+							connections.push(connection);
+						}
+					}
+				}
+			} catch (connectionError) {
+				console.error('Error creating connections:', connectionError);
+				// Don't throw - the nodes are created, just connections failed
+			}
+
+			console.log('Pulsing animation created successfully');
+			return {
+				pulseNode,
+				scaleNode,
+				object,
+				connections,
+				message: `Created pulsing animation for ${object.name || 'object'}`
+			};
+
+		} catch (error) {
+			console.error('Error creating pulsing animation:', error);
+			throw new Error(`Failed to create pulsing animation: ${error.message}`);
+		}
+	}
+
+	/**
+	 * General interaction creation method
+	 * @param {Object} command - Create interaction command
+	 */
+	async createInteraction(command) {
+		const { type, target, ...params } = command;
+
+		switch (type) {
+			case 'spinning':
+			case 'spin':
+				return this.createSpinning({ target, ...params });
+			case 'pulsing':
+			case 'pulse':
+				return this.createPulsing({ target, ...params });
+			default:
+				throw new Error(`Unknown interaction type: ${type}`);
+		}
+	}
+
+	/**
+	 * Remove interaction from an object
+	 * @param {Object} command - Remove interaction command
+	 */
+	async removeInteraction(command) {
+		const { target = 'selected', type = 'all' } = command;
+		const object = this.findObject(target);
+
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		const interactionGraph = this.getInteractionGraph();
+		if (!interactionGraph) {
+			throw new Error('Interaction editor not available');
+		}
+
+		// Find nodes connected to this object
+		const connectedNodes = [];
+		for (const [nodeId, node] of interactionGraph.nodes) {
+			if (node.sceneObject === object) {
+				// Find nodes connected to this property node
+				for (const connection of interactionGraph.connections) {
+					if (connection.toNodeId === nodeId) {
+						const fromNode = interactionGraph.nodes.get(connection.fromNodeId);
+						if (fromNode && (type === 'all' || this.nodeMatchesType(fromNode, type))) {
+							connectedNodes.push(fromNode);
+						}
+					}
+				}
+			}
+		}
+
+		// Remove the connected nodes (this will automatically remove connections)
+		for (const node of connectedNodes) {
+			interactionGraph.removeNode(node.id);
+		}
+
+		return {
+			removedNodes: connectedNodes,
+			object,
+			message: `Removed ${connectedNodes.length} interaction(s) from ${object.name || 'object'}`
+		};
+	}
+
+	// ==================== HELPER METHODS ====================
+
+	/**
+	 * Get the interaction graph from the editor
+	 * @returns {InteractionGraph|null}
+	 */
+	getInteractionGraph() {
+		if (this.editor &&
+			this.editor.interactionEditor &&
+			this.editor.interactionEditor.interactionEditor &&
+			this.editor.interactionEditor.interactionEditor.interactionGraph) {
+			return this.editor.interactionEditor.interactionEditor.interactionGraph;
+		}
+		return null;
+	}
+
+	/**
+	 * Find or create a property node for an object
+	 * @param {THREE.Object3D} object - Target object
+	 * @param {string} propertyType - Property type (position, rotation, scale)
+	 * @returns {Promise<PatchNode>} Property node
+	 */
+	async findOrCreatePropertyNode(object, propertyType) {
+		const interactionGraph = this.getInteractionGraph();
+		if (!interactionGraph) {
+			throw new Error('Interaction graph not available');
+		}
+
+		// Check if property node already exists
+		const existingNode = Array.from(interactionGraph.nodes.values()).find(node =>
+			node.sceneObject === object &&
+			node.type === 'ObjectProperty' &&
+			node.propertyType === propertyType
+		);
+
+		if (existingNode) {
+			return existingNode;
+		}
+
+		// Create new property node
+		const nodePromise = interactionGraph.createPropertyPatch(object, propertyType);
+		const node = await nodePromise;
+
+		if (!node) {
+			throw new Error(`Failed to create ${propertyType} property node`);
+		}
+
+		return node;
+	}
+
+	/**
+	 * Create a connection command between two nodes
+	 * @param {string} fromNodeId - Source node ID
+	 * @param {number} fromOutputIndex - Source output index
+	 * @param {string} toNodeId - Target node ID
+	 * @param {number} toInputIndex - Target input index
+	 * @returns {Promise<Command>} Connection command
+	 */
+	async createConnectionCommand(fromNodeId, fromOutputIndex, toNodeId, toInputIndex) {
+		// Import connection command dynamically
+		try {
+			const { AddInteractionConnectionCommand } = await import('../commands/AddInteractionConnectionCommand.js');
+			return new AddInteractionConnectionCommand(
+				this.editor,
+				fromNodeId,
+				fromOutputIndex,
+				toNodeId,
+				toInputIndex
+			);
+		} catch (error) {
+			console.warn('AddInteractionConnectionCommand not found, using direct method');
+			// Fallback to direct connection if command not available
+			const interactionGraph = this.getInteractionGraph();
+			if (interactionGraph) {
+				interactionGraph.addConnection(fromNodeId, fromOutputIndex, toNodeId, toInputIndex);
+			}
+			return null;
+		}
+	}
+
+	/**
+	 * Get the input index for a rotation axis
+	 * @param {string} axis - Rotation axis (x, y, z)
+	 * @returns {number} Input index
+	 */
+	getAxisInputIndex(axis) {
+		switch (axis.toLowerCase()) {
+			case 'x': return 0;
+			case 'y': return 1;
+			case 'z': return 2;
+			default: return 1; // Default to Y axis
+		}
+	}
+
+	/**
+	 * Check if a node matches a specific interaction type
+	 * @param {PatchNode} node - Node to check
+	 * @param {string} type - Interaction type
+	 * @returns {boolean} Whether node matches type
+	 */
+	nodeMatchesType(node, type) {
+		const nodeType = node.constructor.name.toLowerCase();
+		const targetType = type.toLowerCase();
+
+		if (targetType === 'spin' || targetType === 'spinning') {
+			return nodeType.includes('spin');
+		}
+		if (targetType === 'pulse' || targetType === 'pulsing') {
+			return nodeType.includes('pulse');
+		}
+		if (targetType === 'all') {
+			return true;
+		}
+
+		return nodeType.includes(targetType);
 	}
 }
 

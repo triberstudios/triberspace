@@ -36,13 +36,33 @@ class OpenAIProvider extends AIProvider {
 		const systemPrompt = this.createSystemPrompt();
 		const userPrompt = this.createUserPrompt(userInput, context);
 
+		// Extract target for validation
+		const extractedTarget = this.extractTargetObject(userInput.toLowerCase());
+
 		try {
 			const response = await this.callOpenAI([
 				{ role: 'system', content: systemPrompt },
 				{ role: 'user', content: userPrompt }
 			]);
 
-			return JSON.parse(response);
+			const result = JSON.parse(response);
+
+			// Post-process commands to validate and correct targeting
+			if (result.commands && Array.isArray(result.commands)) {
+				result.commands = result.commands.map(command => {
+					// Only process interaction commands that have targets
+					if (['createSpinning', 'createPulsing', 'removeInteraction'].includes(command.action) && command.target) {
+						// If GPT-4's target doesn't match our extracted target and we have a better one
+						if (extractedTarget && extractedTarget !== 'selected' && command.target !== extractedTarget) {
+							console.log(`OpenAI Provider: Correcting target from "${command.target}" to "${extractedTarget}"`);
+							command.target = extractedTarget;
+						}
+					}
+					return command;
+				});
+			}
+
+			return result;
 		} catch (error) {
 			console.error('Error parsing scene command:', error);
 			throw new Error('Failed to parse command. Please try rephrasing your request.');
@@ -108,27 +128,108 @@ class OpenAIProvider extends AIProvider {
 	}
 
 	createSystemPrompt() {
-		return `Convert 3D editor commands to JSON. Actions: addObject, addLight, moveObject, rotateObject, scaleObject, removeObject, clearScene, changeMaterialColor/Type/Property.
-Objects: cube, sphere, plane, cylinder, cone, torus, dodecahedron, icosahedron, octahedron, tetrahedron, capsule, circle, ring, torusknot.
-Lights: directional (default), point, spot, ambient, hemisphere. Light properties: color, intensity, position.
-Materials: standard, basic, phong, lambert, toon. Properties: roughness(0-1), metalness(0-1), opacity(0-1), transparent(bool).
-For transparency/glass: use changeMaterialProperty with property:"opacity", value:0.5 (or desired transparency).
-Object targeting: Use "objN" (e.g. obj12, obj42) from context. Use "selected" for currently selected object. Lower IDs = created first.
+		return `Convert 3D editor commands to JSON.
 
-NAMING: Generate descriptive names by combining attributes from user input:
+ACTIONS:
+- Object creation: addObject, addLight
+- Object manipulation: moveObject, rotateObject, scaleObject, removeObject, clearScene
+- Material changes: changeMaterialColor, changeMaterialType, changeMaterialProperty
+- INTERACTIONS: createSpinning, createPulsing, removeInteraction
+
+OBJECTS: cube, sphere, plane, cylinder, cone, torus, dodecahedron, icosahedron, octahedron, tetrahedron, capsule, circle, ring, torusknot.
+
+LIGHTS: directional (default), point, spot, ambient, hemisphere. Properties: color, intensity, position.
+
+MATERIALS: standard, basic, phong, lambert, toon. Properties: roughness(0-1), metalness(0-1), opacity(0-1), transparent(bool).
+
+INTERACTIONS:
+- "make [object] spin" → {action:"createSpinning", target:"cube", speed:60, axis:"y", clockwise:true}
+- "make [object] pulse" → {action:"createPulsing", target:"sphere", speed:1, intensity:0.5}
+- "stop [object] spinning" → {action:"removeInteraction", target:"cube", type:"spinning"}
+- Parameters: speed (rpm for spin, frequency for pulse), axis (x/y/z for spin), intensity (0-1 for pulse), clockwise (true/false)
+
+OBJECT TARGETING:
+CRITICAL: Look for [Target: objecttype] in user prompt - this is the extracted target to use!
+
+PRIORITY ORDER:
+1. USE [Target: objecttype] from user prompt if present → target:"objecttype"
+2. Extract object type from command: "make the cube spin" → target:"cube"
+3. Use "objN" (e.g. obj12, obj42) from context if specified
+4. Use "selected" for currently selected object
+5. For commands with object names like "make the red cube spin", extract "red_cube" as target
+
+NAMING: Generate descriptive names by combining attributes:
 - Colors: red_cube, blue_sphere, green_cylinder
 - Materials: glass_cube, metal_sphere, wood_plane
 - Sizes: large_cube, small_sphere, tiny_cylinder
-- Multiple attributes: large_red_cube, small_glass_sphere
-- Default: just the object type (cube, sphere, etc.) if no attributes specified
+- Multiple: large_red_cube, small_glass_sphere
+- Default: just object type if no attributes
 
 Return: {"commands":[{action,type,name,position[x,y,z],color,target,property,value,intensity,etc}],"response":"brief message"}
-Examples: "red cube" → {action:"addObject",type:"cube",name:"red_cube",color:"red"}, "large blue sphere" → {action:"addObject",type:"sphere",name:"large_blue_sphere",color:"blue",scale:[2,2,2]}
-Defaults: position[0,1,0], rotation[0,0,0], scale[1,1,1]. Target "selected" for current/last object.`;
+
+Examples:
+- "red cube" → {action:"addObject",type:"cube",name:"red_cube",color:"red"}
+- "make the cube spin [Target: cube]" → {action:"createSpinning",target:"cube"}
+- "make sphere pulse fast [Target: sphere]" → {action:"createPulsing",target:"sphere",speed:2}
+- "stop the spinning" → {action:"removeInteraction",target:"selected",type:"spinning"}
+- "make the cube pulse [Target: cube]" → {action:"createPulsing",target:"cube",speed:1}
+- "spin the sphere [Target: sphere]" → {action:"createSpinning",target:"sphere"}
+
+Defaults: position[0,1,0], rotation[0,0,0], scale[1,1,1].`;
+	}
+
+	/**
+	 * Extract target object from user input
+	 * @param {string} input - User input string
+	 * @returns {string} Target object identifier
+	 */
+	extractTargetObject(input) {
+		// Check for object ID references (e.g., "obj12")
+		const objIdMatch = input.match(/obj(\d+)/);
+		if (objIdMatch) {
+			return `obj${objIdMatch[1]}`;
+		}
+
+		// Check for object types in interaction commands
+		// Pattern: "make the [object] [action]" or "[action] the [object]"
+		const objectTypes = [
+			'cube', 'box', 'sphere', 'ball', 'plane', 'ground',
+			'cylinder', 'cone', 'torus', 'dodecahedron', 'icosahedron',
+			'octahedron', 'tetrahedron', 'capsule', 'circle', 'ring', 'torusknot'
+		];
+
+		for (const type of objectTypes) {
+			// Match patterns like "make the cube spin", "spin the cube", "cube spin"
+			const patterns = [
+				new RegExp(`\\bthe\\s+${type}\\b`, 'i'),
+				new RegExp(`\\b${type}\\s+`, 'i'),
+				new RegExp(`\\s+${type}\\b`, 'i')
+			];
+
+			for (const pattern of patterns) {
+				if (pattern.test(input)) {
+					return type;
+				}
+			}
+		}
+
+		// Check for "selected" keyword
+		if (input.match(/\b(selected|selection|it|that|this)\b/i)) {
+			return 'selected';
+		}
+
+		// Default fallback
+		return 'selected';
 	}
 
 	createUserPrompt(userInput, context) {
 		let prompt = userInput;
+
+		// Extract target object for better targeting
+		const extractedTarget = this.extractTargetObject(userInput.toLowerCase());
+		if (extractedTarget && extractedTarget !== 'selected') {
+			prompt += ` [Target: ${extractedTarget}]`;
+		}
 
 		// Only add context if it's relevant to the command
 		const needsContext = userInput.match(/\b(it|that|this|selected|move|rotate|scale|change|make|color|transparent|opacity)\b/i);

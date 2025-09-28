@@ -24,12 +24,40 @@ class MockProvider extends AIProvider {
 		const commands = [];
 		let response = "I'm not sure how to do that yet.";
 
-		// Check for object ID references (e.g., "obj12")
-		const objIdMatch = input.match(/obj(\d+)/);
-		let targetObject = objIdMatch ? `obj${objIdMatch[1]}` : 'selected';
+		// Enhanced target object extraction
+		let targetObject = this.extractTargetObject(input);
 
-		// Pattern matching for shapes
-		if (input.includes('cube') || input.includes('box')) {
+		// INTERACTION COMMANDS - Check these FIRST to avoid conflicts with shape names
+		if (input.includes('spin') || (input.includes('rotate') && !input.match(/rotate\s+\d+/)) || input.includes('spinning')) {
+			const spinCommand = this.parseSpinCommand(input, targetObject);
+			if (spinCommand) {
+				commands.push(spinCommand);
+				response = "I've created a spinning animation for the object!";
+			}
+		}
+		else if (input.includes('pulse') || input.includes('pulsing') || input.includes('breathe') || input.includes('breathing')) {
+			const pulseCommand = this.parsePulseCommand(input, targetObject);
+			if (pulseCommand) {
+				commands.push(pulseCommand);
+				response = "I've created a pulsing animation for the object!";
+			}
+		}
+		else if (input.includes('animate') || input.includes('animation')) {
+			const animationCommand = this.parseAnimationCommand(input, targetObject);
+			if (animationCommand) {
+				commands.push(animationCommand);
+				response = `I've created an animation for the object!`;
+			}
+		}
+		else if (input.includes('stop') && (input.includes('spin') || input.includes('pulse') || input.includes('animation'))) {
+			const stopCommand = this.parseStopCommand(input, targetObject);
+			if (stopCommand) {
+				commands.push(stopCommand);
+				response = "I've stopped the animation for the object!";
+			}
+		}
+		// Pattern matching for shapes - only for creation commands
+		else if (input.includes('cube') || input.includes('box')) {
 			commands.push(this.createAddObjectCommand('cube', input));
 			response = "I've added a cube to your scene!";
 		}
@@ -429,6 +457,160 @@ class MockProvider extends AIProvider {
 		};
 	}
 
+	parseSpinCommand(input, target = 'selected') {
+		// Extract spinning parameters
+		let speed = 60; // Default RPM
+		let axis = 'y'; // Default axis
+		let clockwise = true; // Default direction
+
+		// Try to extract speed
+		const speedMatch = input.match(/(?:speed|rpm)\s+(\d+(?:\.\d+)?)/);
+		if (speedMatch) {
+			speed = parseFloat(speedMatch[1]);
+		} else if (input.includes('fast')) {
+			speed = 120;
+		} else if (input.includes('slow')) {
+			speed = 30;
+		}
+
+		// Extract axis
+		if (input.includes('x') || input.includes('horizontal')) {
+			axis = 'x';
+		} else if (input.includes('z') || input.includes('forward')) {
+			axis = 'z';
+		} // Default is y
+
+		// Extract direction
+		if (input.includes('counter') || input.includes('ccw') || input.includes('anticlockwise')) {
+			clockwise = false;
+		}
+
+		return {
+			action: 'createSpinning',
+			target: target,
+			speed: speed,
+			axis: axis,
+			clockwise: clockwise
+		};
+	}
+
+	parsePulseCommand(input, target = 'selected') {
+		// Extract pulsing parameters
+		let speed = 1; // Default frequency
+		let intensity = 0.5; // Default amplitude
+
+		// Try to extract speed/frequency
+		const speedMatch = input.match(/(?:speed|frequency)\s+(\d+(?:\.\d+)?)/);
+		if (speedMatch) {
+			speed = parseFloat(speedMatch[1]);
+		} else if (input.includes('fast')) {
+			speed = 2;
+		} else if (input.includes('slow')) {
+			speed = 0.5;
+		}
+
+		// Try to extract intensity
+		const intensityMatch = input.match(/(?:intensity|amplitude)\s+(\d+(?:\.\d+)?)/);
+		if (intensityMatch) {
+			intensity = parseFloat(intensityMatch[1]);
+		} else if (input.includes('big') || input.includes('large')) {
+			intensity = 0.8;
+		} else if (input.includes('small') || input.includes('subtle')) {
+			intensity = 0.2;
+		}
+
+		return {
+			action: 'createPulsing',
+			target: target,
+			speed: speed,
+			intensity: intensity
+		};
+	}
+
+	parseAnimationCommand(input, target = 'selected') {
+		// General animation command - determine type from context
+		if (input.includes('spin') || input.includes('rotate') || input.includes('turn')) {
+			return this.parseSpinCommand(input, target);
+		} else if (input.includes('pulse') || input.includes('scale') || input.includes('breathe')) {
+			return this.parsePulseCommand(input, target);
+		}
+
+		// Default to spinning animation
+		return this.parseSpinCommand(input, target);
+	}
+
+	parseStopCommand(input, target = 'selected') {
+		// Determine which type of animation to stop
+		let type = 'all'; // Default to stopping all animations
+
+		if (input.includes('spin')) {
+			type = 'spinning';
+		} else if (input.includes('pulse')) {
+			type = 'pulsing';
+		}
+
+		return {
+			action: 'removeInteraction',
+			target: target,
+			type: type
+		};
+	}
+
+	/**
+	 * Extract target object from user input
+	 * @param {string} input - User input string
+	 * @returns {string} Target object identifier
+	 */
+	extractTargetObject(input) {
+		// Check for object ID references (e.g., "obj12")
+		const objIdMatch = input.match(/obj(\d+)/);
+		if (objIdMatch) {
+			return `obj${objIdMatch[1]}`;
+		}
+
+		// Check for object types in interaction commands
+		// Pattern: "make the [object] [action]" or "[action] the [object]"
+		const objectTypes = [
+			'cube', 'box', 'sphere', 'ball', 'plane', 'ground',
+			'cylinder', 'cone', 'torus', 'donut', 'dodecahedron',
+			'icosahedron', 'octahedron', 'tetrahedron', 'capsule',
+			'pill', 'circle', 'ring', 'torusknot'
+		];
+
+		// Look for "the [object]" pattern
+		const theObjectMatch = input.match(/the\s+(\w+)/);
+		if (theObjectMatch) {
+			const potentialObject = theObjectMatch[1].toLowerCase();
+			if (objectTypes.includes(potentialObject)) {
+				console.log(`Extracted target object from "the ${potentialObject}": ${potentialObject}`);
+				return potentialObject;
+			}
+		}
+
+		// Look for "[object] [action]" pattern (e.g., "cube spin", "sphere pulse")
+		for (const objectType of objectTypes) {
+			if (input.includes(objectType)) {
+				console.log(`Found object type in input: ${objectType}`);
+				return objectType;
+			}
+		}
+
+		// Check for color + object combinations (e.g., "red cube", "blue sphere")
+		const colors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'white', 'black', 'gray', 'brown'];
+		for (const color of colors) {
+			for (const objectType of objectTypes) {
+				if (input.includes(color) && input.includes(objectType)) {
+					console.log(`Found color + object combination: ${color} ${objectType}`);
+					return `${color}_${objectType}`;
+				}
+			}
+		}
+
+		// Default to selected if no specific object found
+		console.log('No specific object found, defaulting to selected');
+		return 'selected';
+	}
+
 	async simulateDelay(min = 100, max = 500) {
 		const delay = Math.random() * (max - min) + min;
 		return new Promise(resolve => setTimeout(resolve, delay));
@@ -437,8 +619,8 @@ class MockProvider extends AIProvider {
 	initializeResponses() {
 		// Pre-defined responses for common queries
 		this.responses.set('hello', "Hello! I'm your AI assistant for creating 3D scenes. What would you like to build today?");
-		this.responses.set('help', "I can help you with your 3D scene! Try commands like:\n• 'Add a red cube'\n• 'Make it metallic'\n• 'Rotate 45 degrees'\n• 'Make the sphere blue'\n• 'Scale it bigger'\n• 'Clear the scene'");
-		this.responses.set('what can you do', "I can add 3D shapes (cubes, spheres, planes, cylinders), change colors and materials, rotate and scale objects, move them around, and clear the scene. Just tell me what you want to create!");
+		this.responses.set('help', "I can help you with your 3D scene! Try commands like:\n• 'Add a red cube'\n• 'Make it metallic'\n• 'Rotate 45 degrees'\n• 'Make the sphere blue'\n• 'Scale it bigger'\n• 'Make the cube spin'\n• 'Make the sphere pulse'\n• 'Stop the animation'\n• 'Clear the scene'");
+		this.responses.set('what can you do', "I can add 3D shapes (cubes, spheres, planes, cylinders), change colors and materials, rotate and scale objects, move them around, create spinning and pulsing animations, and clear the scene. Just tell me what you want to create!");
 	}
 }
 

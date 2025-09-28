@@ -222,10 +222,10 @@ function SidebarAI( editor ) {
 	
 	// Suggested prompts
 	const prompts = [
-		'Add a red cube at position 2,0,5',
+		'Add a red cube',
+		'Make the cube spin',
 		'Add a sphere above the cube',
-		'Add a cube',
-		'Add a sphere',
+		'Make the sphere pulse',
 		'Clear the scene'
 	];
 	
