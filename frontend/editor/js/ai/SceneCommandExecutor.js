@@ -82,6 +82,15 @@ class SceneCommandExecutor {
 			case 'createPulsing':
 				return this.createPulsing(command);
 
+			case 'modifySpinning':
+				return this.modifySpinning(command);
+
+			case 'modifyPulsing':
+				return this.modifyPulsing(command);
+
+			case 'updateInteraction':
+				return this.updateInteraction(command);
+
 			case 'createInteraction':
 				return this.createInteraction(command);
 
@@ -580,13 +589,163 @@ class SceneCommandExecutor {
 			}
 		});
 
+		// Add interaction/animation context
+		context.interactions = this.getInteractionContext();
+
 		// Scene statistics
 		context.sceneInfo = {
 			objectCount: context.sceneObjects.length,
-			hasSelection: context.selectedObjects.length > 0
+			hasSelection: context.selectedObjects.length > 0,
+			activeAnimations: context.interactions.length
 		};
 
 		return context;
+	}
+
+	/**
+	 * Get current interaction/animation context for AI awareness
+	 * @returns {Array} Array of interaction descriptions
+	 */
+	getInteractionContext() {
+		const interactions = [];
+		const interactionGraph = this.getInteractionGraph();
+
+		if (!interactionGraph || !interactionGraph.nodes) {
+			return interactions;
+		}
+
+		// Iterate through all nodes in the interaction graph
+		for (const [nodeId, node] of interactionGraph.nodes) {
+			if (node.type === 'Spin' || node.type === 'Pulse' || node.type === 'Float' || node.type === 'Fade') {
+				// Find connected object property nodes
+				const connectedObjects = this.findConnectedObjects(node, interactionGraph);
+
+				connectedObjects.forEach(objectInfo => {
+					const interaction = {
+						type: node.type.toLowerCase(),
+						objectName: objectInfo.objectName,
+						objectType: objectInfo.objectType,
+						nodeId: nodeId,
+						parameters: this.getNodeParameters(node)
+					};
+
+					interactions.push(interaction);
+				});
+			}
+		}
+
+		return interactions;
+	}
+
+	/**
+	 * Find objects connected to an animation node
+	 * @param {Object} animationNode - The animation node (Spin, Pulse, etc.)
+	 * @param {Object} interactionGraph - The interaction graph
+	 * @returns {Array} Array of connected object info
+	 */
+	findConnectedObjects(animationNode, interactionGraph) {
+		const connectedObjects = [];
+
+		// Find connections from animation node outputs
+		for (const connection of interactionGraph.connections) {
+			if (connection.fromNodeId === animationNode.id) {
+				const toNode = interactionGraph.nodes.get(connection.toNodeId);
+				if (toNode && toNode.type === 'ObjectProperty' && toNode.sceneObject) {
+					connectedObjects.push({
+						object: toNode.sceneObject, // Add the actual object reference
+						objectName: toNode.sceneObject.name || 'Unnamed Object',
+						objectType: this.getObjectType(toNode.sceneObject),
+						propertyType: toNode.propertyType || 'unknown'
+					});
+				}
+			}
+		}
+
+		return connectedObjects;
+	}
+
+	/**
+	 * Get current parameter values from a node
+	 * @param {Object} node - The node to get parameters from
+	 * @returns {Object} Parameter values
+	 */
+	getNodeParameters(node) {
+		const params = {};
+
+		if (node.inputs) {
+			node.inputs.forEach(input => {
+				params[input.name] = node.getInputValue ? node.getInputValue(input.name) : input.value;
+			});
+		}
+
+		return params;
+	}
+
+	/**
+	 * Find existing animation nodes for a specific object
+	 * @param {THREE.Object3D} object - The scene object
+	 * @param {string} animationType - Type of animation ('spin', 'pulse', etc.)
+	 * @returns {Array} Array of matching nodes
+	 */
+	findExistingAnimationNodes(object, animationType = null) {
+		const matchingNodes = [];
+		const interactionGraph = this.getInteractionGraph();
+
+		if (!interactionGraph || !interactionGraph.nodes) {
+			return matchingNodes;
+		}
+
+		for (const [nodeId, node] of interactionGraph.nodes) {
+			// Check if this is an animation node of the right type
+			const nodeType = node.type.toLowerCase();
+			if (animationType && nodeType !== animationType) {
+				continue;
+			}
+
+			if (nodeType === 'spin' || nodeType === 'pulse' || nodeType === 'float' || nodeType === 'fade') {
+				// Check if this node is connected to the target object
+				const connectedObjects = this.findConnectedObjects(node, interactionGraph);
+				console.log(`Checking node ${node.type} for connections to target object:`, {
+					nodeId: nodeId,
+					connectedObjects: connectedObjects.map(obj => ({
+						name: obj.objectName,
+						type: obj.objectType,
+						hasObjectRef: !!obj.object
+					}))
+				});
+
+				const isConnectedToObject = connectedObjects.some(objInfo => {
+					// More flexible object matching
+					const targetName = object.name || object.type || 'Unnamed Object';
+					const connectedName = objInfo.objectName;
+
+					// Direct name match
+					if (connectedName === targetName) return true;
+
+					// Match by object reference/UUID if available
+					if (objInfo.object && objInfo.object === object) return true;
+					if (objInfo.object && objInfo.object.uuid && object.uuid && objInfo.object.uuid === object.uuid) return true;
+
+					// Match by type (e.g., "cube" matches "Cube" or "BoxGeometry")
+					const targetType = (object.type || '').toLowerCase();
+					const connectedType = (connectedName || '').toLowerCase();
+					if (targetType && (connectedType.includes(targetType) || targetType.includes(connectedType))) return true;
+
+					return false;
+				});
+
+				if (isConnectedToObject) {
+					matchingNodes.push({
+						node: node,
+						nodeId: nodeId,
+						type: nodeType,
+						parameters: this.getNodeParameters(node)
+					});
+				}
+			}
+		}
+
+		return matchingNodes;
 	}
 
 	/**
@@ -1189,6 +1348,122 @@ class SceneCommandExecutor {
 			return this.editor.interactionEditor.interactionEditor.interactionGraph;
 		}
 		return null;
+	}
+
+	/**
+	 * Refresh the interaction editor UI to show updated node values
+	 */
+	refreshInteractionUI() {
+		if (this.editor &&
+			this.editor.interactionEditor &&
+			this.editor.interactionEditor.interactionEditor &&
+			this.editor.interactionEditor.interactionEditor.canvas) {
+			this.editor.interactionEditor.interactionEditor.canvas.render();
+			console.log('Refreshed interaction editor UI');
+		}
+	}
+
+	/**
+	 * Modify existing spinning animation parameters
+	 * @param {Object} command - Modify spinning command
+	 */
+	async modifySpinning(command) {
+		const { target = 'selected', speed, axis, clockwise } = command;
+		const object = this.findObject(target);
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Find existing spin nodes for this object
+		const existingNodes = this.findExistingAnimationNodes(object, 'spin');
+		console.log(`Looking for spin nodes for object:`, {
+			name: object.name,
+			type: object.type,
+			uuid: object.uuid,
+			foundNodes: existingNodes.length
+		});
+
+		if (existingNodes.length === 0) {
+			// Show debug info about what nodes exist
+			const allAnimationNodes = this.findExistingAnimationNodes(object);
+			console.log('All animation nodes for this object:', allAnimationNodes);
+			throw new Error(`No spinning animation found for ${object.name || object.type}. Create one first.`);
+		}
+
+		// Modify the first (most recent) spin node
+		const { node } = existingNodes[0];
+		console.log('Modifying existing SpinNode parameters for:', object.name || object.type);
+
+		// Update parameters if specified
+		if (speed !== undefined) {
+			node.setInputValue('speed', speed);
+			console.log(`Updated spin speed to: ${speed}`);
+		}
+		if (clockwise !== undefined) {
+			node.setInputValue('clockwise', clockwise);
+			console.log(`Updated spin direction to: ${clockwise ? 'clockwise' : 'counterclockwise'}`);
+		}
+
+		// Refresh the UI to show updated values
+		this.refreshInteractionUI();
+
+		return { success: true, modified: 'spinning', object: object.name || object.type };
+	}
+
+	/**
+	 * Modify existing pulsing animation parameters
+	 * @param {Object} command - Modify pulsing command
+	 */
+	async modifyPulsing(command) {
+		const { target = 'selected', speed, intensity } = command;
+		const object = this.findObject(target);
+		if (!object) {
+			throw new Error(`Object not found: ${target}`);
+		}
+
+		// Find existing pulse nodes for this object
+		const existingNodes = this.findExistingAnimationNodes(object, 'pulse');
+		if (existingNodes.length === 0) {
+			throw new Error(`No pulsing animation found for ${object.name || object.type}. Create one first.`);
+		}
+
+		// Modify the first (most recent) pulse node
+		const { node } = existingNodes[0];
+		console.log('Modifying existing PulseNode parameters for:', object.name || object.type);
+
+		// Update parameters if specified
+		if (speed !== undefined) {
+			node.setInputValue('frequency', speed);
+			console.log(`Updated pulse speed to: ${speed}`);
+		}
+		if (intensity !== undefined) {
+			node.setInputValue('amplitude', intensity);
+			console.log(`Updated pulse intensity to: ${intensity}`);
+		}
+
+		// Refresh the UI to show updated values
+		this.refreshInteractionUI();
+
+		return { success: true, modified: 'pulsing', object: object.name || object.type };
+	}
+
+	/**
+	 * Generic method to update any interaction parameters
+	 * @param {Object} command - Update interaction command
+	 */
+	async updateInteraction(command) {
+		const { target = 'selected', type, parameters } = command;
+
+		switch (type) {
+			case 'spin':
+			case 'spinning':
+				return this.modifySpinning({ target, ...parameters });
+			case 'pulse':
+			case 'pulsing':
+				return this.modifyPulsing({ target, ...parameters });
+			default:
+				throw new Error(`Unknown interaction type: ${type}`);
+		}
 	}
 
 	/**

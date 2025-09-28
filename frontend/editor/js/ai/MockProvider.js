@@ -28,18 +28,37 @@ class MockProvider extends AIProvider {
 		let targetObject = this.extractTargetObject(input);
 
 		// INTERACTION COMMANDS - Check these FIRST to avoid conflicts with shape names
+		// Check for modification keywords first
 		if (input.includes('spin') || (input.includes('rotate') && !input.match(/rotate\s+\d+/)) || input.includes('spinning')) {
-			const spinCommand = this.parseSpinCommand(input, targetObject);
-			if (spinCommand) {
-				commands.push(spinCommand);
-				response = "I've created a spinning animation for the object!";
+			const isModification = this.detectModificationIntent(input, 'spin');
+			if (isModification) {
+				const spinCommand = this.parseSpinModificationCommand(input, targetObject);
+				if (spinCommand) {
+					commands.push(spinCommand);
+					response = "I've updated the spinning animation parameters!";
+				}
+			} else {
+				const spinCommand = this.parseSpinCommand(input, targetObject);
+				if (spinCommand) {
+					commands.push(spinCommand);
+					response = "I've created a spinning animation for the object!";
+				}
 			}
 		}
 		else if (input.includes('pulse') || input.includes('pulsing') || input.includes('breathe') || input.includes('breathing')) {
-			const pulseCommand = this.parsePulseCommand(input, targetObject);
-			if (pulseCommand) {
-				commands.push(pulseCommand);
-				response = "I've created a pulsing animation for the object!";
+			const isModification = this.detectModificationIntent(input, 'pulse');
+			if (isModification) {
+				const pulseCommand = this.parsePulseModificationCommand(input, targetObject);
+				if (pulseCommand) {
+					commands.push(pulseCommand);
+					response = "I've updated the pulsing animation parameters!";
+				}
+			} else {
+				const pulseCommand = this.parsePulseCommand(input, targetObject);
+				if (pulseCommand) {
+					commands.push(pulseCommand);
+					response = "I've created a pulsing animation for the object!";
+				}
 			}
 		}
 		else if (input.includes('animate') || input.includes('animation')) {
@@ -614,6 +633,107 @@ class MockProvider extends AIProvider {
 	async simulateDelay(min = 100, max = 500) {
 		const delay = Math.random() * (max - min) + min;
 		return new Promise(resolve => setTimeout(resolve, delay));
+	}
+
+	/**
+	 * Detect if user wants to modify existing animation vs create new one
+	 * @param {string} input - User input string
+	 * @param {string} animationType - Type of animation (spin, pulse)
+	 * @returns {boolean} True if modification intent detected
+	 */
+	detectModificationIntent(input, animationType) {
+		// Keywords that suggest modification of existing animation
+		const modificationKeywords = [
+			'change', 'modify', 'update', 'adjust', 'alter',
+			'faster', 'slower', 'speed up', 'slow down',
+			'clockwise', 'counterclockwise', 'reverse', 'opposite',
+			'more', 'less', 'increase', 'decrease',
+			'stronger', 'weaker', 'harder', 'softer'
+		];
+
+		// Direction change keywords for spinning
+		if (animationType === 'spin') {
+			const directionKeywords = ['clockwise', 'counterclockwise', 'reverse', 'opposite', 'other way'];
+			if (directionKeywords.some(keyword => input.includes(keyword))) {
+				return true;
+			}
+		}
+
+		// Speed/intensity change keywords
+		const speedKeywords = ['faster', 'slower', 'speed up', 'slow down', 'quicker', 'speed'];
+		if (speedKeywords.some(keyword => input.includes(keyword))) {
+			return true;
+		}
+
+		// General modification keywords
+		return modificationKeywords.some(keyword => input.includes(keyword));
+	}
+
+	/**
+	 * Parse spin modification command
+	 * @param {string} input - User input string
+	 * @param {string} target - Target object
+	 * @returns {Object} Modification command
+	 */
+	parseSpinModificationCommand(input, target = 'selected') {
+		const command = {
+			action: 'modifySpinning',
+			target: target
+		};
+
+		// Extract new speed if specified
+		const speedMatch = input.match(/(?:speed|rpm)\s+(\d+(?:\.\d+)?)/);
+		if (speedMatch) {
+			command.speed = parseFloat(speedMatch[1]);
+		} else if (input.includes('fast')) {
+			command.speed = 120;
+		} else if (input.includes('slow')) {
+			command.speed = 30;
+		}
+
+		// Extract direction changes
+		if (input.includes('counterclockwise') || input.includes('ccw') || input.includes('reverse') || input.includes('opposite')) {
+			command.clockwise = false;
+		} else if (input.includes('clockwise') || input.includes('cw')) {
+			command.clockwise = true;
+		}
+
+		return command;
+	}
+
+	/**
+	 * Parse pulse modification command
+	 * @param {string} input - User input string
+	 * @param {string} target - Target object
+	 * @returns {Object} Modification command
+	 */
+	parsePulseModificationCommand(input, target = 'selected') {
+		const command = {
+			action: 'modifyPulsing',
+			target: target
+		};
+
+		// Extract new speed if specified
+		const speedMatch = input.match(/(?:speed|frequency)\s+(\d+(?:\.\d+)?)/);
+		if (speedMatch) {
+			command.speed = parseFloat(speedMatch[1]);
+		} else if (input.includes('fast')) {
+			command.speed = 2;
+		} else if (input.includes('slow')) {
+			command.speed = 0.5;
+		}
+
+		// Extract intensity changes
+		const intensityMatch = input.match(/(?:intensity|amplitude)\s+(\d+(?:\.\d+)?)/);
+		if (intensityMatch) {
+			command.intensity = parseFloat(intensityMatch[1]);
+		} else if (input.includes('strong') || input.includes('more') || input.includes('big')) {
+			command.intensity = 0.8;
+		} else if (input.includes('weak') || input.includes('less') || input.includes('small') || input.includes('subtle')) {
+			command.intensity = 0.2;
+		}
+
+		return command;
 	}
 
 	initializeResponses() {

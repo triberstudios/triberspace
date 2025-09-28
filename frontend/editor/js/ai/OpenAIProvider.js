@@ -51,7 +51,7 @@ class OpenAIProvider extends AIProvider {
 			if (result.commands && Array.isArray(result.commands)) {
 				result.commands = result.commands.map(command => {
 					// Only process interaction commands that have targets
-					if (['createSpinning', 'createPulsing', 'removeInteraction'].includes(command.action) && command.target) {
+					if (['createSpinning', 'createPulsing', 'modifySpinning', 'modifyPulsing', 'removeInteraction'].includes(command.action) && command.target) {
 						// If GPT-4's target doesn't match our extracted target and we have a better one
 						if (extractedTarget && extractedTarget !== 'selected' && command.target !== extractedTarget) {
 							console.log(`OpenAI Provider: Correcting target from "${command.target}" to "${extractedTarget}"`);
@@ -134,7 +134,7 @@ ACTIONS:
 - Object creation: addObject, addLight
 - Object manipulation: moveObject, rotateObject, scaleObject, removeObject, clearScene
 - Material changes: changeMaterialColor, changeMaterialType, changeMaterialProperty
-- INTERACTIONS: createSpinning, createPulsing, removeInteraction
+- INTERACTIONS: createSpinning, createPulsing, modifySpinning, modifyPulsing, removeInteraction
 
 OBJECTS: cube, sphere, plane, cylinder, cone, torus, dodecahedron, icosahedron, octahedron, tetrahedron, capsule, circle, ring, torusknot.
 
@@ -143,10 +143,20 @@ LIGHTS: directional (default), point, spot, ambient, hemisphere. Properties: col
 MATERIALS: standard, basic, phong, lambert, toon. Properties: roughness(0-1), metalness(0-1), opacity(0-1), transparent(bool).
 
 INTERACTIONS:
+CREATE NEW:
 - "make [object] spin" → {action:"createSpinning", target:"cube", speed:60, axis:"y", clockwise:true}
 - "make [object] pulse" → {action:"createPulsing", target:"sphere", speed:1, intensity:0.5}
+
+MODIFY EXISTING (use when interactions context shows existing animations):
+- "spin counterclockwise" → {action:"modifySpinning", target:"cube", clockwise:false}
+- "spin faster" → {action:"modifySpinning", target:"cube", speed:120}
+- "pulse slower" → {action:"modifyPulsing", target:"sphere", speed:0.5}
+- "change axis to x" → {action:"modifySpinning", target:"cube", axis:"x"}
+
+REMOVE:
 - "stop [object] spinning" → {action:"removeInteraction", target:"cube", type:"spinning"}
-- Parameters: speed (rpm for spin, frequency for pulse), axis (x/y/z for spin), intensity (0-1 for pulse), clockwise (true/false)
+
+Parameters: speed (rpm for spin, frequency for pulse), axis (x/y/z for spin), intensity (0-1 for pulse), clockwise (true/false)
 
 OBJECT TARGETING:
 CRITICAL: Look for [Target: objecttype] in user prompt - this is the extracted target to use!
@@ -167,13 +177,19 @@ NAMING: Generate descriptive names by combining attributes:
 
 Return: {"commands":[{action,type,name,position[x,y,z],color,target,property,value,intensity,etc}],"response":"brief message"}
 
+MODIFICATION DETECTION:
+Use modifySpinning/modifyPulsing when:
+1. [Interactions: ...] context shows existing animations for target object
+2. User uses modification keywords: counterclockwise, clockwise, faster, slower, reverse, change, adjust
+3. User specifies parameter changes without "make" or "create"
+
 Examples:
 - "red cube" → {action:"addObject",type:"cube",name:"red_cube",color:"red"}
 - "make the cube spin [Target: cube]" → {action:"createSpinning",target:"cube"}
 - "make sphere pulse fast [Target: sphere]" → {action:"createPulsing",target:"sphere",speed:2}
+- "spin counterclockwise [Target: cube]" + [Interactions: cube spinning clockwise] → {action:"modifySpinning",target:"cube",clockwise:false}
+- "pulse faster [Target: sphere]" + [Interactions: sphere pulsing] → {action:"modifyPulsing",target:"sphere",speed:2}
 - "stop the spinning" → {action:"removeInteraction",target:"selected",type:"spinning"}
-- "make the cube pulse [Target: cube]" → {action:"createPulsing",target:"cube",speed:1}
-- "spin the sphere [Target: sphere]" → {action:"createSpinning",target:"sphere"}
 
 Defaults: position[0,1,0], rotation[0,0,0], scale[1,1,1].`;
 	}
