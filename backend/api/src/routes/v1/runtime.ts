@@ -45,16 +45,27 @@ export async function v1RuntimeRoutes(fastify: FastifyInstance) {
   fastify.post('/scenes', async (request, reply) => {
     try {
       // Log request for debugging
-      fastify.log.info('Received scene upload request', {
+      fastify.log.info('🗄️ Backend: Received scene upload request', {
         hasBody: !!request.body,
-        bodyKeys: request.body ? Object.keys(request.body) : []
+        bodyKeys: request.body ? Object.keys(request.body) : [],
+        compiledBehaviorsDetail: request.body?.compiledBehaviors ? {
+          behaviorCount: request.body.compiledBehaviors.behaviors?.length || 0,
+          errorCount: request.body.compiledBehaviors.errors?.length || 0,
+          behaviors: request.body.compiledBehaviors.behaviors?.map(b => ({
+            objectName: b.objectName,
+            objectUuid: b.objectUuid,
+            behaviorCount: b.behaviors?.length || 0,
+            hasUpdateFunction: !!b.updateFunction?.execute
+          }))
+        } : null,
+        sceneChildrenCount: request.body?.scene?.children?.length || 0
       });
 
       // Validate the request body - use very permissive schema
       const validationResult = sceneUploadSchema.safeParse(request.body);
 
       if (!validationResult.success) {
-        fastify.log.warn('Scene validation failed', validationResult.error.errors);
+        fastify.log.warn('🗄️ Backend: Scene validation failed', validationResult.error.errors);
         return reply.code(400).send({
           success: false,
           error: 'Invalid scene data',
@@ -63,6 +74,7 @@ export async function v1RuntimeRoutes(fastify: FastifyInstance) {
       }
 
       const sceneData = validationResult.data;
+      fastify.log.info('🗄️ Backend: Scene validation passed, preparing to store');
       const sceneId = randomUUID();
       const uploadedAt = new Date().toISOString();
 
@@ -80,7 +92,12 @@ export async function v1RuntimeRoutes(fastify: FastifyInstance) {
       const filePath = path.join(TEMP_STORAGE_DIR, `${sceneId}.json`);
       await fs.writeFile(filePath, JSON.stringify(sceneRecord, null, 2));
 
-      fastify.log.info(`Scene uploaded: ${sceneId}`);
+      fastify.log.info(`🗄️ Backend: Scene stored successfully: ${sceneId}`, {
+        sceneId,
+        filePath,
+        storedKeys: Object.keys(sceneRecord),
+        behaviorCount: sceneRecord.compiledBehaviors?.behaviors?.length || 0
+      });
 
       return {
         success: true,
@@ -119,6 +136,15 @@ export async function v1RuntimeRoutes(fastify: FastifyInstance) {
       const fileContent = await fs.readFile(filePath, 'utf-8');
       const sceneData = JSON.parse(fileContent);
 
+      fastify.log.info(`🗄️ Backend: Scene data loaded from storage: ${sceneId}`, {
+        sceneId,
+        hasCompiledBehaviors: !!sceneData.compiledBehaviors,
+        behaviorCount: sceneData.compiledBehaviors?.behaviors?.length || 0,
+        errorCount: sceneData.compiledBehaviors?.errors?.length || 0,
+        sceneChildrenCount: sceneData.scene?.children?.length || 0,
+        dataKeys: Object.keys(sceneData)
+      });
+
       // Check if scene has expired
       const now = new Date();
       const expiresAt = new Date(sceneData.expiresAt);
@@ -132,7 +158,7 @@ export async function v1RuntimeRoutes(fastify: FastifyInstance) {
         });
       }
 
-      fastify.log.info(`Scene retrieved: ${sceneId}`);
+      fastify.log.info(`🗄️ Backend: Returning scene data: ${sceneId}`);
 
       return sceneData;
     } catch (error) {

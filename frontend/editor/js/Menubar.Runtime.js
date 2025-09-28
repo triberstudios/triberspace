@@ -29,12 +29,24 @@ function MenubarRuntime( editor ) {
 		try {
 			// Get scene JSON with compiled behaviors
 			const sceneData = editor.toJSON();
-			console.log('Uploading scene data:', {
+			console.log('📤 MenubarRuntime: Scene data prepared for upload:', {
 				hasScene: !!sceneData.scene,
 				hasCamera: !!sceneData.camera,
 				hasCompiledBehaviors: !!sceneData.compiledBehaviors,
 				hasInteractionGraph: !!sceneData.interactionGraph,
-				keys: Object.keys(sceneData)
+				keys: Object.keys(sceneData),
+				compiledBehaviorsDetail: sceneData.compiledBehaviors ? {
+					behaviorCount: sceneData.compiledBehaviors.behaviors?.length || 0,
+					errorCount: sceneData.compiledBehaviors.errors?.length || 0,
+					hasBehaviors: Array.isArray(sceneData.compiledBehaviors.behaviors),
+					behaviors: sceneData.compiledBehaviors.behaviors?.map(b => ({
+						objectName: b.objectName,
+						objectUuid: b.objectUuid,
+						behaviorCount: b.behaviors?.length || 0,
+						hasUpdateFunction: !!b.updateFunction?.execute
+					}))
+				} : null,
+				sceneObjectCount: sceneData.scene?.children?.length || 0
 			});
 
 			// Upload to backend
@@ -59,6 +71,12 @@ function MenubarRuntime( editor ) {
 			}
 
 			const result = await response.json();
+			console.log('📤 MenubarRuntime: Backend response:', {
+				success: result.success,
+				hasData: !!result.data,
+				sceneId: result.data?.sceneId,
+				error: result.error
+			});
 
 			if (!result.success) {
 				throw new Error(result.error || 'Upload failed');
@@ -70,7 +88,10 @@ function MenubarRuntime( editor ) {
 			const previewUrl = `http://localhost:3000/runtime/preview/${sceneId}`;
 			window.open(previewUrl, '_blank');
 
-			console.log('Scene uploaded successfully:', sceneId);
+			console.log('📤 MenubarRuntime: Scene uploaded successfully, opening preview:', {
+				sceneId,
+				previewUrl
+			});
 
 		} catch (error) {
 			console.error('Failed to preview scene:', error);

@@ -32,21 +32,52 @@ export class BehaviorExecutor {
     private objectMap: Map<string, THREE.Object3D>;
     private behaviorSets: BehaviorSet[];
     private startTime: number;
+    private compiledFunctions: Map<string, Function>; // Cache for compiled functions
+    private behaviorStartTimes: Map<string, number>; // Track when each behavior started
 
     constructor(compiledBehaviors: CompiledBehaviors, objectMap: Map<string, THREE.Object3D>) {
         this.objectMap = objectMap;
         this.behaviorSets = compiledBehaviors.behaviors;
         this.startTime = performance.now();
+        this.compiledFunctions = new Map();
+        this.behaviorStartTimes = new Map();
 
-        console.log(`BehaviorExecutor initialized with ${this.behaviorSets.length} behavior sets`);
+        console.log(`⚡ BehaviorExecutor: Initializing with ${this.behaviorSets.length} behavior sets`, {
+            totalBehaviorSets: this.behaviorSets.length,
+            objectMapSize: objectMap.size,
+            objectMapKeys: Array.from(objectMap.keys()),
+            compiledBehaviorsKeys: Object.keys(compiledBehaviors)
+        });
 
         // Log behavior details for debugging
-        this.behaviorSets.forEach(behaviorSet => {
+        this.behaviorSets.forEach((behaviorSet, index) => {
             const object = this.objectMap.get(behaviorSet.objectUuid);
-            console.log(`- ${behaviorSet.objectName} (${object ? 'found' : 'missing'}): ${behaviorSet.behaviors.length} behaviors`);
-            behaviorSet.behaviors.forEach(behavior => {
-                console.log(`  - ${behavior.type}: ${behavior.speed} ${behavior.type === 'spin' ? 'RPM' : 'BPM'}`);
+            console.log(`⚡ BehaviorExecutor: Behavior set ${index + 1}/${this.behaviorSets.length}`, {
+                objectName: behaviorSet.objectName,
+                objectUuid: behaviorSet.objectUuid,
+                objectFound: !!object,
+                objectType: object?.type,
+                objectPosition: object?.position,
+                behaviorCount: behaviorSet.behaviors.length,
+                hasUpdateFunction: !!behaviorSet.updateFunction?.code,
+                updateFunctionCode: behaviorSet.updateFunction?.code?.substring(0, 200) + '...'
             });
+
+            behaviorSet.behaviors.forEach((behavior, bIndex) => {
+                console.log(`⚡ BehaviorExecutor: Behavior ${bIndex + 1}/${behaviorSet.behaviors.length}:`, {
+                    type: behavior.type,
+                    speed: behavior.speed,
+                    nodeId: behavior.nodeId,
+                    objectUuid: behavior.objectUuid,
+                    axis: behavior.axis,
+                    direction: behavior.direction
+                });
+            });
+        });
+
+        console.log(`⚡ BehaviorExecutor: Initialization complete`, {
+            behaviorSetsWithObjects: this.behaviorSets.filter(set => this.objectMap.has(set.objectUuid)).length,
+            behaviorSetsWithoutObjects: this.behaviorSets.filter(set => !this.objectMap.has(set.objectUuid)).length
         });
     }
 
@@ -57,15 +88,78 @@ export class BehaviorExecutor {
             const object = this.objectMap.get(behaviorSet.objectUuid);
 
             if (!object) {
-                // Object not found - skip
+                // Object not found - skip (but log occasionally for debugging)
+                if (Math.random() < 0.001) { // Log 0.1% of the time to avoid spam
+                    console.warn(`⚡ BehaviorExecutor: Object not found for UUID ${behaviorSet.objectUuid} (${behaviorSet.objectName})`);
+                }
                 continue;
             }
 
             try {
                 // Execute the compiled behavior function
-                behaviorSet.updateFunction.execute(object, deltaTime);
+                if (behaviorSet.updateFunction?.code) {
+                    const compiledFunction = this.getCompiledFunction(behaviorSet);
+                    if (compiledFunction) {
+                        // Initialize behavior start time if needed
+                        const behaviorKey = `${behaviorSet.objectUuid}_${behaviorSet.objectName}`;
+                        if (!this.behaviorStartTimes.has(behaviorKey)) {
+                            this.behaviorStartTimes.set(behaviorKey, currentTime);
+                        }
+
+                        // Calculate elapsed time since behavior started
+                        const behaviorStartTime = this.behaviorStartTimes.get(behaviorKey)!;
+                        const elapsedTime = currentTime - behaviorStartTime;
+
+                        // Check if object has proper rotation property
+                        if (!object.rotation) {
+                            console.warn(`⚡ BehaviorExecutor: Object ${behaviorSet.objectName} has no rotation property:`, {
+                                objectType: object.type,
+                                objectUuid: object.uuid,
+                                objectKeys: Object.keys(object),
+                                hasPosition: !!object.position,
+                                hasScale: !!object.scale
+                            });
+                            return;
+                        }
+
+                        // Initialize behavior start time (one time only)
+                        const initKey = behaviorKey + '_init';
+                        if (!this.behaviorStartTimes.has(initKey)) {
+                            console.log(`⚡ BehaviorExecutor: Initializing behavior for ${behaviorSet.objectName} - preserving original editor design`);
+                            this.behaviorStartTimes.set(initKey, currentTime);
+                        }
+
+                        // Debug: Log rotation before and after
+                        const rotationBefore = {
+                            x: object.rotation.x || 0,
+                            y: object.rotation.y || 0,
+                            z: object.rotation.z || 0
+                        };
+
+                        compiledFunction(object, deltaTime, elapsedTime);
+
+                        const rotationAfter = {
+                            x: object.rotation.x || 0,
+                            y: object.rotation.y || 0,
+                            z: object.rotation.z || 0
+                        };
+
+                        // Log successful behavior execution occasionally
+                        if (Math.random() < 0.001) { // Log 0.1% of the time to confirm it's working
+                            console.log(`⚡ BehaviorExecutor: Successfully executing behavior for ${behaviorSet.objectName}`);
+                        }
+                    } else {
+                        // Function compilation failed - fallback to manual
+                        console.warn(`⚡ BehaviorExecutor: Function compilation failed for ${behaviorSet.objectName}, using manual fallback`);
+                        this.executeManualBehaviors(object, behaviorSet.behaviors, currentTime);
+                    }
+                } else {
+                    // No update function - fallback to manual
+                    console.warn(`⚡ BehaviorExecutor: No update function for ${behaviorSet.objectName}, using manual fallback`);
+                    this.executeManualBehaviors(object, behaviorSet.behaviors, currentTime);
+                }
             } catch (error) {
-                console.warn(`Failed to execute behavior for ${behaviorSet.objectName}:`, error);
+                console.warn(`⚡ BehaviorExecutor: Failed to execute behavior for ${behaviorSet.objectName}:`, error);
 
                 // Fallback to manual execution
                 this.executeManualBehaviors(object, behaviorSet.behaviors, currentTime);
@@ -73,20 +167,78 @@ export class BehaviorExecutor {
         }
     }
 
+    // Get or compile function from code string
+    private getCompiledFunction(behaviorSet: BehaviorSet): Function | null {
+        const functionId = behaviorSet.objectUuid;
+
+        // Check if already compiled and cached
+        if (this.compiledFunctions.has(functionId)) {
+            return this.compiledFunctions.get(functionId)!;
+        }
+
+        // Compile function from code string
+        try {
+            const functionCode = behaviorSet.updateFunction.code;
+
+            console.log(`⚡ BehaviorExecutor: Compiling function for ${behaviorSet.objectName}`, {
+                objectUuid: behaviorSet.objectUuid,
+                codeLength: functionCode.length,
+                codePreview: functionCode.substring(0, 100) + '...'
+            });
+
+            // Extract the function body from the code string
+            // The code contains: "function updateBehavior(object, deltaTime) { ... }"
+            // We need to create: new Function('object', 'deltaTime', '...')
+            const functionBodyMatch = functionCode.match(/function\s+\w+\s*\([^)]*\)\s*\{([\s\S]*)\}/);
+            if (!functionBodyMatch) {
+                console.error(`⚡ BehaviorExecutor: Cannot parse function code for ${behaviorSet.objectName}`);
+                return null;
+            }
+
+            const functionBody = functionBodyMatch[1];
+            const compiledFunction = new Function('object', 'deltaTime', 'elapsedTime', functionBody);
+
+            // Cache the compiled function
+            this.compiledFunctions.set(functionId, compiledFunction);
+
+            console.log(`⚡ BehaviorExecutor: Successfully compiled and cached function for ${behaviorSet.objectName}`);
+            return compiledFunction;
+
+        } catch (error) {
+            console.error(`⚡ BehaviorExecutor: Failed to compile function for ${behaviorSet.objectName}:`, error);
+            return null;
+        }
+    }
+
     // Fallback manual behavior execution
     private executeManualBehaviors(object: THREE.Object3D, behaviors: CompiledBehavior[], currentTime: number) {
+        console.log(`⚡ BehaviorExecutor: Executing ${behaviors.length} manual behaviors for object`, {
+            objectType: object.type,
+            objectName: object.name,
+            objectUuid: object.uuid,
+            behaviors: behaviors.map(b => ({ type: b.type, speed: b.speed }))
+        });
+
         for (const behavior of behaviors) {
             try {
                 switch (behavior.type) {
                     case 'spin':
                         this.executeSpin(object, behavior, currentTime);
+                        if (Math.random() < 0.01) { // Log 1% of the time
+                            console.log(`⚡ BehaviorExecutor: Executed spin behavior on ${object.name || object.type}`);
+                        }
                         break;
                     case 'pulse':
                         this.executePulse(object, behavior, currentTime);
+                        if (Math.random() < 0.01) {
+                            console.log(`⚡ BehaviorExecutor: Executed pulse behavior on ${object.name || object.type}`);
+                        }
                         break;
+                    default:
+                        console.warn(`⚡ BehaviorExecutor: Unknown behavior type: ${behavior.type}`);
                 }
             } catch (error) {
-                console.warn(`Failed to execute ${behavior.type} behavior:`, error);
+                console.warn(`⚡ BehaviorExecutor: Failed to execute ${behavior.type} behavior:`, error);
             }
         }
     }
@@ -162,5 +314,7 @@ export class BehaviorExecutor {
     destroy() {
         this.behaviorSets = [];
         this.objectMap.clear();
+        this.compiledFunctions.clear();
+        this.behaviorStartTimes.clear();
     }
 }

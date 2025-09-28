@@ -4,7 +4,7 @@ import { Suspense, useState, use } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Stats } from '@react-three/drei';
 import { Physics, RigidBody } from '@react-three/rapier';
-import { SceneLoader } from '@/components/runtime/SceneLoader';
+import { SceneLoader, SceneDebugInfo } from '@/components/runtime/SceneLoader';
 import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
 
 interface PreviewPageProps {
@@ -17,6 +17,7 @@ export default function PreviewPage({ params }: PreviewPageProps) {
     const { sceneId } = use(params);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [sceneData, setSceneData] = useState<any>(null);
 
     return (
         <div className="w-full h-screen bg-black">
@@ -48,8 +49,8 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                 }}
             >
                 <Physics gravity={[0, -30, 0]}>
-                    {/* Lighting */}
-                    <ambientLight intensity={0.6} />
+                    {/* Lighting - Commented out to respect editor lighting design */}
+                    {/* <ambientLight intensity={0.6} />
                     <directionalLight
                         position={[10, 10, 5]}
                         intensity={1.5}
@@ -62,7 +63,7 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                         shadow-camera-bottom={-10}
                     />
                     <pointLight position={[5, 5, 5]} intensity={0.5} />
-                    <pointLight position={[-5, 5, -5]} intensity={0.5} />
+                    <pointLight position={[-5, 5, -5]} intensity={0.5} /> */}
 
                     {/* Ground plane with physics */}
                     <RigidBody type="fixed">
@@ -72,19 +73,6 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                         </mesh>
                     </RigidBody>
 
-                    {/* Add some reference objects to help with visibility */}
-                    <mesh position={[5, 1, 0]} castShadow>
-                        <boxGeometry args={[1, 1, 1]} />
-                        <meshStandardMaterial color="#ff4444" />
-                    </mesh>
-                    <mesh position={[-5, 1, 0]} castShadow>
-                        <boxGeometry args={[1, 1, 1]} />
-                        <meshStandardMaterial color="#44ff44" />
-                    </mesh>
-                    <mesh position={[0, 1, 5]} castShadow>
-                        <boxGeometry args={[1, 1, 1]} />
-                        <meshStandardMaterial color="#4444ff" />
-                    </mesh>
 
                     {/* Character and Camera */}
                     <ThirdPersonCamera
@@ -98,6 +86,7 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                             sceneId={sceneId}
                             onLoadingChange={setIsLoading}
                             onError={setError}
+                            onSceneDataChange={setSceneData}
                         />
                     </Suspense>
 
@@ -123,6 +112,9 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                     </div>
                 </div>
             )}
+
+            {/* Debug info */}
+            <SceneDebugInfo sceneData={sceneData} />
         </div>
     );
 }

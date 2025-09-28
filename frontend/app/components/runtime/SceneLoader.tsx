@@ -34,9 +34,10 @@ interface SceneLoaderProps {
     sceneId: string;
     onLoadingChange?: (loading: boolean) => void;
     onError?: (error: string) => void;
+    onSceneDataChange?: (sceneData: SceneData | null) => void;
 }
 
-export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderProps) {
+export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChange }: SceneLoaderProps) {
     const [sceneData, setSceneData] = useState<SceneData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,12 +50,13 @@ export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderPr
         loadSceneData();
     }, [sceneId]);
 
-    // Initialize behaviors when scene data loads
-    useEffect(() => {
+    // Initialize behaviors when scene objects are actually loaded
+    const handleSceneLoaded = () => {
         if (sceneData?.compiledBehaviors && groupRef.current) {
+            console.log('🎬 SceneLoader: Scene objects loaded, initializing behaviors');
             initializeBehaviors();
         }
-    }, [sceneData]);
+    };
 
     async function loadSceneData() {
         try {
@@ -63,8 +65,9 @@ export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderPr
             onLoadingChange?.(true);
             onError?.(null);
 
-            // For MVP, we'll simulate loading from a temporary storage
-            // In the future, this will fetch from the actual API endpoint
+            console.log('SceneLoader: Loading scene', sceneId);
+
+            // Fetch scene data from backend API
             const response = await fetch(`http://localhost:3001/api/v1/runtime/scenes/${sceneId}`);
 
             if (!response.ok) {
@@ -72,7 +75,15 @@ export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderPr
             }
 
             const data = await response.json();
+            console.log('SceneLoader: Received data', {
+                hasScene: !!data.scene,
+                hasCamera: !!data.camera,
+                hasCompiledBehaviors: !!data.compiledBehaviors,
+                behaviorCount: data.compiledBehaviors?.behaviors?.length || 0,
+                sceneChildrenCount: data.scene?.children?.length || 0
+            });
             setSceneData(data);
+            onSceneDataChange?.(data);
         } catch (err) {
             console.error('Failed to load scene:', err);
             const errorMessage = err instanceof Error ? err.message : 'Failed to load scene';
@@ -85,16 +96,46 @@ export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderPr
     }
 
     function initializeBehaviors() {
-        if (!sceneData?.compiledBehaviors || !groupRef.current) return;
+        if (!sceneData?.compiledBehaviors || !groupRef.current) {
+            console.log('🎬 SceneLoader: Cannot initialize behaviors', {
+                hasSceneData: !!sceneData,
+                hasCompiledBehaviors: !!sceneData?.compiledBehaviors,
+                hasGroup: !!groupRef.current
+            });
+            return;
+        }
+
+        console.log('🎬 SceneLoader: Starting behavior initialization', {
+            behaviorCount: sceneData.compiledBehaviors.behaviors?.length || 0,
+            errorCount: sceneData.compiledBehaviors.errors?.length || 0,
+            groupChildren: groupRef.current.children.length
+        });
 
         // Build object map for UUID lookup
         const objectMap = new Map<string, THREE.Object3D>();
+        const allObjects: Array<{uuid: string, type: string, name: string}> = [];
+
         groupRef.current.traverse((object) => {
             if (object.uuid) {
                 objectMap.set(object.uuid, object);
+                allObjects.push({
+                    uuid: object.uuid,
+                    type: object.type,
+                    name: object.name || 'unnamed'
+                });
             }
         });
         objectMapRef.current = objectMap;
+
+        console.log('🎬 SceneLoader: Built object map', {
+            objectMapSize: objectMap.size,
+            allObjects: allObjects,
+            behaviorTargets: sceneData.compiledBehaviors.behaviors?.map(b => ({
+                objectName: b.objectName,
+                objectUuid: b.objectUuid,
+                found: objectMap.has(b.objectUuid)
+            }))
+        });
 
         // Initialize behavior executor
         behaviorExecutorRef.current = new BehaviorExecutor(
@@ -102,13 +143,23 @@ export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderPr
             objectMap
         );
 
-        console.log('Initialized behaviors for', sceneData.compiledBehaviors.behaviors.length, 'objects');
+        console.log('🎬 SceneLoader: Behavior initialization complete', {
+            behaviorExecutorCreated: !!behaviorExecutorRef.current,
+            behaviorsWithObjects: sceneData.compiledBehaviors.behaviors?.filter(b => objectMap.has(b.objectUuid)).length || 0,
+            behaviorsWithoutObjects: sceneData.compiledBehaviors.behaviors?.filter(b => !objectMap.has(b.objectUuid)).length || 0
+        });
     }
 
     // Animation loop
     useFrame((state, delta) => {
         if (behaviorExecutorRef.current) {
             behaviorExecutorRef.current.update(delta);
+        } else if (Math.random() < 0.001) { // Log occasionally when no executor
+            console.log('🎬 SceneLoader: No behavior executor in animation loop', {
+                hasExecutor: !!behaviorExecutorRef.current,
+                hasSceneData: !!sceneData,
+                hasCompiledBehaviors: !!sceneData?.compiledBehaviors
+            });
         }
     });
 
@@ -142,13 +193,13 @@ export function SceneLoader({ sceneId, onLoadingChange, onError }: SceneLoaderPr
 
     return (
         <group ref={groupRef}>
-            <SceneContent sceneData={sceneData} />
+            <SceneContent sceneData={sceneData} onSceneLoaded={handleSceneLoaded} />
         </group>
     );
 }
 
 // Component to render the actual Three.js scene content
-function SceneContent({ sceneData }: { sceneData: SceneData }) {
+function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSceneLoaded?: () => void }) {
     const groupRef = useRef<THREE.Group>(null);
 
     useEffect(() => {
@@ -158,7 +209,24 @@ function SceneContent({ sceneData }: { sceneData: SceneData }) {
         const loader = new THREE.ObjectLoader();
 
         try {
+            console.log('SceneContent: Parsing scene data', {
+                hasSceneData: !!sceneData.scene,
+                sceneDataType: typeof sceneData.scene,
+                sceneDataKeys: sceneData.scene ? Object.keys(sceneData.scene) : null
+            });
+
             const loadedScene = loader.parse(sceneData.scene);
+
+            console.log('SceneContent: Scene parsed successfully', {
+                loadedSceneType: loadedScene.type,
+                loadedSceneChildren: loadedScene.children.length,
+                childrenTypes: loadedScene.children.map(child => ({
+                    type: child.type,
+                    name: child.name,
+                    uuid: child.uuid,
+                    position: child.position
+                }))
+            });
 
             // Clear existing content
             while (groupRef.current.children.length > 0) {
@@ -172,12 +240,34 @@ function SceneContent({ sceneData }: { sceneData: SceneData }) {
                 groupRef.current.add(child);
             }
 
-            console.log('Loaded scene with', groupRef.current.children.length, 'objects');
+            console.log('SceneContent: Loaded scene with', groupRef.current.children.length, 'objects in group');
+
+            // Debug: Log all lights in the scene
+            const lights: any[] = [];
+            groupRef.current.traverse((object) => {
+                if (object.type.includes('Light')) {
+                    lights.push({
+                        type: object.type,
+                        name: object.name,
+                        uuid: object.uuid,
+                        intensity: (object as any).intensity,
+                        color: (object as any).color?.getHexString(),
+                        position: object.position
+                    });
+                }
+            });
+            console.log('🔆 SceneContent: Lights in scene:', lights);
+
+            // Notify that scene objects are loaded and ready for behavior initialization
+            if (onSceneLoaded) {
+                onSceneLoaded();
+            }
 
         } catch (error) {
-            console.error('Failed to parse scene:', error);
+            console.error('SceneContent: Failed to parse scene:', error);
+            console.log('SceneContent: Scene data that failed to parse:', sceneData.scene);
         }
-    }, [sceneData]);
+    }, [sceneData, onSceneLoaded]);
 
     return <group ref={groupRef} />;
 }

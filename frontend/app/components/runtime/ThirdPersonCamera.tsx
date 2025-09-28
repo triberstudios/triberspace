@@ -23,10 +23,10 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     const rigidBodyRef = useRef<any>(null);
     const raycaster = useRef(new THREE.Raycaster());
 
-    // Camera configuration
+    // Camera configuration (V2World values)
     const cameraDistance = 4;
     const cameraHeight = 3;
-    const smoothness = 0.1;
+    const smoothness = 0.5;
 
     // Camera control state
     const [cameraAngle, setCameraAngle] = useState(0);
@@ -39,7 +39,8 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     const { animation } = useCharacterControls({
         characterRef,
         rigidBodyRef,
-        cameraAngle
+        cameraAngle,
+        setCameraAngle
     });
 
     // Mouse/touch controls for camera
@@ -93,68 +94,54 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
         };
     }, [isDragging, lastClientX, lastClientY]);
 
-    // Camera follow logic
+    // Camera follow logic (V2World style)
     useFrame(() => {
         if (!characterRef.current || !cameraRef.current || !rigidBodyRef.current) return;
 
         const characterBody = rigidBodyRef.current;
         const characterPosition = characterBody.translation();
-        const camera = cameraRef.current;
 
-        // Calculate camera orientation
+        const camera = cameraRef.current;
         const cameraOrientationAngle = cameraAngle + Math.PI;
         const yOffset = 2.5;
 
-        // Calculate desired camera position
+        // Calculate 3P camera position/angle (V2World style)
         const horizontalDistance = Math.cos(cameraVerticalAngle) * cameraDistance;
         const verticalDistance = Math.sin(cameraVerticalAngle) * cameraDistance;
-
         const desiredPosition = new THREE.Vector3(
             characterPosition.x + Math.sin(cameraOrientationAngle) * horizontalDistance,
             characterPosition.y + cameraHeight + verticalDistance,
             characterPosition.z + Math.cos(cameraOrientationAngle) * horizontalDistance
         );
 
-        // Collision detection for camera
-        const rayCastOffset = new THREE.Vector3(
-            characterPosition.x,
-            characterPosition.y + 2,
-            characterPosition.z
-        );
-        const directionVec = new THREE.Vector3().subVectors(desiredPosition, rayCastOffset);
+        // Collision detection logic - set up raycaster (V2World style)
+        const rayCastOffset = new THREE.Vector3(characterPosition.x, characterPosition.y + 2, characterPosition.z);
+        const castStartPos = rayCastOffset;
+        const directionVec = new THREE.Vector3().subVectors(desiredPosition, castStartPos);
         const directionVecMag = directionVec.length();
         const directionVecNormalized = directionVec.normalize();
-
-        raycaster.current.set(rayCastOffset, directionVecNormalized);
+        raycaster.current.set(castStartPos, directionVecNormalized);
         raycaster.current.far = directionVecMag;
 
-        // Find objects that can collide with camera (objects with camCollidable property)
-        const collidableObjects = scene.children.filter(child =>
-            (child as any).camCollidable || child.userData.camCollidable
-        );
+        // Grab all items that can collide with cam (V2World style)
+        const checklist = scene.children.filter(child => (child as any).camCollidable);
 
-        // Check for intersections
-        const intersects = raycaster.current.intersectObjects(collidableObjects, true);
+        // Use raycaster to see if there's an intersection with collidable items
+        const newIntersects = raycaster.current.intersectObjects(checklist, true);
+
+        // Create a clone of desired position - in the case of intersection, move cam position to final position
         let finalPosition = desiredPosition.clone();
 
-        if (intersects.length > 0) {
-            const closestIntersect = intersects[0];
+        if (newIntersects.length > 0) {
+            const closestIntersect = newIntersects[0];
             if (closestIntersect.distance < directionVecMag) {
-                finalPosition = rayCastOffset.clone().add(
-                    directionVecNormalized.multiplyScalar(closestIntersect.distance - 0.1)
-                );
+                finalPosition = castStartPos.add(directionVecNormalized.multiplyScalar(closestIntersect.distance - 0.1));
             }
         }
 
-        // Smoothly move camera to final position
+        // Use final position as the cam destination
         camera.position.lerp(finalPosition, smoothness);
-
-        // Look at character
-        camera.lookAt(
-            characterPosition.x,
-            characterPosition.y + yOffset,
-            characterPosition.z
-        );
+        camera.lookAt(characterPosition.x, characterPosition.y + yOffset, characterPosition.z);
     });
 
     return (

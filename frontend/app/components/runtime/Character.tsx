@@ -19,29 +19,61 @@ const Character = React.forwardRef<THREE.Group, CharacterProps>(({
     color = '#4080ff',
     rigidBodyRef
 }, characterRef) => {
-    // For MVP, we'll use a simple geometry instead of loading an external GLB
-    // In production, you could load the TriberCharacterThinner.glb
+    const { scene, animations } = useGLTF('/assets/TriberCharacterThinner.glb');
     const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
     const internalRigidBodyRef = useRef<any>(null);
     const actualRigidBodyRef = rigidBodyRef || internalRigidBodyRef;
-    const meshRef = useRef<THREE.Mesh>(null);
+    const [physicsReady, setPhysicsReady] = useState(false);
 
-    // Create a simple character geometry (can be replaced with GLB later)
+    // Initialize animation mixer
     useEffect(() => {
-        if (meshRef.current) {
-            // Set character color
-            if (meshRef.current.material && 'color' in meshRef.current.material) {
-                (meshRef.current.material as THREE.MeshStandardMaterial).color.set(color);
+        if (scene) {
+            const mixerInstance = new THREE.AnimationMixer(scene);
+            setMixer(mixerInstance);
+        }
+    }, [scene]);
+
+    // Handle animation changes
+    useEffect(() => {
+        if (mixer && animations.length > 0) {
+            mixer.stopAllAction();
+            const clip = animations.find((clip) => clip.name === animation);
+            if (clip) {
+                const action = mixer.clipAction(clip);
+                action.play();
             }
         }
-    }, [color]);
+    }, [mixer, animation, animations]);
 
-    // Animation system (simplified for MVP)
+    // Update animation mixer
+    useFrame((_, deltaTime) => {
+        if (mixer) {
+            mixer.update(deltaTime);
+        }
+    });
+
+    // Set character color
     useEffect(() => {
-        // In a full implementation, you would load animations from the GLB file
-        // For now, we'll just handle the animation state
-        console.log(`Character animation: ${animation}`);
-    }, [animation]);
+        if (scene) {
+            scene.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    (child.material as THREE.MeshStandardMaterial).color.set(color);
+                    if ((child.material as THREE.MeshStandardMaterial).emissive) {
+                        (child.material as THREE.MeshStandardMaterial).emissive.set(color);
+                        (child.material as THREE.MeshStandardMaterial).emissiveIntensity = 200;
+                    }
+                }
+            });
+        }
+    }, [scene, color]);
+
+    // Physics ready timer
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setPhysicsReady(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Debug logging
     useEffect(() => {
@@ -56,57 +88,34 @@ const Character = React.forwardRef<THREE.Group, CharacterProps>(({
     }, [actualRigidBodyRef.current]);
 
     return (
-        <RigidBody
-            ref={actualRigidBodyRef}
-            colliders={false}
-            type="dynamic"
-            lockRotations={true}
-            position={position}
-            friction={1}
-            linearDamping={0.5}
-            angularDamping={0.5}
-            gravityScale={15}
-        >
-            <CapsuleCollider position={[0, 1.2, 0]} args={[0.5, 0.75]} />
-            <group
-                ref={characterRef}
-                scale={[1, 1, 1]}
-                rotation={[0, 0, 0]}
-                position={[0, 0, 0]}
-            >
-                {/* Simple character representation - replace with GLB model */}
-                <mesh ref={meshRef} position={[0, 1, 0]} castShadow>
-                    <capsuleGeometry args={[0.5, 1.5]} />
-                    <meshStandardMaterial color={color} />
-                </mesh>
-
-                {/* Head */}
-                <mesh position={[0, 2.2, 0]} castShadow>
-                    <sphereGeometry args={[0.4]} />
-                    <meshStandardMaterial color={color} />
-                </mesh>
-
-                {/* Arms */}
-                <mesh position={[-0.7, 1.5, 0]} rotation={[0, 0, Math.PI / 6]} castShadow>
-                    <capsuleGeometry args={[0.15, 0.8]} />
-                    <meshStandardMaterial color={color} />
-                </mesh>
-                <mesh position={[0.7, 1.5, 0]} rotation={[0, 0, -Math.PI / 6]} castShadow>
-                    <capsuleGeometry args={[0.15, 0.8]} />
-                    <meshStandardMaterial color={color} />
-                </mesh>
-
-                {/* Legs */}
-                <mesh position={[-0.25, 0.2, 0]} castShadow>
-                    <capsuleGeometry args={[0.2, 0.8]} />
-                    <meshStandardMaterial color={color} />
-                </mesh>
-                <mesh position={[0.25, 0.2, 0]} castShadow>
-                    <capsuleGeometry args={[0.2, 0.8]} />
-                    <meshStandardMaterial color={color} />
-                </mesh>
-            </group>
-        </RigidBody>
+        <>
+            {physicsReady && (
+                <RigidBody
+                    ref={actualRigidBodyRef}
+                    colliders={false}
+                    type="dynamic"
+                    lockRotations={true}
+                    position={position}
+                    friction={1}
+                    linearDamping={0.5}
+                    angularDamping={0.5}
+                    gravityScale={15}
+                    dominanceGroup={1000}
+                >
+                    <CapsuleCollider position={[0, 1.2, 0]} args={[0.5, 0.75]} />
+                    <group
+                        ref={characterRef}
+                        scale={[0.35, 0.35, 0.35]}
+                        rotation={[0, Math.PI, 0]}
+                        position={[0, 0, 0]}
+                        dispose={null}
+                        renderOrder={1002}
+                    >
+                        <primitive object={scene} dispose={null} />
+                    </group>
+                </RigidBody>
+            )}
+        </>
     );
 });
 

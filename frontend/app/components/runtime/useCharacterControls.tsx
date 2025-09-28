@@ -82,12 +82,14 @@ interface UseCharacterControlsProps {
     characterRef: React.RefObject<THREE.Group>;
     rigidBodyRef: React.RefObject<any>;
     cameraAngle: number;
+    setCameraAngle: (angle: number | ((prevAngle: number) => number)) => void;
 }
 
 export function useCharacterControls({
     characterRef,
     rigidBodyRef,
-    cameraAngle
+    cameraAngle,
+    setCameraAngle
 }: UseCharacterControlsProps) {
     const [animation, setAnimation] = useState('idle');
     const keys = useKeyboardControls();
@@ -107,78 +109,65 @@ export function useCharacterControls({
             return;
         }
 
+        let desiredRotationAngle = 0;
+        const movementSpeed = 7; // V2World speed
+        const rotationSpeed = 0.03; // V2World rotation speed
         const character = characterRef.current;
         const rigidBody = rigidBodyRef.current;
+        const forward = new THREE.Vector3(0, 0, -1);
+        const characterQuaternion = new THREE.Quaternion().copy(character.quaternion);
 
-        // Calculate movement direction
-        let moveX = 0;
-        let moveZ = 0;
+        // Apply the character's current rotation to the forward vector
+        forward.applyQuaternion(characterQuaternion);
 
-        if (keys.up) moveZ += 1;
-        if (keys.down) moveZ -= 1;
-        if (keys.left) moveX -= 1;
-        if (keys.right) moveX += 1;
-
-        // Determine if character is moving
-        const isMoving = moveX !== 0 || moveZ !== 0;
-        const isRunning = keys.shift && isMoving;
-
-        // Update animation based on movement
-        if (!isMoving) {
-            setAnimation('idle');
-        } else if (isRunning) {
-            setAnimation('run');
+        // Handle forward and backward movement (UP/DOWN keys)
+        if (keys.up || keys.down) {
+            const directionMultiplier = keys.up ? -1 : -1; // V2World uses same direction for both
+            rigidBody.setLinvel({
+                x: forward.x * movementSpeed * directionMultiplier,
+                y: 0,
+                z: forward.z * movementSpeed * directionMultiplier
+            }, true);
         } else {
-            setAnimation('walk');
+            // Stop movement if neither forward nor backward keys are pressed
+            rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         }
 
-        if (isMoving) {
-            // Normalize movement vector
-            const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
-            moveX /= moveLength;
-            moveZ /= moveLength;
+        // Handle left and right rotation (LEFT/RIGHT keys)
+        if (keys.left || keys.right) {
+            const rotationDirection = keys.left ? 1 : -1;
+            setCameraAngle(cameraAngle + rotationSpeed * rotationDirection);
+        }
 
-            // Apply camera angle to movement direction
-            const rotatedMoveX = moveX * Math.cos(cameraAngle) + moveZ * Math.sin(cameraAngle);
-            const rotatedMoveZ = moveZ * Math.cos(cameraAngle) - moveX * Math.sin(cameraAngle);
+        // Determine the desired rotation angle based on keyboard input
+        desiredRotationAngle = keys.up
+            ? cameraAngle
+            : keys.down
+            ? cameraAngle + Math.PI
+            : lastDesiredRotationAngle;
 
-            // Calculate speed
-            const currentSpeed = isRunning ? runSpeed : walkSpeed;
+        // Update the last desired rotation angle for smooth transitions
+        if (keys.up || keys.down) {
+            setLastDesiredRotationAngle(desiredRotationAngle);
+        }
 
-            // Apply movement to rigid body
-            const currentVelocity = rigidBody.linvel();
-            rigidBody.setLinvel({
-                x: rotatedMoveX * currentSpeed,
-                y: currentVelocity.y, // Preserve vertical velocity for gravity/jumping
-                z: rotatedMoveZ * currentSpeed
-            }, true);
+        // Apply the new rotation to the character
+        const newQuaternion = new THREE.Quaternion();
+        newQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), desiredRotationAngle);
+        character.quaternion.copy(newQuaternion);
 
-            // Calculate desired character rotation
-            const desiredRotationAngle = Math.atan2(rotatedMoveX, rotatedMoveZ);
+        // Update the animation state based on movement (only idle/walk, no run)
+        const isMoving = keys.up || keys.down;
+        const animationState = isMoving ? 'walk' : 'idle';
 
-            // Smooth character rotation
-            const angleDifference = desiredRotationAngle - lastDesiredRotationAngle;
-            const adjustedAngleDifference = Math.atan2(Math.sin(angleDifference), Math.cos(angleDifference));
-            const newRotationAngle = lastDesiredRotationAngle + adjustedAngleDifference * smoothness;
-
-            setLastDesiredRotationAngle(newRotationAngle);
-
-            // Apply rotation to character
-            character.rotation.y = newRotationAngle;
-        } else {
-            // Stop horizontal movement when no input
-            const currentVelocity = rigidBody.linvel();
-            rigidBody.setLinvel({
-                x: 0,
-                y: currentVelocity.y,
-                z: 0
-            }, true);
+        if (animation !== animationState) {
+            setAnimation(animationState);
         }
     });
 
     return {
         animation,
-        isMoving: keys.up || keys.down || keys.left || keys.right,
-        isRunning: keys.shift && (keys.up || keys.down || keys.left || keys.right)
+        isMoving: keys.up || keys.down,
+        isRunning: false // V2World doesn't have running
     };
 }

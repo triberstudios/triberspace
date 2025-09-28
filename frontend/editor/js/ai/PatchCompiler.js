@@ -10,7 +10,8 @@ export class PatchCompiler {
             'Pulse',
             'ObjectRotation',
             'ObjectScale',
-            'SceneObject'
+            'SceneObject',
+            'ObjectProperty'  // Add ObjectProperty as supported target
         ]);
     }
 
@@ -20,7 +21,15 @@ export class PatchCompiler {
      * @returns {Object} Compiled behaviors with execution code
      */
     compile(interactionGraph) {
+        console.log('🔧 PatchCompiler: Starting compilation', {
+            hasGraph: !!interactionGraph,
+            hasNodes: !!interactionGraph?.nodes,
+            nodeCount: interactionGraph?.nodes?.length || 0,
+            graphKeys: interactionGraph ? Object.keys(interactionGraph) : null
+        });
+
         if (!interactionGraph || !interactionGraph.nodes || interactionGraph.nodes.length === 0) {
+            console.log('🔧 PatchCompiler: No nodes to compile, returning empty result');
             return {
                 behaviors: [],
                 errors: [],
@@ -37,24 +46,62 @@ export class PatchCompiler {
         const errors = [];
         const nodeMap = new Map();
 
-        // Build node lookup map
-        if (Array.isArray(interactionGraph.nodes)) {
-            interactionGraph.nodes.forEach(node => {
-                nodeMap.set(node.id, node);
+        // Build node lookup map - handle both array and object formats
+        if (interactionGraph.nodes) {
+            if (Array.isArray(interactionGraph.nodes)) {
+                // Array format
+                interactionGraph.nodes.forEach(node => {
+                    nodeMap.set(node.id, node);
+                });
+            } else if (typeof interactionGraph.nodes === 'object') {
+                // Object map format (current format)
+                Object.values(interactionGraph.nodes).forEach(node => {
+                    nodeMap.set(node.id, node);
+                });
+            }
+
+            console.log('🔧 PatchCompiler: Built node map', {
+                nodeMapSize: nodeMap.size,
+                nodeFormat: Array.isArray(interactionGraph.nodes) ? 'array' : 'object',
+                nodeTypes: Array.from(nodeMap.values()).map(n => ({
+                    id: n.id,
+                    type: n.type,
+                    name: n.name || n.objectName
+                }))
             });
         }
 
         // Find behavior chains (nodes that ultimately connect to SceneObject nodes)
         const behaviorChains = this.findBehaviorChains(interactionGraph, nodeMap);
+        console.log('🔧 PatchCompiler: Found behavior chains', {
+            chainCount: behaviorChains.length,
+            chains: behaviorChains.map(chain => ({
+                targetObject: chain.targetObject,
+                behaviors: chain.behaviors.map(b => ({ type: b.type, id: b.id }))
+            }))
+        });
 
         // Compile each behavior chain
-        behaviorChains.forEach(chain => {
+        behaviorChains.forEach((chain, index) => {
             try {
+                console.log(`🔧 PatchCompiler: Compiling chain ${index + 1}/${behaviorChains.length}`, {
+                    targetObject: chain.targetObject,
+                    behaviorCount: chain.behaviors.length
+                });
+
                 const behavior = this.compileBehaviorChain(chain, nodeMap);
                 if (behavior) {
                     compiledBehaviors.push(behavior);
+                    console.log(`🔧 PatchCompiler: Successfully compiled behavior for ${behavior.objectName}`, {
+                        objectUuid: behavior.objectUuid,
+                        behaviorCount: behavior.behaviors.length,
+                        hasUpdateFunction: !!behavior.updateFunction?.code
+                    });
+                } else {
+                    console.warn(`🔧 PatchCompiler: No behavior generated for chain ${index + 1}`);
                 }
             } catch (error) {
+                console.error(`🔧 PatchCompiler: Error compiling chain ${index + 1}:`, error);
                 errors.push({
                     message: `Failed to compile behavior for object ${chain.targetObject?.objectName || 'unknown'}`,
                     error: error.message,
@@ -63,16 +110,24 @@ export class PatchCompiler {
             }
         });
 
-        return {
+        const result = {
             behaviors: compiledBehaviors,
             errors: errors,
             metadata: {
                 compiledAt: new Date().toISOString(),
                 totalNodes: interactionGraph.nodes.length,
-                totalConnections: interactionGraph.connections.length,
+                totalConnections: interactionGraph.connections?.length || 0,
                 behaviorCount: compiledBehaviors.length
             }
         };
+
+        console.log('🔧 PatchCompiler: Compilation complete', {
+            behaviorCount: compiledBehaviors.length,
+            errorCount: errors.length,
+            result: result
+        });
+
+        return result;
     }
 
     /**
@@ -82,36 +137,90 @@ export class PatchCompiler {
         const chains = [];
         const processedNodes = new Set();
 
-        // Find all SceneObject nodes as targets
-        const sceneObjectNodes = Array.isArray(graph.nodes) ?
-            graph.nodes.filter(node => node.type === 'SceneObject') : [];
+        // Find all target nodes (SceneObject or ObjectProperty)
+        const targetNodes = [];
+        if (graph.nodes) {
+            // Handle nodes as array (new format)
+            if (Array.isArray(graph.nodes)) {
+                targetNodes.push(...graph.nodes.filter(node =>
+                    node.type === 'SceneObject' || node.type === 'ObjectProperty'
+                ));
+            }
+            // Handle nodes as object map (current format)
+            else if (typeof graph.nodes === 'object') {
+                Object.values(graph.nodes).forEach(node => {
+                    if (node.type === 'SceneObject' || node.type === 'ObjectProperty') {
+                        targetNodes.push(node);
+                    }
+                });
+            }
+        }
 
-        sceneObjectNodes.forEach(sceneObjectNode => {
+        console.log('🔧 PatchCompiler: Found target nodes', {
+            nodeFormat: Array.isArray(graph.nodes) ? 'array' : 'object',
+            totalNodes: Array.isArray(graph.nodes) ? graph.nodes.length : Object.keys(graph.nodes || {}).length,
+            targetNodeCount: targetNodes.length,
+            targetNodes: targetNodes.map(n => ({ id: n.id, type: n.type, objectName: n.objectName }))
+        });
+
+        targetNodes.forEach(targetNode => {
             const chain = {
-                targetObject: sceneObjectNode,
+                targetObject: targetNode,
                 behaviors: []
             };
 
-            // Find all connections feeding into this SceneObject
-            const incomingConnections = Array.isArray(graph.connections) ?
-                graph.connections.filter(conn => conn.to.nodeId === sceneObjectNode.id) : [];
+            // Find all connections feeding into this target node
+            // Handle both connection formats: {from.nodeId, to.nodeId} and {fromNodeId, toNodeId}
+            const incomingConnections = [];
+            if (Array.isArray(graph.connections)) {
+                graph.connections.forEach(conn => {
+                    const targetNodeId = conn.to?.nodeId || conn.toNodeId;
+                    if (targetNodeId === targetNode.id) {
+                        incomingConnections.push(conn);
+                    }
+                });
+            }
+
+            console.log(`🔧 PatchCompiler: Processing target node ${targetNode.id}`, {
+                targetNode: { id: targetNode.id, type: targetNode.type, objectName: targetNode.objectName },
+                incomingConnectionCount: incomingConnections.length,
+                connections: incomingConnections.map(c => ({
+                    from: c.from?.nodeId || c.fromNodeId,
+                    to: c.to?.nodeId || c.toNodeId
+                }))
+            });
 
             incomingConnections.forEach(connection => {
-                const sourceNode = nodeMap.get(connection.from.nodeId);
-                if (sourceNode && this.supportedNodes.has(sourceNode.type) &&
-                    !processedNodes.has(sourceNode.id)) {
+                const sourceNodeId = connection.from?.nodeId || connection.fromNodeId;
+                const sourceNode = nodeMap.get(sourceNodeId);
 
-                    // Trace back to find complete behavior chain
-                    const behaviorChain = this.traceBehaviorChain(
+                console.log(`🔧 PatchCompiler: Processing connection`, {
+                    sourceNodeId,
+                    sourceNodeFound: !!sourceNode,
+                    sourceNodeType: sourceNode?.type,
+                    isSupported: sourceNode ? this.supportedNodes.has(sourceNode.type) : false,
+                    alreadyProcessed: processedNodes.has(sourceNodeId)
+                });
+
+                if (sourceNode && this.supportedNodes.has(sourceNode.type)) {
+
+                    // Create behavior from source node
+                    const behaviorChain = this.createBehaviorFromNode(
                         sourceNode,
-                        connection,
-                        graph,
-                        nodeMap
+                        targetNode,
+                        connection
                     );
+
+                    console.log(`🔧 PatchCompiler: Traced behavior chain`, {
+                        sourceNodeId: sourceNode.id,
+                        targetNodeId: targetNode.id,
+                        behaviorChainCreated: !!behaviorChain,
+                        behaviorChainType: behaviorChain?.type
+                    });
 
                     if (behaviorChain) {
                         chain.behaviors.push(behaviorChain);
-                        processedNodes.add(sourceNode.id);
+                        // Allow same source node to create multiple behaviors for different axes
                     }
                 }
             });
@@ -122,6 +231,57 @@ export class PatchCompiler {
         });
 
         return chains;
+    }
+
+    /**
+     * Create a behavior from a source node (Spin/Pulse) targeting an object
+     */
+    createBehaviorFromNode(sourceNode, targetNode, connection) {
+        console.log(`🔧 PatchCompiler: Creating behavior from node`, {
+            sourceNode: { id: sourceNode.id, type: sourceNode.type },
+            targetNode: { id: targetNode.id, type: targetNode.type, objectUuid: targetNode.objectUuid, objectName: targetNode.objectName },
+            connection
+        });
+
+        if (sourceNode.type === 'Spin') {
+            // Determine axis based on connection target input index
+            const inputIndex = connection.to?.inputIndex || connection.toInputIndex || 0;
+            const axis = inputIndex === 0 ? 'x' : inputIndex === 1 ? 'y' : 'z'; // 0=x, 1=y, 2=z
+
+            console.log(`🔧 PatchCompiler: Spin behavior axis detection`, {
+                inputIndex,
+                determinedAxis: axis,
+                connectionInfo: {
+                    toInputIndex: connection.toInputIndex,
+                    toInputName: connection.to?.inputName
+                }
+            });
+
+            return {
+                type: 'spin',
+                nodeId: sourceNode.id,
+                objectUuid: targetNode.objectUuid,
+                speed: sourceNode.inputs?.find(input => input.name === 'speed')?.value || 30, // Default 30 RPM
+                axis: axis,
+                direction: sourceNode.inputs?.find(input => input.name === 'clockwise')?.value ? 1 : -1,
+                startTime: performance.now()
+            };
+        }
+
+        if (sourceNode.type === 'Pulse') {
+            return {
+                type: 'pulse',
+                nodeId: sourceNode.id,
+                objectUuid: targetNode.objectUuid,
+                speed: sourceNode.inputs?.find(input => input.name === 'speed')?.value || 60, // Default 60 BPM
+                amount: sourceNode.inputs?.find(input => input.name === 'amount')?.value || 0.2,
+                targetProperty: 'scale',
+                startTime: performance.now()
+            };
+        }
+
+        console.warn(`🔧 PatchCompiler: Unsupported behavior type: ${sourceNode.type}`);
+        return null;
     }
 
     /**
@@ -170,31 +330,50 @@ export class PatchCompiler {
         const objectUuid = chain.targetObject.objectUuid;
         const objectName = chain.targetObject.objectName || 'Unnamed Object';
 
+        console.log(`🔧 PatchCompiler: Compiling behavior chain`, {
+            objectUuid,
+            objectName,
+            behaviorCount: chain.behaviors.length,
+            behaviors: chain.behaviors
+        });
+
         if (!objectUuid) {
             throw new Error(`No object UUID found for ${objectName}`);
         }
 
         const behaviors = [];
 
-        chain.behaviors.forEach(behaviorChain => {
-            const { targetNode, targetConnection, sourceNodes } = behaviorChain;
+        // Handle new simplified format where behaviors are directly behavior objects
+        chain.behaviors.forEach(behavior => {
+            if (behavior && typeof behavior === 'object' && behavior.type) {
+                // This is already a compiled behavior object
+                behaviors.push(behavior);
+                console.log(`🔧 PatchCompiler: Added direct behavior`, behavior);
+            } else {
+                // This is the old format with sourceNodes - handle for compatibility
+                console.warn(`🔧 PatchCompiler: Old format behavior detected`, behavior);
+                const { targetNode, targetConnection, sourceNodes } = behavior;
 
-            sourceNodes.forEach(sourceNode => {
-                const behavior = this.compileNodeBehavior(
-                    sourceNode,
-                    targetNode,
-                    targetConnection,
-                    objectUuid,
-                    objectName
-                );
+                if (sourceNodes && Array.isArray(sourceNodes)) {
+                    sourceNodes.forEach(sourceNode => {
+                        const compiledBehavior = this.compileNodeBehavior(
+                            sourceNode,
+                            targetNode,
+                            targetConnection,
+                            objectUuid,
+                            objectName
+                        );
 
-                if (behavior) {
-                    behaviors.push(behavior);
+                        if (compiledBehavior) {
+                            behaviors.push(compiledBehavior);
+                        }
+                    });
                 }
-            });
+            }
         });
 
         if (behaviors.length === 0) {
+            console.warn(`🔧 PatchCompiler: No behaviors compiled for ${objectName}`);
             return null;
         }
 
@@ -243,7 +422,7 @@ export class PatchCompiler {
             speed, // RPM
             direction,
             targetProperty,
-            startTime: Date.now()
+            startTime: 0 // Use relative time instead of absolute timestamp
         };
     }
 
@@ -262,7 +441,7 @@ export class PatchCompiler {
             speed, // BPM
             amount,
             targetProperty,
-            startTime: Date.now()
+            startTime: 0 // Use relative time instead of absolute timestamp
         };
     }
 
@@ -276,20 +455,15 @@ export class PatchCompiler {
             objectUuid,
             code: `
 // Generated behavior function for object ${objectUuid}
-function updateBehavior(object, deltaTime) {
+function updateBehavior(object, deltaTime, elapsedTime) {
     if (!object || object.uuid !== '${objectUuid}') return;
 
-    const currentTime = performance.now();
+    const currentTime = elapsedTime; // Use provided elapsed time
 
     ${functionBody}
 }
-            `.trim(),
-            // Also provide a callable function for immediate use
-            execute: new Function('object', 'deltaTime', `
-                if (!object || object.uuid !== '${objectUuid}') return;
-                const currentTime = performance.now();
-                ${functionBody}
-            `)
+            `.trim()
+            // Removed execute function to fix IndexedDB serialization
         };
     }
 
@@ -317,12 +491,12 @@ function updateBehavior(object, deltaTime) {
      * Generate spin behavior code
      */
     generateSpinCode(behavior) {
-        const { axis, speed, direction, startTime } = behavior;
+        const { axis, speed, direction } = behavior;
 
         return `
     // Spin behavior - ${speed} RPM, ${direction > 0 ? 'clockwise' : 'counterclockwise'}
     {
-        const elapsedSeconds = (currentTime - ${startTime}) / 1000;
+        const elapsedSeconds = currentTime / 1000; // currentTime is already elapsed time in ms
         const radiansPerSecond = (${speed} / 60) * 2 * Math.PI;
         const rotationRadians = elapsedSeconds * radiansPerSecond * ${direction};
         object.rotation.${axis} = rotationRadians;
@@ -333,7 +507,7 @@ function updateBehavior(object, deltaTime) {
      * Generate pulse behavior code
      */
     generatePulseCode(behavior) {
-        const { speed, amount, startTime, targetProperty } = behavior;
+        const { speed, amount, targetProperty } = behavior;
 
         // Handle different target properties
         const isUniformScale = targetProperty === 'scale';
@@ -346,7 +520,7 @@ function updateBehavior(object, deltaTime) {
         return `
     // Pulse behavior - ${speed} BPM, ${amount} amount
     {
-        const elapsedSeconds = (currentTime - ${startTime}) / 1000;
+        const elapsedSeconds = currentTime / 1000; // currentTime is already elapsed time in ms
         const cyclesPerSecond = ${speed} / 60;
         const phase = (elapsedSeconds * cyclesPerSecond) % 1;
         const pulsePhase = (Math.sin(phase * 2 * Math.PI - Math.PI / 2) + 1) / 2;
