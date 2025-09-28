@@ -1,0 +1,318 @@
+{
+  "id": "38a09b96-4969-4024-9fa5-e148f39658b7",
+  "scene": {
+    "metadata": {
+      "version": 4.6,
+      "type": "Object",
+      "generator": "Object3D.toJSON"
+    },
+    "geometries": [
+      {
+        "uuid": "1eb985f5-5ce3-43de-b751-abd70d96330f",
+        "type": "BoxGeometry",
+        "width": 1,
+        "height": 1,
+        "depth": 1,
+        "widthSegments": 1,
+        "heightSegments": 1,
+        "depthSegments": 1
+      }
+    ],
+    "materials": [
+      {
+        "uuid": "c0c91c38-398a-442b-897a-34771c80d352",
+        "type": "MeshStandardMaterial",
+        "color": 16777215,
+        "roughness": 1,
+        "metalness": 0,
+        "emissive": 0,
+        "envMapRotation": [
+          0,
+          0,
+          0,
+          "XYZ"
+        ],
+        "envMapIntensity": 1,
+        "blendColor": 0
+      }
+    ],
+    "object": {
+      "uuid": "98823a3c-628c-4473-9737-e4a30f232658",
+      "type": "Scene",
+      "name": "Scene",
+      "layers": 1,
+      "matrix": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "children": [
+        {
+          "uuid": "d73ac449-0e6b-489c-9e6d-3f5adc95ed28",
+          "type": "Mesh",
+          "name": "Cube",
+          "layers": 1,
+          "matrix": [
+            0.5099425034153571,
+            0.7399586432104786,
+            -0.43865686994345177,
+            0,
+            5.551115123125783e-17,
+            0.5099425034153571,
+            0.8602084882227555,
+            0,
+            0.8602084882227555,
+            -0.43865686994345177,
+            0.26004135678952145,
+            0,
+            0,
+            0.5,
+            0,
+            1
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "geometry": "1eb985f5-5ce3-43de-b751-abd70d96330f",
+          "material": "c0c91c38-398a-442b-897a-34771c80d352"
+        },
+        {
+          "uuid": "8fbdfaba-0f60-439a-976a-602b50161399",
+          "type": "DirectionalLight",
+          "name": "DirectionalLight",
+          "layers": 1,
+          "matrix": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            5,
+            8,
+            3,
+            1
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "color": 16777215,
+          "intensity": 1,
+          "shadow": {
+            "camera": {
+              "uuid": "fdb87797-bacd-45f7-bd42-6b7f02031909",
+              "type": "OrthographicCamera",
+              "layers": 1,
+              "up": [
+                0,
+                1,
+                0
+              ],
+              "zoom": 1,
+              "left": -5,
+              "right": 5,
+              "top": 5,
+              "bottom": -5,
+              "near": 0.5,
+              "far": 500
+            }
+          }
+        }
+      ],
+      "backgroundRotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "environmentRotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ]
+    }
+  },
+  "camera": {
+    "metadata": {
+      "version": 4.6,
+      "type": "Object",
+      "generator": "Object3D.toJSON"
+    },
+    "object": {
+      "uuid": "fc4008a8-7774-4fbb-bb58-350e96a37a7e",
+      "type": "PerspectiveCamera",
+      "name": "Camera",
+      "layers": 1,
+      "matrix": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0.8944271909999159,
+        -0.4472135954999579,
+        0,
+        0,
+        0.4472135954999579,
+        0.8944271909999159,
+        0,
+        0,
+        5,
+        10,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "fov": 50,
+      "zoom": 1,
+      "near": 0.01,
+      "far": 5000,
+      "focus": 10,
+      "aspect": 1.658886894075404,
+      "filmGauge": 35,
+      "filmOffset": 0
+    }
+  },
+  "compiledBehaviors": {
+    "behaviors": [],
+    "errors": [],
+    "metadata": {
+      "compiledAt": "2025-09-28T19:04:07.326Z",
+      "totalConnections": 2,
+      "behaviorCount": 0
+    }
+  },
+  "interactionGraph": {
+    "nodes": {
+      "node_1": {
+        "id": "node_1",
+        "type": "Spin",
+        "position": {
+          "x": 212,
+          "y": 87.5
+        },
+        "properties": {},
+        "inputs": [
+          {
+            "name": "speed",
+            "dataType": "number",
+            "value": 5
+          },
+          {
+            "name": "clockwise",
+            "dataType": "boolean",
+            "value": true
+          }
+        ],
+        "startTime": 1759085909344
+      },
+      "node_2": {
+        "id": "node_2",
+        "type": "ObjectProperty",
+        "position": {
+          "x": 562,
+          "y": 87.5
+        },
+        "properties": {
+          "initialRotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "inputs": [
+          {
+            "name": "x",
+            "dataType": "number",
+            "value": 10139.34
+          },
+          {
+            "name": "y",
+            "dataType": "number",
+            "value": 10139.34
+          },
+          {
+            "name": "z",
+            "dataType": "number",
+            "value": 0
+          }
+        ],
+        "propertyType": "rotation",
+        "objectUuid": "d73ac449-0e6b-489c-9e6d-3f5adc95ed28",
+        "objectName": "Cube"
+      }
+    },
+    "connections": [
+      {
+        "id": "node_1-0-node_2-0",
+        "fromNodeId": "node_1",
+        "fromOutputIndex": 0,
+        "toNodeId": "node_2",
+        "toInputIndex": 0
+      },
+      {
+        "id": "node_1-0-node_2-1",
+        "fromNodeId": "node_1",
+        "fromOutputIndex": 0,
+        "toNodeId": "node_2",
+        "toInputIndex": 1
+      }
+    ],
+    "metadata": {
+      "version": "1.0",
+      "timestamp": 1759086247325
+    }
+  },
+  "environment": null,
+  "project": {
+    "shadows": true,
+    "shadowType": 1,
+    "toneMapping": 0,
+    "toneMappingExposure": 1
+  },
+  "metadata": {
+    "name": "Preview Scene",
+    "description": "Generated from Triber Editor",
+    "creator": "Editor User",
+    "createdAt": "2025-09-28T19:04:07.329Z"
+  },
+  "scripts": {},
+  "history": {
+    "undos": [],
+    "redos": []
+  },
+  "uploadedAt": "2025-09-28T19:04:07.333Z",
+  "expiresAt": "2025-09-29T19:04:07.333Z"
+}

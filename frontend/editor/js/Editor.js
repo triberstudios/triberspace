@@ -8,6 +8,7 @@ import { Storage as _Storage } from './Storage.js';
 import { Selector } from './Selector.js';
 import { SpinNode } from './interaction-editor/nodes/SpinNode.js';
 import { ObjectRotationNode } from './interaction-editor/nodes/ObjectRotationNode.js';
+import { PatchCompiler } from './ai/PatchCompiler.js';
 
 var _DEFAULT_CAMERA = new THREE.PerspectiveCamera( 50, 1, 0.01, 5000 );
 _DEFAULT_CAMERA.name = 'Camera';
@@ -797,12 +798,37 @@ Editor.prototype = {
 
 		//
 
-		// Serialize interaction graph if available
+		// Serialize interaction graph and compile behaviors if available
 		var interactionGraph = null;
+		var compiledBehaviors = null;
 		if ( this.interactionEditor && this.interactionEditor.interactionEditor ) {
 			const graph = this.interactionEditor.interactionEditor.getInteractionGraph();
 			if ( graph ) {
 				interactionGraph = graph.serialize();
+
+				// Compile behaviors for runtime
+				const compiler = new PatchCompiler();
+				const validationErrors = compiler.validateGraph(interactionGraph);
+
+				if (validationErrors.length === 0) {
+					try {
+						compiledBehaviors = compiler.compile(interactionGraph);
+					} catch (error) {
+						console.warn('Failed to compile behaviors:', error);
+						compiledBehaviors = {
+							behaviors: [],
+							errors: [{ message: 'Compilation failed', error: error.message }],
+							metadata: { compiledAt: new Date().toISOString() }
+						};
+					}
+				} else {
+					console.warn('Graph validation failed:', validationErrors);
+					compiledBehaviors = {
+						behaviors: [],
+						errors: validationErrors.map(err => ({ message: err, error: 'Validation error' })),
+						metadata: { compiledAt: new Date().toISOString() }
+					};
+				}
 			}
 		}
 
@@ -820,7 +846,8 @@ Editor.prototype = {
 			scripts: this.scripts,
 			history: this.history.toJSON(),
 			environment: environment,
-			interactionGraph: interactionGraph
+			interactionGraph: interactionGraph,
+			compiledBehaviors: compiledBehaviors
 
 		};
 

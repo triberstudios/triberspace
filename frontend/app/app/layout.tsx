@@ -43,12 +43,9 @@ export default function RootLayout({
         className={`${workSans.variable} ${geistMono.variable} font-sans antialiased dynamic-viewport-height overflow-hidden`}
       >
         <Providers>
-          <div className="flex h-full flex-col">
-            <GlobalNav />
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </div>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
         </Providers>
         <Toaster theme="dark" />
       </body>

@@ -12,6 +12,7 @@ import { v1StoreRoutes } from './store';
 import { v1PointsRoutes } from './points';
 import { v1UploadsRoutes } from './uploads';
 import { v1SketchfabRoutes } from './sketchfab';
+import { v1RuntimeRoutes } from './runtime';
 
 export async function v1Routes(fastify: FastifyInstance) {
   // Auth routes - extends your existing Better Auth
@@ -53,6 +54,9 @@ export async function v1Routes(fastify: FastifyInstance) {
   // Sketchfab - OAuth integration for 3D model imports
   await fastify.register(v1SketchfabRoutes, { prefix: '/sketchfab' });
 
+  // Runtime - Scene upload/download for editor preview
+  await fastify.register(v1RuntimeRoutes, { prefix: '/runtime' });
+
   // Health check for v1 API
   fastify.get('/', async (request, reply) => {
     return {
@@ -73,7 +77,8 @@ export async function v1Routes(fastify: FastifyInstance) {
           '/v1/store',
           '/v1/points',
           '/v1/uploads',
-          '/v1/sketchfab'
+          '/v1/sketchfab',
+          '/v1/runtime'
         ]
       }
     };
