@@ -541,7 +541,7 @@ export class InteractionGraph {
         return { width: 800, height: 600, viewportX: 0, viewportY: 0, zoom: 1 };
     }
 
-    // Smart positioning algorithm based on node types and relationships
+    // Enhanced smart positioning algorithm with better collision detection
     findSmartPosition(newNode) {
         const canvas = this.getCanvasViewport();
 
@@ -549,7 +549,7 @@ export class InteractionGraph {
         if (this.nodes.size === 0) {
             const centerX = (-canvas.viewportX / canvas.zoom) + (canvas.width / canvas.zoom / 2) - 75;
             const centerY = (-canvas.viewportY / canvas.zoom) + (canvas.height / canvas.zoom / 2) - 25;
-            return { x: centerX, y: centerY };
+            return this.snapToGrid({ x: centerX, y: centerY });
         }
 
         // Analyze existing nodes
@@ -563,26 +563,26 @@ export class InteractionGraph {
             // Property node: place to RIGHT of non-property nodes
             const rightmostNode = nonPropertyNodes.reduce((max, node) =>
                 node.position.x > max.position.x ? node : max);
-            const x = rightmostNode.position.x + 350; // Increased spacing for easier connections
-            const y = this.findBestY(x, rightmostNode.position.y);
-            return { x, y };
+            const x = rightmostNode.position.x + this.getNodeSpacing(rightmostNode, newNode);
+            const y = this.findBestY(x, rightmostNode.position.y, newNode);
+            return this.snapToGrid({ x, y });
         } else if (!isPropertyNode && propertyNodes.length > 0) {
             // Non-property node: place to LEFT of property nodes
             const leftmostNode = propertyNodes.reduce((min, node) =>
                 node.position.x < min.position.x ? node : min);
-            const x = leftmostNode.position.x - 350; // Increased spacing for easier connections
-            const y = this.findBestY(x, leftmostNode.position.y);
-            return { x, y };
+            const x = leftmostNode.position.x - this.getNodeSpacing(leftmostNode, newNode);
+            const y = this.findBestY(x, leftmostNode.position.y, newNode);
+            return this.snapToGrid({ x, y });
         }
 
         // Fallback: intelligent grid placement around center
         return this.findGridPosition();
     }
 
-    // Find best Y position to avoid overlaps at given X coordinate
-    findBestY(targetX, preferredY = null) {
-        const nodeSpacing = 150; // Minimum vertical spacing
-        const tolerance = 50; // X tolerance for considering nodes in same column
+    // Enhanced Y position finder with node size awareness
+    findBestY(targetX, preferredY = null, newNode = null) {
+        const tolerance = 80; // X tolerance for considering nodes in same column
+        const minSpacing = 40; // Minimum spacing between nodes
 
         // Find nodes near this X position
         const nearbyNodes = Array.from(this.nodes.values())
@@ -594,29 +594,44 @@ export class InteractionGraph {
             return preferredY || 100;
         }
 
+        // Calculate spacing based on node sizes
+        const newNodeHeight = this.getNodeHeight(newNode);
+
         // If preferred Y is available (no conflicts), use it
         if (preferredY !== null) {
-            const hasConflict = nearbyNodes.some(node =>
-                Math.abs(node.position.y - preferredY) < nodeSpacing);
+            const hasConflict = nearbyNodes.some(node => {
+                const existingHeight = this.getNodeHeight(node);
+                const requiredSpacing = Math.max(newNodeHeight, existingHeight) + minSpacing;
+                return Math.abs(node.position.y - preferredY) < requiredSpacing;
+            });
             if (!hasConflict) {
                 return preferredY;
             }
         }
 
         // Find gaps between nodes or place at end
-        let bestY = nearbyNodes[0].position.y - nodeSpacing;
+        let bestY = nearbyNodes[0].position.y - newNodeHeight - minSpacing;
         if (bestY < 50) { // Don't go too high
             // Look for gaps between nodes
             for (let i = 0; i < nearbyNodes.length - 1; i++) {
-                const gap = nearbyNodes[i + 1].position.y - nearbyNodes[i].position.y;
-                if (gap >= nodeSpacing * 2) {
-                    bestY = nearbyNodes[i].position.y + nodeSpacing;
+                const currentNode = nearbyNodes[i];
+                const nextNode = nearbyNodes[i + 1];
+                const currentHeight = this.getNodeHeight(currentNode);
+                const nextHeight = this.getNodeHeight(nextNode);
+
+                const gap = nextNode.position.y - (currentNode.position.y + currentHeight);
+                const requiredSpace = newNodeHeight + (minSpacing * 2);
+
+                if (gap >= requiredSpace) {
+                    bestY = currentNode.position.y + currentHeight + minSpacing;
                     break;
                 }
             }
-            // If no gaps found, place after last node
+            // If no gap found, place after last node
             if (bestY < 50) {
-                bestY = nearbyNodes[nearbyNodes.length - 1].position.y + nodeSpacing;
+                const lastNode = nearbyNodes[nearbyNodes.length - 1];
+                const lastHeight = this.getNodeHeight(lastNode);
+                bestY = lastNode.position.y + lastHeight + minSpacing;
             }
         }
 
@@ -646,6 +661,70 @@ export class InteractionGraph {
     // Legacy method - now redirects to smart positioning
     findAvailablePosition(newNode = null) {
         return this.findSmartPosition(newNode);
+    }
+
+    // Helper method to calculate spacing between nodes based on their sizes
+    getNodeSpacing(existingNode, newNode) {
+        const baseSpacing = 200; // Increased base spacing
+        const existingWidth = this.getNodeWidth(existingNode);
+        const newWidth = this.getNodeWidth(newNode);
+
+        // Add extra spacing based on the wider node
+        const extraSpacing = Math.max(existingWidth, newWidth) * 0.1;
+        return baseSpacing + extraSpacing;
+    }
+
+    // Helper method to get node width (with fallback for unknown nodes)
+    getNodeWidth(node) {
+        if (!node) return 150; // Default width
+
+        // If node has getBounds method, use it
+        if (node.getBounds) {
+            const bounds = node.getBounds();
+            return bounds.width || 150;
+        }
+
+        // Fallback based on node type
+        const typeWidths = {
+            'Spin': 150,
+            'Pulse': 140,
+            'Float': 140,
+            'Fade': 140,
+            'Object': 180,
+            'Position': 160,
+            'Rotation': 160,
+            'Scale': 160,
+            'ObjectProperty': 160
+        };
+
+        return typeWidths[node.type] || 150;
+    }
+
+    // Helper method to get node height (with fallback for unknown nodes)
+    getNodeHeight(node) {
+        if (!node) return 80; // Default height
+
+        // If node has getBounds method, use it
+        if (node.getBounds) {
+            const bounds = node.getBounds();
+            return bounds.height || 80;
+        }
+
+        // Fallback based on node type and input/output count
+        const baseHeight = 60;
+        const inputHeight = node.inputs ? node.inputs.length * 20 : 40;
+        const outputHeight = node.outputs ? node.outputs.length * 20 : 20;
+
+        return Math.max(baseHeight + Math.max(inputHeight, outputHeight), 80);
+    }
+
+    // Helper method to snap position to grid for organized layout
+    snapToGrid(position) {
+        const gridSize = 20; // Grid spacing
+        return {
+            x: Math.round(position.x / gridSize) * gridSize,
+            y: Math.round(position.y / gridSize) * gridSize
+        };
     }
 
     updateNodeFromObject(node, object) {

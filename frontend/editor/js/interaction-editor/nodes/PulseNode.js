@@ -93,9 +93,7 @@ export class PulseNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        const speed = this.getInputValue('speed');
-        const amount = Math.round(this.getInputValue('amount') * 100);
-        return `Pulse (${speed} bpm, ${amount}%)`;
+        return 'Pulse';
     }
 
     // Custom bounds for pulse nodes

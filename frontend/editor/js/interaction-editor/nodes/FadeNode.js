@@ -98,10 +98,7 @@ export class FadeNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        const speed = this.getInputValue('speed');
-        const min = Math.round(this.getInputValue('min') * 100);
-        const max = Math.round(this.getInputValue('max') * 100);
-        return `Fade (${speed} bpm, ${min}%-${max}%)`;
+        return 'Fade';
     }
 
     // Custom bounds

@@ -145,7 +145,7 @@ export class ObjectScaleNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        return `${this.objectName} Scale`;
+        return 'Scale';
     }
 
     // Custom size for property nodes

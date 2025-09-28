@@ -241,7 +241,7 @@ export class SceneObjectNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        return `${this.objectName} (${this.type})`;
+        return 'Object';
     }
 
     // Custom size for scene object nodes (wider to accommodate object name)

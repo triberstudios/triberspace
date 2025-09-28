@@ -93,9 +93,7 @@ export class FloatNode extends PatchNode {
 
     // Get display name for UI
     getDisplayName() {
-        const speed = this.getInputValue('speed');
-        const height = this.getInputValue('height');
-        return `Float (${speed} bpm, ${height} units)`;
+        return 'Float';
     }
 
     // Custom bounds
