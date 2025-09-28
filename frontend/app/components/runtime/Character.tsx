@@ -75,17 +75,7 @@ const Character = React.forwardRef<THREE.Group, CharacterProps>(({
         return () => clearTimeout(timer);
     }, []);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('Character component mounted at position:', position);
-        console.log('Character color:', color);
-    }, []);
-
-    useEffect(() => {
-        if (actualRigidBodyRef.current) {
-            console.log('Character rigid body initialized');
-        }
-    }, [actualRigidBodyRef.current]);
+    // Character initialization complete
 
     return (
         <>

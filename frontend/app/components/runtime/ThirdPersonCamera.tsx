@@ -16,7 +16,7 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     initialPosition = [0, 2, 0],
     characterColor = '#4080ff'
 }) => {
-    console.log('ThirdPersonCamera initialized with:', { initialPosition, characterColor });
+    // console.log('ThirdPersonCamera initialized with:', { initialPosition, characterColor });
     const { setDefaultCamera, scene } = useThree();
     const cameraRef = useRef<THREE.PerspectiveCamera>(null);
     const characterRef = useRef<THREE.Group>(null);
@@ -46,7 +46,7 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     // Mouse/touch controls for camera
     useEffect(() => {
         const handlePointerDown = (event: PointerEvent) => {
-            console.log('Pointer down detected');
+            // console.log('Pointer down detected');
             setIsDragging(true);
             setLastClientX(event.clientX);
             setLastClientY(event.clientY);

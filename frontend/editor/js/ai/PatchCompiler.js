@@ -21,15 +21,10 @@ export class PatchCompiler {
      * @returns {Object} Compiled behaviors with execution code
      */
     compile(interactionGraph) {
-        console.log('🔧 PatchCompiler: Starting compilation', {
-            hasGraph: !!interactionGraph,
-            hasNodes: !!interactionGraph?.nodes,
-            nodeCount: interactionGraph?.nodes?.length || 0,
-            graphKeys: interactionGraph ? Object.keys(interactionGraph) : null
-        });
+        // console.log('🔧 PatchCompiler: Starting compilation'); // Disabled - too frequent
 
         if (!interactionGraph || !interactionGraph.nodes || interactionGraph.nodes.length === 0) {
-            console.log('🔧 PatchCompiler: No nodes to compile, returning empty result');
+            // console.log('🔧 PatchCompiler: No nodes to compile'); // Disabled - too frequent
             return {
                 behaviors: [],
                 errors: [],
@@ -60,43 +55,35 @@ export class PatchCompiler {
                 });
             }
 
-            console.log('🔧 PatchCompiler: Built node map', {
-                nodeMapSize: nodeMap.size,
-                nodeFormat: Array.isArray(interactionGraph.nodes) ? 'array' : 'object',
-                nodeTypes: Array.from(nodeMap.values()).map(n => ({
-                    id: n.id,
-                    type: n.type,
-                    name: n.name || n.objectName
-                }))
-            });
+            // console.log('🔧 PatchCompiler: Built node map'); // Disabled - too frequent
         }
 
         // Find behavior chains (nodes that ultimately connect to SceneObject nodes)
         const behaviorChains = this.findBehaviorChains(interactionGraph, nodeMap);
-        console.log('🔧 PatchCompiler: Found behavior chains', {
-            chainCount: behaviorChains.length,
-            chains: behaviorChains.map(chain => ({
-                targetObject: chain.targetObject,
-                behaviors: chain.behaviors.map(b => ({ type: b.type, id: b.id }))
-            }))
-        });
+        // console.log('🔧 PatchCompiler: Found behavior chains', {
+        //     chainCount: behaviorChains.length,
+        //     chains: behaviorChains.map(chain => ({
+        //         targetObject: chain.targetObject,
+        //         behaviors: chain.behaviors.map(b => ({ type: b.type, id: b.id }))
+        //     }))
+        // });
 
         // Compile each behavior chain
         behaviorChains.forEach((chain, index) => {
             try {
-                console.log(`🔧 PatchCompiler: Compiling chain ${index + 1}/${behaviorChains.length}`, {
-                    targetObject: chain.targetObject,
-                    behaviorCount: chain.behaviors.length
-                });
+                // console.log(`🔧 PatchCompiler: Compiling chain ${index + 1}/${behaviorChains.length}`, {
+                //     targetObject: chain.targetObject,
+                //     behaviorCount: chain.behaviors.length
+                // });
 
                 const behavior = this.compileBehaviorChain(chain, nodeMap);
                 if (behavior) {
                     compiledBehaviors.push(behavior);
-                    console.log(`🔧 PatchCompiler: Successfully compiled behavior for ${behavior.objectName}`, {
-                        objectUuid: behavior.objectUuid,
-                        behaviorCount: behavior.behaviors.length,
-                        hasUpdateFunction: !!behavior.updateFunction?.code
-                    });
+                    // console.log(`🔧 PatchCompiler: Successfully compiled behavior for ${behavior.objectName}`, {
+                    //     objectUuid: behavior.objectUuid,
+                    //     behaviorCount: behavior.behaviors.length,
+                    //     hasUpdateFunction: !!behavior.updateFunction?.code
+                    // });
                 } else {
                     console.warn(`🔧 PatchCompiler: No behavior generated for chain ${index + 1}`);
                 }
@@ -121,11 +108,11 @@ export class PatchCompiler {
             }
         };
 
-        console.log('🔧 PatchCompiler: Compilation complete', {
-            behaviorCount: compiledBehaviors.length,
-            errorCount: errors.length,
-            result: result
-        });
+        // console.log('🔧 PatchCompiler: Compilation complete', {
+        //     behaviorCount: compiledBehaviors.length,
+        //     errorCount: errors.length,
+        //     result: result
+        // });
 
         return result;
     }
@@ -156,12 +143,12 @@ export class PatchCompiler {
             }
         }
 
-        console.log('🔧 PatchCompiler: Found target nodes', {
-            nodeFormat: Array.isArray(graph.nodes) ? 'array' : 'object',
-            totalNodes: Array.isArray(graph.nodes) ? graph.nodes.length : Object.keys(graph.nodes || {}).length,
-            targetNodeCount: targetNodes.length,
-            targetNodes: targetNodes.map(n => ({ id: n.id, type: n.type, objectName: n.objectName }))
-        });
+        // console.log('🔧 PatchCompiler: Found target nodes', {
+        //     nodeFormat: Array.isArray(graph.nodes) ? 'array' : 'object',
+        //     totalNodes: Array.isArray(graph.nodes) ? graph.nodes.length : Object.keys(graph.nodes || {}).length,
+        //     targetNodeCount: targetNodes.length,
+        //     targetNodes: targetNodes.map(n => ({ id: n.id, type: n.type, objectName: n.objectName }))
+        // });
 
         targetNodes.forEach(targetNode => {
             const chain = {
@@ -181,26 +168,26 @@ export class PatchCompiler {
                 });
             }
 
-            console.log(`🔧 PatchCompiler: Processing target node ${targetNode.id}`, {
-                targetNode: { id: targetNode.id, type: targetNode.type, objectName: targetNode.objectName },
-                incomingConnectionCount: incomingConnections.length,
-                connections: incomingConnections.map(c => ({
-                    from: c.from?.nodeId || c.fromNodeId,
-                    to: c.to?.nodeId || c.toNodeId
-                }))
-            });
+            // console.log(`🔧 PatchCompiler: Processing target node ${targetNode.id}`, {
+            //     targetNode: { id: targetNode.id, type: targetNode.type, objectName: targetNode.objectName },
+            //     incomingConnectionCount: incomingConnections.length,
+            //     connections: incomingConnections.map(c => ({
+            //         from: c.from?.nodeId || c.fromNodeId,
+            //         to: c.to?.nodeId || c.toNodeId
+            //     }))
+            // });
 
             incomingConnections.forEach(connection => {
                 const sourceNodeId = connection.from?.nodeId || connection.fromNodeId;
                 const sourceNode = nodeMap.get(sourceNodeId);
 
-                console.log(`🔧 PatchCompiler: Processing connection`, {
-                    sourceNodeId,
-                    sourceNodeFound: !!sourceNode,
-                    sourceNodeType: sourceNode?.type,
-                    isSupported: sourceNode ? this.supportedNodes.has(sourceNode.type) : false,
-                    alreadyProcessed: processedNodes.has(sourceNodeId)
-                });
+                // console.log(`🔧 PatchCompiler: Processing connection`, {
+                //     sourceNodeId,
+                //     sourceNodeFound: !!sourceNode,
+                //     sourceNodeType: sourceNode?.type,
+                //     isSupported: sourceNode ? this.supportedNodes.has(sourceNode.type) : false,
+                //     alreadyProcessed: processedNodes.has(sourceNodeId)
+                // });
 
                 if (sourceNode && this.supportedNodes.has(sourceNode.type)) {
 
@@ -211,12 +198,6 @@ export class PatchCompiler {
                         connection
                     );
 
-                    console.log(`🔧 PatchCompiler: Traced behavior chain`, {
-                        sourceNodeId: sourceNode.id,
-                        targetNodeId: targetNode.id,
-                        behaviorChainCreated: !!behaviorChain,
-                        behaviorChainType: behaviorChain?.type
-                    });
 
                     if (behaviorChain) {
                         chain.behaviors.push(behaviorChain);
@@ -237,25 +218,20 @@ export class PatchCompiler {
      * Create a behavior from a source node (Spin/Pulse) targeting an object
      */
     createBehaviorFromNode(sourceNode, targetNode, connection) {
-        console.log(`🔧 PatchCompiler: Creating behavior from node`, {
-            sourceNode: { id: sourceNode.id, type: sourceNode.type },
-            targetNode: { id: targetNode.id, type: targetNode.type, objectUuid: targetNode.objectUuid, objectName: targetNode.objectName },
-            connection
-        });
 
         if (sourceNode.type === 'Spin') {
             // Determine axis based on connection target input index
             const inputIndex = connection.to?.inputIndex || connection.toInputIndex || 0;
             const axis = inputIndex === 0 ? 'x' : inputIndex === 1 ? 'y' : 'z'; // 0=x, 1=y, 2=z
 
-            console.log(`🔧 PatchCompiler: Spin behavior axis detection`, {
-                inputIndex,
-                determinedAxis: axis,
-                connectionInfo: {
-                    toInputIndex: connection.toInputIndex,
-                    toInputName: connection.to?.inputName
-                }
-            });
+            // console.log(`🔧 PatchCompiler: Spin behavior axis detection`, {
+            //     inputIndex,
+            //     determinedAxis: axis,
+            //     connectionInfo: {
+            //         toInputIndex: connection.toInputIndex,
+            //         toInputName: connection.to?.inputName
+            //     }
+            // });
 
             return {
                 type: 'spin',
@@ -330,12 +306,12 @@ export class PatchCompiler {
         const objectUuid = chain.targetObject.objectUuid;
         const objectName = chain.targetObject.objectName || 'Unnamed Object';
 
-        console.log(`🔧 PatchCompiler: Compiling behavior chain`, {
-            objectUuid,
-            objectName,
-            behaviorCount: chain.behaviors.length,
-            behaviors: chain.behaviors
-        });
+        // console.log(`🔧 PatchCompiler: Compiling behavior chain`, {
+        //     objectUuid,
+        //     objectName,
+        //     behaviorCount: chain.behaviors.length,
+        //     behaviors: chain.behaviors
+        // });
 
         if (!objectUuid) {
             throw new Error(`No object UUID found for ${objectName}`);
@@ -348,7 +324,7 @@ export class PatchCompiler {
             if (behavior && typeof behavior === 'object' && behavior.type) {
                 // This is already a compiled behavior object
                 behaviors.push(behavior);
-                console.log(`🔧 PatchCompiler: Added direct behavior`, behavior);
+                // console.log(`🔧 PatchCompiler: Added direct behavior`, behavior);
             } else {
                 // This is the old format with sourceNodes - handle for compatibility
                 console.warn(`🔧 PatchCompiler: Old format behavior detected`, behavior);

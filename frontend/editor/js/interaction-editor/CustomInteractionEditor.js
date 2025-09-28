@@ -72,7 +72,7 @@ export class CustomInteractionEditor {
     }
 
     init() {
-        console.log('Initializing Custom Patch Editor');
+        // console.log('Initializing Custom Patch Editor');
 
         // Initialize canvas
         this.canvas.init();
@@ -88,7 +88,7 @@ export class CustomInteractionEditor {
         }
 
         this.isInitialized = true;
-        console.log('Custom Patch Editor initialized successfully');
+        // console.log('Custom Patch Editor initialized successfully');
     }
 
     addTestNodes() {
@@ -145,7 +145,7 @@ export class CustomInteractionEditor {
         });
 
         this.canvas.on('connectionClick', (connectionId) => {
-            console.log('CustomInteractionEditor received connectionClick:', connectionId);
+            // console.log('CustomInteractionEditor received connectionClick:', connectionId);
             this.selectConnection(connectionId);
         });
 

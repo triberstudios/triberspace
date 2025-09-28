@@ -16,7 +16,6 @@ function useKeyboardControls() {
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            console.log('Key down:', event.code);
             switch (event.code) {
                 case 'KeyW':
                 case 'ArrowUp':
@@ -102,10 +101,7 @@ export function useCharacterControls({
 
     useFrame(() => {
         if (!characterRef.current || !rigidBodyRef.current) {
-            console.log('useFrame: Missing refs', {
-                hasCharacterRef: !!characterRef.current,
-                hasRigidBodyRef: !!rigidBodyRef.current
-            });
+            // Character refs not ready yet
             return;
         }
 

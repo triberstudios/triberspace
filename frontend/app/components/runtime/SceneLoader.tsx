@@ -53,7 +53,7 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
     // Initialize behaviors when scene objects are actually loaded
     const handleSceneLoaded = () => {
         if (sceneData?.compiledBehaviors && groupRef.current) {
-            console.log('🎬 SceneLoader: Scene objects loaded, initializing behaviors');
+            // console.log('🎬 SceneLoader: Scene objects loaded, initializing behaviors');
             initializeBehaviors();
         }
     };
@@ -65,7 +65,7 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
             onLoadingChange?.(true);
             onError?.(null);
 
-            console.log('SceneLoader: Loading scene', sceneId);
+            // console.log('SceneLoader: Loading scene', sceneId);
 
             // Fetch scene data from backend API
             const response = await fetch(`http://localhost:3001/api/v1/runtime/scenes/${sceneId}`);
@@ -75,13 +75,13 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
             }
 
             const data = await response.json();
-            console.log('SceneLoader: Received data', {
-                hasScene: !!data.scene,
-                hasCamera: !!data.camera,
-                hasCompiledBehaviors: !!data.compiledBehaviors,
-                behaviorCount: data.compiledBehaviors?.behaviors?.length || 0,
-                sceneChildrenCount: data.scene?.children?.length || 0
-            });
+            // console.log('SceneLoader: Received data', {
+            //     hasScene: !!data.scene,
+            //     hasCamera: !!data.camera,
+            //     hasCompiledBehaviors: !!data.compiledBehaviors,
+            //     behaviorCount: data.compiledBehaviors?.behaviors?.length || 0,
+            //     sceneChildrenCount: data.scene?.children?.length || 0
+            // });
             setSceneData(data);
             onSceneDataChange?.(data);
         } catch (err) {
@@ -97,19 +97,19 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
 
     function initializeBehaviors() {
         if (!sceneData?.compiledBehaviors || !groupRef.current) {
-            console.log('🎬 SceneLoader: Cannot initialize behaviors', {
-                hasSceneData: !!sceneData,
-                hasCompiledBehaviors: !!sceneData?.compiledBehaviors,
-                hasGroup: !!groupRef.current
-            });
+            // console.log('🎬 SceneLoader: Cannot initialize behaviors', {
+            //     hasSceneData: !!sceneData,
+            //     hasCompiledBehaviors: !!sceneData?.compiledBehaviors,
+            //     hasGroup: !!groupRef.current
+            // });
             return;
         }
 
-        console.log('🎬 SceneLoader: Starting behavior initialization', {
-            behaviorCount: sceneData.compiledBehaviors.behaviors?.length || 0,
-            errorCount: sceneData.compiledBehaviors.errors?.length || 0,
-            groupChildren: groupRef.current.children.length
-        });
+        // console.log('🎬 SceneLoader: Starting behavior initialization', {
+        //     behaviorCount: sceneData.compiledBehaviors.behaviors?.length || 0,
+        //     errorCount: sceneData.compiledBehaviors.errors?.length || 0,
+        //     groupChildren: groupRef.current.children.length
+        // });
 
         // Build object map for UUID lookup
         const objectMap = new Map<string, THREE.Object3D>();
@@ -127,15 +127,15 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
         });
         objectMapRef.current = objectMap;
 
-        console.log('🎬 SceneLoader: Built object map', {
-            objectMapSize: objectMap.size,
-            allObjects: allObjects,
-            behaviorTargets: sceneData.compiledBehaviors.behaviors?.map(b => ({
-                objectName: b.objectName,
-                objectUuid: b.objectUuid,
-                found: objectMap.has(b.objectUuid)
-            }))
-        });
+        // console.log('🎬 SceneLoader: Built object map', {
+        //     objectMapSize: objectMap.size,
+        //     allObjects: allObjects,
+        //     behaviorTargets: sceneData.compiledBehaviors.behaviors?.map(b => ({
+        //         objectName: b.objectName,
+        //         objectUuid: b.objectUuid,
+        //         found: objectMap.has(b.objectUuid)
+        //     }))
+        // });
 
         // Initialize behavior executor
         behaviorExecutorRef.current = new BehaviorExecutor(
@@ -143,24 +143,18 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
             objectMap
         );
 
-        console.log('🎬 SceneLoader: Behavior initialization complete', {
-            behaviorExecutorCreated: !!behaviorExecutorRef.current,
-            behaviorsWithObjects: sceneData.compiledBehaviors.behaviors?.filter(b => objectMap.has(b.objectUuid)).length || 0,
-            behaviorsWithoutObjects: sceneData.compiledBehaviors.behaviors?.filter(b => !objectMap.has(b.objectUuid)).length || 0
-        });
+        // console.log('🎬 SceneLoader: Behavior initialization complete', {
+        //     behaviorExecutorCreated: !!behaviorExecutorRef.current,
+        //     behaviorsWithObjects: sceneData.compiledBehaviors.behaviors?.filter(b => objectMap.has(b.objectUuid)).length || 0,
+        //     behaviorsWithoutObjects: sceneData.compiledBehaviors.behaviors?.filter(b => !objectMap.has(b.objectUuid)).length || 0
+        // });
     }
 
     // Animation loop
     useFrame((state, delta) => {
         if (behaviorExecutorRef.current) {
             behaviorExecutorRef.current.update(delta);
-        } else if (Math.random() < 0.001) { // Log occasionally when no executor
-            console.log('🎬 SceneLoader: No behavior executor in animation loop', {
-                hasExecutor: !!behaviorExecutorRef.current,
-                hasSceneData: !!sceneData,
-                hasCompiledBehaviors: !!sceneData?.compiledBehaviors
-            });
-        }
+        } // Remove occasional logging when no executor
     });
 
     if (loading) {
@@ -209,24 +203,24 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
         const loader = new THREE.ObjectLoader();
 
         try {
-            console.log('SceneContent: Parsing scene data', {
-                hasSceneData: !!sceneData.scene,
-                sceneDataType: typeof sceneData.scene,
-                sceneDataKeys: sceneData.scene ? Object.keys(sceneData.scene) : null
-            });
+            // console.log('SceneContent: Parsing scene data', {
+            //     hasSceneData: !!sceneData.scene,
+            //     sceneDataType: typeof sceneData.scene,
+            //     sceneDataKeys: sceneData.scene ? Object.keys(sceneData.scene) : null
+            // });
 
             const loadedScene = loader.parse(sceneData.scene);
 
-            console.log('SceneContent: Scene parsed successfully', {
-                loadedSceneType: loadedScene.type,
-                loadedSceneChildren: loadedScene.children.length,
-                childrenTypes: loadedScene.children.map(child => ({
-                    type: child.type,
-                    name: child.name,
-                    uuid: child.uuid,
-                    position: child.position
-                }))
-            });
+            // console.log('SceneContent: Scene parsed successfully', {
+            //     loadedSceneType: loadedScene.type,
+            //     loadedSceneChildren: loadedScene.children.length,
+            //     childrenTypes: loadedScene.children.map(child => ({
+            //         type: child.type,
+            //         name: child.name,
+            //         uuid: child.uuid,
+            //         position: child.position
+            //     }))
+            // });
 
             // Clear existing content
             while (groupRef.current.children.length > 0) {
@@ -240,7 +234,7 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
                 groupRef.current.add(child);
             }
 
-            console.log('SceneContent: Loaded scene with', groupRef.current.children.length, 'objects in group');
+            // console.log('SceneContent: Loaded scene with', groupRef.current.children.length, 'objects in group');
 
             // Debug: Log all lights in the scene
             const lights: any[] = [];
@@ -256,7 +250,7 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
                     });
                 }
             });
-            console.log('🔆 SceneContent: Lights in scene:', lights);
+            // console.log('🔆 SceneContent: Lights in scene:', lights);
 
             // Notify that scene objects are loaded and ready for behavior initialization
             if (onSceneLoaded) {

@@ -136,10 +136,10 @@ class InteractionEditorWindow {
 	initCustomInteractionEditor() {
 		// Initialize custom vanilla JS interaction editor
 		if (!this.interactionEditor) {
-			console.log('InteractionEditorWindow: Creating CustomInteractionEditor...');
+			// console.log('InteractionEditorWindow: Creating CustomInteractionEditor...');
 			this.interactionEditor = new CustomInteractionEditor(this.interactionCanvas, this.editor);
-			console.log('InteractionEditorWindow: CustomInteractionEditor created successfully', this.interactionEditor);
-			console.log('InteractionEditorWindow: InteractionGraph available:', this.interactionEditor.getInteractionGraph());
+			// console.log('InteractionEditorWindow: CustomInteractionEditor created successfully', this.interactionEditor);
+			// console.log('InteractionEditorWindow: InteractionGraph available:', this.interactionEditor.getInteractionGraph());
 		}
 	}
 
