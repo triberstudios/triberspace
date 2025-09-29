@@ -3,7 +3,7 @@
  * Provides search, preview, and import interface for Sketchfab models
  */
 
-import { UIPanel, UIRow, UIText, UIInput, UIButton, UISelect, UIBreak } from '../libs/ui.js';
+import { UIPanel, UIText, UIInput, UIButton, UISelect, UIBreak } from '../libs/ui.js';
 import { SketchfabAuth } from './SketchfabAuth.js';
 import { SketchfabLoader } from './SketchfabLoader.js';
 
@@ -53,7 +53,7 @@ function SketchfabBrowser( editor ) {
 	searchSection.setClass( 'search-section' );
 	searchSection.setDisplay( 'none' );
 
-	const searchInput = new UIInput();
+	const searchInput = new UIInput( '' );
 	searchInput.dom.placeholder = 'Search models...';
 	searchInput.dom.addEventListener( 'keyup', function ( event ) {
 
@@ -86,15 +86,17 @@ function SketchfabBrowser( editor ) {
 	} );
 	licenseSelect.dom.addEventListener( 'change', performSearch );
 
-	searchSection.add( new UIText( 'Search' ).setClass( 'section-title' ) );
-	searchSection.add( searchInput );
-	searchSection.add( searchButton );
-	searchSection.add( new UIBreak() );
-	searchSection.add( new UIText( 'Sort by' ) );
-	searchSection.add( sortSelect );
-	searchSection.add( new UIBreak() );
-	searchSection.add( new UIText( 'License' ) );
-	searchSection.add( licenseSelect );
+	// Create horizontal search row container with grouped elements
+	const searchRow = new UIPanel();
+	searchRow.setClass( 'search-row' );
+
+	// Add all controls directly to the row - tabs first, then search
+	searchRow.add( sortSelect );
+	searchRow.add( licenseSelect );
+	searchRow.add( searchInput );
+	searchRow.add( searchButton );
+
+	searchSection.add( searchRow );
 
 	container.add( searchSection );
 
@@ -179,9 +181,7 @@ function SketchfabBrowser( editor ) {
 
 		if ( auth.isAuthenticated() ) {
 
-			authStatus.setValue( 'Signed in to Sketchfab' );
-			authButton.dom.textContent = 'Sign out';
-			authButton.dom.disabled = false;
+			authSection.setDisplay( 'none' ); // Hide the entire auth section when signed in
 
 			searchSection.setDisplay( 'block' );
 
@@ -193,6 +193,8 @@ function SketchfabBrowser( editor ) {
 			authStatus.setValue( 'Sign in to browse and import Sketchfab models' );
 			authButton.dom.textContent = 'Sign in to Sketchfab';
 			authButton.dom.disabled = false;
+			authButton.setDisplay( 'block' );
+			authSection.setDisplay( 'block' ); // Show the auth section when signed out
 
 			searchSection.setDisplay( 'none' );
 			resultsSection.setDisplay( 'none' );

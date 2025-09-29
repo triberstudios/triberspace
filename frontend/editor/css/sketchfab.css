@@ -41,6 +41,30 @@
 	border-bottom: 1px solid #555;
 }
 
+#sketchfab-browser .search-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: flex-end;
+}
+
+#sketchfab-browser .search-row input {
+	width: 250px;
+	margin-bottom: 0;
+}
+
+#sketchfab-browser .search-row button {
+	margin-bottom: 0;
+	margin-right: 0;
+	padding: 8px 16px;
+}
+
+#sketchfab-browser .search-row select {
+	width: 100px;
+	margin-bottom: 0;
+	font-size: 11px;
+}
+
 #sketchfab-browser .section-title {
 	font-weight: bold;
 	color: #fff;
