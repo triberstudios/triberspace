@@ -6,6 +6,323 @@ import { SetGeometryCommand } from './commands/SetGeometryCommand.js';
 import { SetValueCommand } from './commands/SetValueCommand.js';
 import { SetMaterialMapCommand } from './commands/SetMaterialMapCommand.js';
 
+/**
+ * Media plane R2 upload utilities
+ */
+class MediaUploadUtils {
+	/**
+	 * Upload a file to Cloudflare R2 storage
+	 * @param {File} file - The file to upload
+	 * @returns {Promise<string>} The CDN URL of the uploaded file
+	 */
+	static async uploadToR2( file ) {
+		try {
+			const headers = {
+				'Content-Type': 'application/json',
+				'X-Dev-Bypass': 'media-plane-editor'
+			};
+
+			if ( document.cookie ) {
+				headers['Cookie'] = document.cookie;
+			}
+
+			// Get presigned upload URL
+			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
+				method: 'POST',
+				headers: headers,
+				credentials: 'include',
+				body: JSON.stringify( {
+					category: 'temp',
+					entityId: 'media-plane-dev',
+					filename: file.name,
+					fileSize: file.size
+				} )
+			} );
+
+			if ( !presignedResponse.ok ) {
+				throw new Error( `Failed to get presigned URL: ${presignedResponse.status}` );
+			}
+
+			const response = await presignedResponse.json();
+			const { uploadUrl, cdnUrl } = response.data || response;
+
+			// Upload file to R2
+			const uploadResponse = await fetch( uploadUrl, {
+				method: 'PUT',
+				headers: { 'Content-Type': file.type },
+				body: file
+			} );
+
+			if ( !uploadResponse.ok ) {
+				throw new Error( `Failed to upload to R2: ${uploadResponse.status}` );
+			}
+
+			const fileType = MediaUploadUtils.getFileType( file.name );
+			console.log( `📤 ${fileType} uploaded to R2:`, cdnUrl );
+			return cdnUrl;
+
+		} catch ( error ) {
+			console.error( '📤 R2 upload failed:', error );
+			throw error;
+		}
+	}
+
+	/**
+	 * Determine file type from filename
+	 * @param {string} filename - The filename to check
+	 * @returns {string} 'video', 'image', or 'unknown'
+	 */
+	static getFileType( filename ) {
+		if ( /\.(mp4|webm|ogg|avi|mov)$/i.test( filename ) ) {
+			return 'video';
+		} else if ( /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test( filename ) ) {
+			return 'image';
+		}
+		return 'unknown';
+	}
+
+	/**
+	 * Check if URL is a video URL
+	 * @param {string} url - The URL to check
+	 * @returns {boolean} True if it's a video URL
+	 */
+	static isVideoUrl( url ) {
+		return /\.(mp4|webm|ogg|avi|mov)(\?|$)/i.test( url ) ||
+			   url.includes( 'youtube.com' ) ||
+			   url.includes( 'vimeo.com' ) ||
+			   url.includes( 'twitch.tv' );
+	}
+
+	/**
+	 * Create a hidden DOM element for media processing
+	 * @param {string} tagName - 'video' or 'img'
+	 * @returns {HTMLVideoElement|HTMLImageElement} The created element
+	 */
+	static createHiddenMediaElement( tagName ) {
+		const element = document.createElement( tagName );
+
+		if ( tagName === 'video' ) {
+			element.crossOrigin = 'anonymous';
+			element.playsInline = true;
+			element.preload = 'metadata';
+		} else if ( tagName === 'img' ) {
+			element.crossOrigin = 'anonymous';
+		}
+
+		// Hide element
+		element.style.position = 'absolute';
+		element.style.width = '1px';
+		element.style.height = '1px';
+		element.style.left = '-9999px';
+		element.style.opacity = '0';
+		element.style.pointerEvents = 'none';
+
+		document.body.appendChild( element );
+		return element;
+	}
+
+	/**
+	 * Configure video element with user settings
+	 * @param {HTMLVideoElement} video - The video element
+	 * @param {Object} userData - User settings
+	 */
+	static configureVideoElement( video, userData ) {
+		video.autoplay = userData.autoplay !== false;
+		video.loop = userData.loop !== false;
+		video.muted = userData.muted !== false;
+	}
+
+	/**
+	 * Create Three.js texture from media element
+	 * @param {HTMLVideoElement|HTMLImageElement} element - The media element
+	 * @param {string} type - 'video' or 'image'
+	 * @returns {THREE.VideoTexture|THREE.Texture} The created texture
+	 */
+	static createTexture( element, type ) {
+		const texture = type === 'video'
+			? new THREE.VideoTexture( element )
+			: new THREE.Texture( element );
+
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.wrapS = THREE.ClampToEdgeWrapping;
+		texture.wrapT = THREE.ClampToEdgeWrapping;
+		texture.needsUpdate = true;
+
+		if ( type === 'video' ) {
+			texture.format = THREE.RGBAFormat;
+			texture.generateMipmaps = false;
+		}
+
+		return texture;
+	}
+
+	/**
+	 * Check if browser supports screen sharing
+	 * @returns {boolean} True if screen sharing is supported
+	 */
+	static supportsScreenShare() {
+		return navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function';
+	}
+
+	/**
+	 * Start screen sharing capture
+	 * @param {Object} options - Screen capture options
+	 * @returns {Promise<MediaStream>} The screen capture stream
+	 */
+	static async startScreenShare( options = {} ) {
+		if ( !MediaUploadUtils.supportsScreenShare() ) {
+			throw new Error( 'Screen sharing not supported in this browser' );
+		}
+
+		try {
+			const stream = await navigator.mediaDevices.getDisplayMedia({
+				video: {
+					cursor: 'always',
+					...options.video
+				},
+				audio: options.audio || false
+			});
+
+			console.log( '🖥️ Screen share started:', {
+				videoTracks: stream.getVideoTracks().length,
+				audioTracks: stream.getAudioTracks().length
+			});
+
+			return stream;
+		} catch ( error ) {
+			console.error( '🖥️ Screen share failed:', error );
+			throw error;
+		}
+	}
+
+	/**
+	 * Stop screen sharing
+	 * @param {MediaStream} stream - The stream to stop
+	 */
+	static stopScreenShare( stream ) {
+		if ( stream ) {
+			stream.getTracks().forEach( track => {
+				track.stop();
+				console.log( '🖥️ Stopped track:', track.kind );
+			});
+			console.log( '🖥️ Screen share stopped' );
+		}
+	}
+
+	/**
+	 * Create video element from MediaStream
+	 * @param {MediaStream} stream - The media stream
+	 * @returns {HTMLVideoElement} The video element
+	 */
+	static createVideoFromStream( stream ) {
+		const video = MediaUploadUtils.createHiddenMediaElement( 'video' );
+		video.srcObject = stream;
+		video.autoplay = true;
+		video.muted = true; // Always mute screen share to prevent feedback
+		video.play();
+		return video;
+	}
+
+	/**
+	 * Create a default "Click to share screen" texture for the editor
+	 * @param {number} aspectRatio - The aspect ratio (width/height) of the target plane
+	 * @returns {THREE.CanvasTexture} The default screenshare texture
+	 */
+	static createDefaultScreenshareTexture( aspectRatio = 2.0 ) {
+		const canvas = document.createElement( 'canvas' );
+
+		// Create canvas with the correct aspect ratio
+		const baseHeight = 256;
+		canvas.height = baseHeight;
+		canvas.width = Math.round( baseHeight * aspectRatio );
+
+		const ctx = canvas.getContext( '2d' );
+
+		// Dark background (matching the design)
+		ctx.fillStyle = '#2a2a2a';
+		ctx.fillRect( 0, 0, canvas.width, canvas.height );
+
+		// Play button circle
+		const centerX = canvas.width / 2;
+		const centerY = canvas.height / 2 - 20; // Slightly above center to leave room for text
+		const circleRadius = 40;
+
+		// Circle background (light gray)
+		ctx.fillStyle = '#d0d0d0';
+		ctx.beginPath();
+		ctx.arc( centerX, centerY, circleRadius, 0, Math.PI * 2 );
+		ctx.fill();
+
+		// Play triangle
+		ctx.fillStyle = '#2a2a2a';
+		ctx.beginPath();
+		const triangleSize = 20;
+		// Move triangle slightly right to center it visually
+		const triangleX = centerX + 3;
+		ctx.moveTo( triangleX - triangleSize / 2, centerY - triangleSize / 2 );
+		ctx.lineTo( triangleX - triangleSize / 2, centerY + triangleSize / 2 );
+		ctx.lineTo( triangleX + triangleSize / 2, centerY );
+		ctx.closePath();
+		ctx.fill();
+
+		// Text below the play button
+		ctx.fillStyle = '#ffffff';
+		ctx.font = '24px Arial, sans-serif';
+		ctx.textAlign = 'center';
+		ctx.fillText( 'Click to share screen', centerX, centerY + circleRadius + 35 );
+
+		const texture = new THREE.CanvasTexture( canvas );
+		texture.needsUpdate = true;
+		return texture;
+	}
+}
+
+/**
+ * Aspect ratio utility functions
+ */
+const AspectRatioUtils = {
+	/**
+	 * Get numeric ratio from string
+	 * @param {string} ratioString - e.g., "16:9", "4:3", "custom"
+	 * @returns {number|null} - The ratio as a decimal (width/height) or null for custom
+	 */
+	getRatioValue( ratioString ) {
+		if ( ratioString === 'custom' ) return null;
+
+		const ratios = {
+			'16:9': 16 / 9,
+			'4:3': 4 / 3,
+			'1:1': 1 / 1,
+			'3:2': 3 / 2,
+			'21:9': 21 / 9,
+			'9:16': 9 / 16
+		};
+
+		return ratios[ ratioString ] || null;
+	},
+
+	/**
+	 * Calculate height from width and ratio
+	 * @param {number} width
+	 * @param {number} ratio
+	 * @returns {number}
+	 */
+	getHeightFromWidth( width, ratio ) {
+		return width / ratio;
+	},
+
+	/**
+	 * Calculate width from height and ratio
+	 * @param {number} height
+	 * @param {number} ratio
+	 * @returns {number}
+	 */
+	getWidthFromHeight( height, ratio ) {
+		return height * ratio;
+	}
+};
+
 function GeometryParametersPanel( editor, object ) {
 
 	const strings = editor.strings;
@@ -54,98 +371,6 @@ function GeometryParametersPanel( editor, object ) {
 
 	container.add( heightSegmentsRow );
 
-	// Add separator
-	container.add( new UIDiv().setClass( 'Separator' ) );
-
-	// Media Configuration Section
-	const mediaHeader = new UIRow();
-	mediaHeader.add( new UIText( 'Media Configuration' ).setClass( 'Label' ).setFontWeight( 'bold' ) );
-	container.add( mediaHeader );
-
-	// Media Source Type
-	const sourceTypeRow = new UIRow();
-	const sourceType = new UISelect().setOptions( {
-		'none': 'None',
-		'upload': 'Upload File',
-		'url': 'External URL'
-	} ).setValue( object.userData.mediaSourceType || 'none' ).onChange( onSourceTypeChange );
-
-	sourceTypeRow.add( new UIText( 'Media Source' ).setClass( 'Label' ) );
-	sourceTypeRow.add( sourceType );
-	container.add( sourceTypeRow );
-
-	// File Upload Section
-	const uploadSection = new UIDiv();
-	const uploadRow = new UIRow();
-
-	// Create custom file input for media files
-	const mediaFileInput = document.createElement( 'input' );
-	mediaFileInput.type = 'file';
-	mediaFileInput.accept = 'image/*,video/*';
-	mediaFileInput.style.display = 'none';
-
-	const mediaUploadButton = new UIButton( 'Choose File' );
-	mediaUploadButton.onClick( function() {
-		mediaFileInput.click();
-	} );
-
-	const mediaFileName = new UIText( 'No file selected' ).setMarginLeft( '10px' ).setColor( '#888' );
-
-	mediaFileInput.addEventListener( 'change', function( event ) {
-		const file = event.target.files[ 0 ];
-		if ( file ) {
-			mediaFileName.setValue( file.name );
-			handleMediaFile( file );
-		}
-	} );
-
-	uploadRow.add( new UIText( 'Media File' ).setClass( 'Label' ) );
-	uploadRow.add( mediaUploadButton );
-	uploadRow.add( mediaFileName );
-	uploadSection.add( uploadRow );
-	document.body.appendChild( mediaFileInput );
-
-	// URL Input Section
-	const urlSection = new UIDiv();
-	const urlRow = new UIRow();
-	const mediaUrl = new UIInput( object.userData.mediaUrl || '' );
-	mediaUrl.dom.placeholder = 'Enter video URL...';
-	mediaUrl.onChange( onUrlChange );
-	urlRow.add( new UIText( 'Media URL' ).setClass( 'Label' ) );
-	urlRow.add( mediaUrl );
-	urlSection.add( urlRow );
-
-	// Media Controls Section
-	const controlsSection = new UIDiv();
-
-	// Autoplay
-	const autoplayRow = new UIRow();
-	const autoplay = new UICheckbox( object.userData.autoplay || false ).onChange( onAutoplayChange );
-	autoplayRow.add( new UIText( 'Autoplay' ).setClass( 'Label' ) );
-	autoplayRow.add( autoplay );
-	controlsSection.add( autoplayRow );
-
-	// Loop
-	const loopRow = new UIRow();
-	const loop = new UICheckbox( object.userData.loop || true ).onChange( onLoopChange );
-	loopRow.add( new UIText( 'Loop' ).setClass( 'Label' ) );
-	loopRow.add( loop );
-	controlsSection.add( loopRow );
-
-	// Muted
-	const mutedRow = new UIRow();
-	const muted = new UICheckbox( object.userData.muted || true ).onChange( onMutedChange );
-	mutedRow.add( new UIText( 'Muted' ).setClass( 'Label' ) );
-	mutedRow.add( muted );
-	controlsSection.add( mutedRow );
-
-	container.add( uploadSection );
-	container.add( urlSection );
-	container.add( controlsSection );
-
-	// Initial visibility setup
-	updateSectionVisibility();
-
 	//
 
 	function refreshUI() {
@@ -155,20 +380,6 @@ function GeometryParametersPanel( editor, object ) {
 		height.setValue( parameters.height );
 		widthSegments.setValue( parameters.widthSegments );
 		heightSegments.setValue( parameters.heightSegments );
-
-		// Update media controls
-		sourceType.setValue( object.userData.mediaSourceType || 'none' );
-		mediaUrl.setValue( object.userData.mediaUrl || '' );
-		autoplay.setValue( object.userData.autoplay || false );
-		loop.setValue( object.userData.loop || true );
-		muted.setValue( object.userData.muted || true );
-
-		// Update file name display if there's a media source
-		if ( object.userData.mediaFileName ) {
-			mediaFileName.setValue( object.userData.mediaFileName );
-		}
-
-		updateSectionVisibility();
 	}
 
 	function updateGeometry() {
@@ -180,12 +391,79 @@ function GeometryParametersPanel( editor, object ) {
 		) ) );
 	}
 
+	// Aspect ratio-aware dimension change handlers
+	function onWidthChange() {
+		const newWidth = width.getValue();
+
+		// If ratio is locked, adjust height accordingly
+		if ( lockRatio.getValue() && aspectRatio.getValue() !== 'custom' ) {
+			const ratio = AspectRatioUtils.getRatioValue( aspectRatio.getValue() );
+			if ( ratio ) {
+				const newHeight = AspectRatioUtils.getHeightFromWidth( newWidth, ratio );
+				height.setValue( newHeight );
+			}
+		}
+
+		updateGeometry();
+	}
+
+	function onHeightChange() {
+		const newHeight = height.getValue();
+
+		// If ratio is locked, adjust width accordingly
+		if ( lockRatio.getValue() && aspectRatio.getValue() !== 'custom' ) {
+			const ratio = AspectRatioUtils.getRatioValue( aspectRatio.getValue() );
+			if ( ratio ) {
+				const newWidth = AspectRatioUtils.getWidthFromHeight( newHeight, ratio );
+				width.setValue( newWidth );
+			}
+		}
+
+		updateGeometry();
+	}
+
+	function onAspectRatioChange() {
+		const ratioValue = aspectRatio.getValue();
+
+		// Store aspect ratio in userData
+		const newUserData = Object.assign( {}, object.userData, { aspectRatio: ratioValue } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Auto-lock ratio when selecting standard ratios
+		if ( ratioValue !== 'custom' ) {
+			lockRatio.setValue( true );
+			onLockRatioChange(); // Update lock state
+
+			// Apply the selected ratio to current dimensions
+			const ratio = AspectRatioUtils.getRatioValue( ratioValue );
+			if ( ratio ) {
+				const currentWidth = width.getValue();
+				const newHeight = AspectRatioUtils.getHeightFromWidth( currentWidth, ratio );
+				height.setValue( newHeight );
+				updateGeometry();
+			}
+		} else {
+			// When selecting custom, unlock the ratio
+			lockRatio.setValue( false );
+			onLockRatioChange();
+		}
+	}
+
+	function onLockRatioChange() {
+		const isLocked = lockRatio.getValue();
+
+		// Store lock state in userData
+		const newUserData = Object.assign( {}, object.userData, { aspectRatioLocked: isLocked } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+	}
+
 	function updateSectionVisibility() {
 		const type = sourceType.getValue();
 
 		uploadSection.setDisplay( type === 'upload' ? '' : 'none' );
 		urlSection.setDisplay( type === 'url' ? '' : 'none' );
-		controlsSection.setDisplay( type !== 'none' ? '' : 'none' );
+		controlsSection.setDisplay( type !== 'none' && type !== 'screenshare' ? '' : 'none' );
+
 	}
 
 	function onSourceTypeChange() {
@@ -194,148 +472,175 @@ function GeometryParametersPanel( editor, object ) {
 		const newUserData = Object.assign( {}, object.userData, { mediaSourceType: type } );
 		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
 
-		// Clear existing media if changing type
+		// Handle different source types
 		if ( type === 'none' ) {
 			clearMedia();
+		} else if ( type === 'screenshare' ) {
+			// Apply default screenshare texture immediately with correct aspect ratio
+			const currentAspectRatio = width.getValue() / height.getValue();
+			const defaultTexture = MediaUploadUtils.createDefaultScreenshareTexture( currentAspectRatio );
+			applyTextureToObject( defaultTexture );
+
+			// Update userData to reflect screenshare configuration
+			const screenshareUserData = Object.assign( {}, object.userData, {
+				mediaSourceType: 'screenshare',
+				mediaType: 'screenshare',
+				isScreenshareReady: true
+			} );
+			editor.execute( new SetValueCommand( editor, object, 'userData', screenshareUserData ) );
 		}
 
 		updateSectionVisibility();
 	}
 
+	/**
+	 * Apply texture to the object's material
+	 * @param {THREE.Texture} texture - The texture to apply
+	 */
+	function applyTextureToObject( texture ) {
+		if ( object.material ) {
+			editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture ) );
+		}
+	}
+
+	/**
+	 * Handle uploaded media file (unified video/image handler)
+	 * @param {File} file - The uploaded file
+	 */
 	function handleMediaFile( file ) {
 		if ( !file ) return;
 
-		const isVideo = /\.(mp4|webm|ogg|avi|mov)$/i.test( file.name );
+		const fileType = MediaUploadUtils.getFileType( file.name );
+		if ( fileType === 'unknown' ) {
+			mediaFileName.setValue( 'Unsupported file type' );
+			return;
+		}
 
-		if ( isVideo ) {
-			// Show upload progress
-			mediaFileName.setValue( 'Uploading video...' );
+		mediaFileName.setValue( `Uploading ${fileType}...` );
 
-			// Upload video to R2 storage
-			uploadVideoToR2( file ).then( ( videoUrl ) => {
-				// Handle video file with R2 URL
-				const video = document.createElement( 'video' );
-				video.crossOrigin = 'anonymous';
-				video.autoplay = object.userData.autoplay !== false;
-				video.loop = object.userData.loop !== false;
-				video.muted = object.userData.muted !== false;
-				video.playsInline = true;
-				video.preload = 'metadata';
-
-				// Hide video element but keep it in DOM
-				video.style.position = 'absolute';
-				video.style.width = '1px';
-				video.style.height = '1px';
-				video.style.left = '-9999px';
-				video.style.opacity = '0';
-				video.style.pointerEvents = 'none';
-				document.body.appendChild( video );
-
-				video.src = videoUrl; // Use R2 URL instead of base64
-				video.load(); // Explicitly load the video
-
-				video.onloadeddata = function() {
-					const texture = new THREE.VideoTexture( video );
-					texture.minFilter = THREE.LinearFilter;
-					texture.magFilter = THREE.LinearFilter;
-					texture.format = THREE.RGBAFormat; // Use RGBA instead of RGB for better compatibility
-					texture.generateMipmaps = false; // Disable mipmaps for video textures
-					texture.wrapS = THREE.ClampToEdgeWrapping;
-					texture.wrapT = THREE.ClampToEdgeWrapping;
-					texture.needsUpdate = true;
-
-					const newUserData = Object.assign( {}, object.userData, {
-						mediaType: 'video',
-						mediaSource: texture,
-						mediaFileName: file.name,
-						mediaRestoreInfo: {
-							hasVideoTexture: true,
-							videoSrc: videoUrl,
-							originalFileName: file.name
-						}
-					} );
-					editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
-					editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
-
-					// Start playing if autoplay is enabled
-					if ( object.userData.autoplay !== false ) {
-						// Add a small delay to ensure texture is ready
-						setTimeout(() => {
-							video.play().catch( e => {
-								console.warn( 'Video autoplay failed:', e );
-								// Try muting and playing again if autoplay failed
-								video.muted = true;
-								video.play().catch( e2 => {
-									console.warn( 'Video play failed even with muting:', e2 );
-								});
-							});
-						}, 100);
-					}
-
-					// Update material to ensure video shows
-					if ( object.material ) {
-						object.material.needsUpdate = true;
-						object.material.map = texture; // Ensure texture is set
-					}
-
-					// Force viewport render
-					if ( editor.signals && editor.signals.sceneGraphChanged ) {
-						editor.signals.sceneGraphChanged.dispatch();
-					}
-				};
-
-				video.onerror = function() {
-					console.error( 'Failed to load video file:', file.name );
-					mediaFileName.setValue( 'Error loading video' );
-				};
-
-			}).catch( ( error ) => {
-				console.error( 'Failed to upload video to R2:', error );
+		// Upload to R2 storage
+		MediaUploadUtils.uploadToR2( file )
+			.then( ( mediaUrl ) => createMediaTexture( mediaUrl, fileType, file.name ) )
+			.catch( ( error ) => {
+				console.error( `Failed to upload ${fileType} to R2:`, error );
 				mediaFileName.setValue( 'Upload failed' );
 			});
+	}
 
-		} else {
-			// Handle image file - upload to R2 like videos
-			mediaFileName.setValue( 'Uploading image...' );
+	/**
+	 * Create Three.js texture from uploaded media
+	 * @param {string} mediaUrl - The R2 CDN URL
+	 * @param {string} fileType - 'video' or 'image'
+	 * @param {string} fileName - Original filename
+	 */
+	function createMediaTexture( mediaUrl, fileType, fileName ) {
+		if ( fileType === 'video' ) {
+			createVideoTexture( mediaUrl, fileName );
+		} else if ( fileType === 'image' ) {
+			createImageTexture( mediaUrl, fileName );
+		}
+	}
 
-			// Upload image to R2 storage
-			uploadImageToR2( file ).then( ( imageUrl ) => {
-				// Load image from R2 URL
-				const image = new Image();
-				image.crossOrigin = 'anonymous';
+	/**
+	 * Create video texture from R2 URL
+	 * @param {string} videoUrl - The video URL
+	 * @param {string} fileName - Original filename
+	 */
+	function createVideoTexture( videoUrl, fileName ) {
+		const video = MediaUploadUtils.createHiddenMediaElement( 'video' );
+		MediaUploadUtils.configureVideoElement( video, object.userData );
 
-				image.onload = function() {
-					const texture = new THREE.Texture( image );
-					texture.needsUpdate = true;
+		video.src = videoUrl;
+		video.load();
 
-					const newUserData = Object.assign( {}, object.userData, {
-						mediaType: 'image',
-						mediaSource: texture,
-						mediaFileName: file.name,
-						mediaRestoreInfo: {
-							hasImageTexture: true,
-							imageSrc: imageUrl,
-							originalFileName: file.name
-						}
-					} );
-					editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
-					editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
+		video.onloadeddata = function() {
+			const texture = MediaUploadUtils.createTexture( video, 'video' );
 
-					mediaFileName.setValue( file.name );
-					console.log( '🖼️ Image texture applied from R2:', imageUrl );
-				};
+			const newUserData = Object.assign( {}, object.userData, {
+				mediaType: 'video',
+				mediaSource: texture,
+				mediaFileName: fileName,
+				mediaRestoreInfo: {
+					hasVideoTexture: true,
+					videoSrc: videoUrl,
+					originalFileName: fileName
+				}
+			} );
 
-				image.onerror = function() {
-					console.error( 'Failed to load image from R2:', imageUrl );
-					mediaFileName.setValue( 'Error loading image' );
-				};
+			applyMediaTexture( texture, newUserData );
+			mediaFileName.setValue( fileName );
 
-				image.src = imageUrl; // Use R2 URL instead of base64
+			// Handle autoplay
+			if ( object.userData.autoplay !== false ) {
+				setTimeout(() => {
+					video.play().catch( e => {
+						console.warn( 'Video autoplay failed:', e );
+						video.muted = true;
+						video.play().catch( e2 => {
+							console.warn( 'Video play failed even with muting:', e2 );
+						});
+					});
+				}, 100);
+			}
+		};
 
-			}).catch( ( error ) => {
-				console.error( 'Failed to upload image to R2:', error );
-				mediaFileName.setValue( 'Upload failed' );
-			});
+		video.onerror = function() {
+			console.error( 'Failed to load video file:', fileName );
+			mediaFileName.setValue( 'Error loading video' );
+		};
+	}
+
+	/**
+	 * Create image texture from R2 URL
+	 * @param {string} imageUrl - The image URL
+	 * @param {string} fileName - Original filename
+	 */
+	function createImageTexture( imageUrl, fileName ) {
+		const image = MediaUploadUtils.createHiddenMediaElement( 'img' );
+
+		image.onload = function() {
+			const texture = MediaUploadUtils.createTexture( image, 'image' );
+
+			const newUserData = Object.assign( {}, object.userData, {
+				mediaType: 'image',
+				mediaSource: texture,
+				mediaFileName: fileName,
+				mediaRestoreInfo: {
+					hasImageTexture: true,
+					imageSrc: imageUrl,
+					originalFileName: fileName
+				}
+			} );
+
+			applyMediaTexture( texture, newUserData );
+			mediaFileName.setValue( fileName );
+		};
+
+		image.onerror = function() {
+			console.error( 'Failed to load image from R2:', imageUrl );
+			mediaFileName.setValue( 'Error loading image' );
+		};
+
+		image.src = imageUrl;
+	}
+
+	/**
+	 * Apply media texture to the object
+	 * @param {THREE.Texture} texture - The texture to apply
+	 * @param {Object} userData - The user data to set
+	 */
+	function applyMediaTexture( texture, userData ) {
+		editor.execute( new SetValueCommand( editor, object, 'userData', userData ) );
+		editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
+
+		// Update material and force render
+		if ( object.material ) {
+			object.material.needsUpdate = true;
+			object.material.map = texture;
+		}
+
+		if ( editor.signals?.sceneGraphChanged ) {
+			editor.signals.sceneGraphChanged.dispatch();
 		}
 	}
 
@@ -373,109 +678,32 @@ function GeometryParametersPanel( editor, object ) {
 		editor.execute( new SetMaterialMapCommand( editor, object, 'map', null, 0 ) );
 	}
 
-	function createVideoTexture( file, src ) {
-		try {
-			const video = document.createElement( 'video' );
-			video.crossOrigin = 'anonymous';
-			video.autoplay = object.userData.autoplay || false;
-			video.loop = object.userData.loop !== false;
-			video.muted = object.userData.muted !== false;
-			video.playsInline = true;
 
-			// Hide video element
-			video.style.display = 'none';
-			document.body.appendChild( video );
 
-			video.onloadeddata = function() {
-				const texture = new THREE.VideoTexture( video );
-				texture.minFilter = THREE.LinearFilter;
-				texture.magFilter = THREE.LinearFilter;
-				texture.format = THREE.RGBAFormat; // Use RGBA instead of RGB for better compatibility
-				texture.generateMipmaps = false; // Disable mipmaps for video textures
-				texture.wrapS = THREE.ClampToEdgeWrapping;
-				texture.wrapT = THREE.ClampToEdgeWrapping;
-				texture.needsUpdate = true;
-				texture.sourceFile = file.name || 'video';
-
-				const newUserData = Object.assign( {}, object.userData, {
-					mediaType: 'video',
-					mediaSource: texture
-				} );
-				editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
-				editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
-
-				// Start video if autoplay is enabled
-				if ( object.userData.autoplay ) {
-					video.play().catch( e => console.warn( 'Video autoplay failed:', e ) );
-				}
-			};
-
-			video.onerror = function() {
-				console.error( 'Failed to load video file:', file.name );
-			};
-
-			// Set video source
-			if ( file instanceof File ) {
-				const url = URL.createObjectURL( file );
-				video.src = url;
-				video.load();
-			} else {
-				video.src = src;
-				video.load();
-			}
-
-		} catch ( error ) {
-			console.error( 'Error creating video texture:', error );
-		}
-	}
-
-	function setupVideoTexture( texture ) {
-		// Configure video texture settings
-		if ( texture.image && texture.image.tagName === 'VIDEO' ) {
-			const video = texture.image;
-			video.autoplay = object.userData.autoplay || false;
-			video.loop = object.userData.loop !== false;
-			video.muted = object.userData.muted !== false;
-		}
-	}
-
+	/**
+	 * Load external media from URL
+	 * @param {string} url - The media URL
+	 */
 	function loadExternalMedia( url ) {
-		// Determine if URL is video or image
-		const isVideoUrl = /\.(mp4|webm|ogg|avi|mov)(\?|$)/i.test( url ) ||
-						   url.includes( 'youtube.com' ) ||
-						   url.includes( 'vimeo.com' ) ||
-						   url.includes( 'twitch.tv' );
-
-		if ( isVideoUrl ) {
+		if ( MediaUploadUtils.isVideoUrl( url ) ) {
 			loadVideoFromUrl( url );
 		} else {
 			loadImageFromUrl( url );
 		}
 	}
 
+	/**
+	 * Load video from external URL
+	 * @param {string} url - The video URL
+	 */
 	function loadVideoFromUrl( url ) {
 		try {
-			const video = document.createElement( 'video' );
-			video.crossOrigin = 'anonymous';
+			const video = MediaUploadUtils.createHiddenMediaElement( 'video' );
+			MediaUploadUtils.configureVideoElement( video, object.userData );
 			video.src = url;
-			video.autoplay = object.userData.autoplay || false;
-			video.loop = object.userData.loop !== false;
-			video.muted = object.userData.muted !== false;
-			video.playsInline = true;
-
-			// Hide video element
-			video.style.display = 'none';
-			document.body.appendChild( video );
 
 			video.onloadeddata = function() {
-				const texture = new THREE.VideoTexture( video );
-				texture.minFilter = THREE.LinearFilter;
-				texture.magFilter = THREE.LinearFilter;
-				texture.format = THREE.RGBAFormat; // Use RGBA instead of RGB for better compatibility
-				texture.generateMipmaps = false; // Disable mipmaps for video textures
-				texture.wrapS = THREE.ClampToEdgeWrapping;
-				texture.wrapT = THREE.ClampToEdgeWrapping;
-				texture.needsUpdate = true;
+				const texture = MediaUploadUtils.createTexture( video, 'video' );
 
 				const newUserData = Object.assign( {}, object.userData, {
 					mediaType: 'video',
@@ -486,8 +714,8 @@ function GeometryParametersPanel( editor, object ) {
 						originalFileName: 'external-video'
 					}
 				} );
-				editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
-				editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
+
+				applyMediaTexture( texture, newUserData );
 
 				// Start video if autoplay is enabled
 				if ( object.userData.autoplay ) {
@@ -497,7 +725,6 @@ function GeometryParametersPanel( editor, object ) {
 
 			video.onerror = function() {
 				console.error( 'Failed to load video from URL:', url );
-				// Could show error message to user here
 			};
 
 		} catch ( error ) {
@@ -505,6 +732,10 @@ function GeometryParametersPanel( editor, object ) {
 		}
 	}
 
+	/**
+	 * Load image from external URL
+	 * @param {string} url - The image URL
+	 */
 	function loadImageFromUrl( url ) {
 		try {
 			const loader = new THREE.TextureLoader();
@@ -513,16 +744,25 @@ function GeometryParametersPanel( editor, object ) {
 			loader.load(
 				url,
 				function( texture ) {
+					// Configure texture
+					texture.minFilter = THREE.LinearFilter;
+					texture.magFilter = THREE.LinearFilter;
+					texture.wrapS = THREE.ClampToEdgeWrapping;
+					texture.wrapT = THREE.ClampToEdgeWrapping;
+
 					const newUserData = Object.assign( {}, object.userData, {
 						mediaType: 'image',
-						mediaSource: texture
+						mediaSource: texture,
+						mediaRestoreInfo: {
+							hasImageTexture: true,
+							imageSrc: url,
+							originalFileName: 'external-image'
+						}
 					} );
-					editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
-					editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
+
+					applyMediaTexture( texture, newUserData );
 				},
-				function( progress ) {
-					// Progress callback
-				},
+				undefined, // progress callback
 				function( error ) {
 					console.error( 'Failed to load image from URL:', url, error );
 				}
@@ -545,119 +785,6 @@ function GeometryParametersPanel( editor, object ) {
 		}
 	} );
 
-	// Upload video to Cloudflare R2 storage
-	async function uploadVideoToR2( file ) {
-		try {
-			// Get presigned upload URL from API (with dev bypass for editor)
-			const headers = {
-				'Content-Type': 'application/json',
-			};
-
-			// Try to include cookies if available, but add dev bypass header for editor
-			if ( document.cookie ) {
-				headers['Cookie'] = document.cookie;
-			}
-
-			// Add development bypass header for the editor
-			headers['X-Dev-Bypass'] = 'media-plane-editor';
-
-			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
-				method: 'POST',
-				headers: headers,
-				credentials: 'include',
-				body: JSON.stringify( {
-					category: 'temp',
-					entityId: 'media-plane-dev', // Dev entity ID
-					filename: file.name,
-					fileSize: file.size
-				} )
-			} );
-
-			if ( !presignedResponse.ok ) {
-				throw new Error( `Failed to get presigned URL: ${presignedResponse.status}` );
-			}
-
-			const response = await presignedResponse.json();
-			const { uploadUrl, cdnUrl } = response.data || response;
-
-			// Upload file directly to R2 using presigned URL
-			const uploadResponse = await fetch( uploadUrl, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': file.type
-				},
-				body: file
-			} );
-
-			if ( !uploadResponse.ok ) {
-				throw new Error( `Failed to upload to R2: ${uploadResponse.status}` );
-			}
-
-			console.log( '📤 Video uploaded to R2:', cdnUrl );
-			return cdnUrl;
-
-		} catch ( error ) {
-			console.error( '📤 R2 upload failed:', error );
-			throw error;
-		}
-	}
-
-	// Upload image to Cloudflare R2 storage (similar to video upload)
-	async function uploadImageToR2( file ) {
-		try {
-			// Get presigned upload URL from API (with dev bypass for editor)
-			const headers = {
-				'Content-Type': 'application/json',
-			};
-
-			// Try to include cookies if available, but add dev bypass header for editor
-			if ( document.cookie ) {
-				headers['Cookie'] = document.cookie;
-			}
-
-			// Add development bypass header for the editor
-			headers['X-Dev-Bypass'] = 'media-plane-editor';
-
-			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
-				method: 'POST',
-				headers: headers,
-				credentials: 'include',
-				body: JSON.stringify( {
-					category: 'temp',
-					entityId: 'media-plane-dev', // Dev entity ID
-					filename: file.name,
-					fileSize: file.size
-				} )
-			} );
-
-			if ( !presignedResponse.ok ) {
-				throw new Error( `Failed to get presigned URL: ${presignedResponse.status}` );
-			}
-
-			const response = await presignedResponse.json();
-			const { uploadUrl, cdnUrl } = response.data || response;
-
-			// Upload file directly to R2 using presigned URL
-			const uploadResponse = await fetch( uploadUrl, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': file.type
-				},
-				body: file
-			} );
-
-			if ( !uploadResponse.ok ) {
-				throw new Error( `Failed to upload to R2: ${uploadResponse.status}` );
-			}
-
-			console.log( '🖼️ Image uploaded to R2:', cdnUrl );
-			return cdnUrl;
-
-		} catch ( error ) {
-			console.error( '🖼️ R2 image upload failed:', error );
-			throw error;
-		}
-	}
 
 	return container;
 }

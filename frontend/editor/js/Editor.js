@@ -770,135 +770,140 @@ Editor.prototype = {
 
 	},
 
+	/**
+	 * Media texture serialization utilities
+	 */
+	mediaSerializationUtils: {
+
+		/**
+		 * Check if texture needs custom serialization
+		 * @param {THREE.Texture} texture - The texture to check
+		 * @returns {boolean} True if needs custom serialization
+		 */
+		needsCustomSerialization: function( texture ) {
+			return texture.isVideoTexture ||
+				   (texture.image && texture.image instanceof HTMLImageElement);
+		},
+
+		/**
+		 * Create safe texture JSON representation
+		 * @param {THREE.Texture} texture - The texture to serialize
+		 * @returns {Object} Safe JSON representation
+		 */
+		createSafeTextureJSON: function( texture ) {
+			return {
+				metadata: {
+					version: 4.6,
+					type: 'Texture',
+					generator: 'Texture.toJSON'
+				},
+				uuid: texture.uuid,
+				name: texture.name || '',
+				image: null, // Don't serialize the media element
+				mapping: texture.mapping,
+				channel: texture.channel,
+				repeat: [ texture.repeat.x, texture.repeat.y ],
+				offset: [ texture.offset.x, texture.offset.y ],
+				center: [ texture.center.x, texture.center.y ],
+				rotation: texture.rotation,
+				wrap: [ texture.wrapS, texture.wrapT ],
+				format: texture.format,
+				internalFormat: texture.internalFormat,
+				type: texture.type,
+				colorSpace: texture.colorSpace,
+				minFilter: texture.minFilter,
+				magFilter: texture.magFilter,
+				anisotropy: texture.anisotropy,
+				flipY: texture.flipY,
+				generateMipmaps: texture.generateMipmaps,
+				premultiplyAlpha: texture.premultiplyAlpha,
+				unpackAlignment: texture.unpackAlignment,
+				compareFunction: texture.compareFunction,
+				// Media-specific flags
+				isVideoTexture: texture.isVideoTexture || false,
+				isImageTexture: (texture.image && texture.image instanceof HTMLImageElement) || false
+			};
+		},
+
+		/**
+		 * Create safe userData for media objects
+		 * @param {Object} userData - Original user data
+		 * @param {string} mediaType - 'video' or 'image'
+		 * @returns {Object} Safe user data
+		 */
+		createSafeUserData: function( userData, mediaType ) {
+			const safeUserData = Object.assign( {}, userData );
+			safeUserData.mediaSource = null; // Remove non-serializable texture
+
+			// Preserve existing mediaRestoreInfo or create fallback
+			if ( !safeUserData.mediaRestoreInfo && userData.mediaSource ) {
+				if ( mediaType === 'video' ) {
+					safeUserData.mediaRestoreInfo = {
+						hasVideoTexture: true,
+						videoSrc: userData.mediaSource.image?.src || null,
+						textureUuid: userData.mediaSource.uuid
+					};
+				} else if ( mediaType === 'image' ) {
+					safeUserData.mediaRestoreInfo = {
+						hasImageTexture: true,
+						imageSrc: userData.mediaSource.image?.src || null,
+						textureUuid: userData.mediaSource.uuid
+					};
+				}
+			}
+
+			return safeUserData;
+		}
+
+	},
+
 	prepareSceneForSerialization: function() {
 
-		// Override toJSON for video textures and handle userData
 		const originalToJSONMethods = [];
 		const originalUserData = [];
+		const mediaUtils = this.mediaSerializationUtils;
 
 		this.scene.traverse( function( object ) {
 
-			// Handle video textures AND image textures with HTMLImageElement in materials
-			if ( object.material && object.material.map ) {
+			// Handle material textures that need custom serialization
+			if ( object.material?.map && mediaUtils.needsCustomSerialization( object.material.map ) ) {
 
 				const texture = object.material.map;
-				const needsSerialization = texture.isVideoTexture ||
-					(texture.image && texture.image instanceof HTMLImageElement);
 
-				if ( needsSerialization ) {
-
-				// Store the original toJSON method
+				// Store original toJSON method
 				originalToJSONMethods.push({
 					texture: texture,
 					originalToJSON: texture.toJSON
 				});
 
-				// Override toJSON to return a safe representation
+				// Override with safe serialization
 				texture.toJSON = function( meta ) {
-					const output = {
-						metadata: {
-							version: 4.6,
-							type: 'Texture',
-							generator: 'Texture.toJSON'
-						},
-						uuid: this.uuid,
-						name: this.name || '',
-						image: null, // Don't serialize the video/image element
-						mapping: this.mapping,
-						channel: this.channel,
-						repeat: [ this.repeat.x, this.repeat.y ],
-						offset: [ this.offset.x, this.offset.y ],
-						center: [ this.center.x, this.center.y ],
-						rotation: this.rotation,
-						wrap: [ this.wrapS, this.wrapT ],
-						format: this.format,
-						internalFormat: this.internalFormat,
-						type: this.type,
-						colorSpace: this.colorSpace,
-						minFilter: this.minFilter,
-						magFilter: this.magFilter,
-						anisotropy: this.anisotropy,
-						flipY: this.flipY,
-						generateMipmaps: this.generateMipmaps,
-						premultiplyAlpha: this.premultiplyAlpha,
-						unpackAlignment: this.unpackAlignment,
-						compareFunction: this.compareFunction,
-						// Store media plane specific data
-						isVideoTexture: this.isVideoTexture || false,
-						isImageTexture: (this.image && this.image instanceof HTMLImageElement) || false,
-						mediaPlaneData: {
-							type: this.isVideoTexture ? 'video' : 'image'
-						}
-					};
-
-					// Store video src if available
-					if ( this.image && this.image.src ) {
-						output.mediaPlaneData.videoSrc = this.image.src;
-					}
-
-					return output;
+					return mediaUtils.createSafeTextureJSON( this );
 				};
-
 			}
 
-			// Handle video/image textures stored in userData.mediaSource
-			if ( object.userData && object.userData.mediaSource ) {
-				const isVideo = object.userData.mediaSource.isVideoTexture;
-				const isImage = object.userData.mediaSource.image && object.userData.mediaSource.image instanceof HTMLImageElement;
+			// Handle media plane objects with mediaSource
+			if ( object.userData?.mediaSource ) {
+				const mediaSource = object.userData.mediaSource;
+				const isVideo = mediaSource.isVideoTexture;
+				const isImage = mediaSource.image instanceof HTMLImageElement;
 
 				if ( isVideo || isImage ) {
-
-					console.log('💾 Preparing to serialize media plane:', object.name, {
-						hasVideoTexture: isVideo,
-						hasImageTexture: isImage,
-						mediaSrc: object.userData.mediaSource.image?.src,
-						mediaType: object.userData.mediaType
-					});
-
 					// Store original userData
 					originalUserData.push({
 						object: object,
 						originalUserData: object.userData
 					});
 
-					// Create safe userData without video/image texture
-					const safeUserData = Object.assign( {}, object.userData );
-
-					// Remove the non-serializable texture
-					safeUserData.mediaSource = null;
-
-					// Store media metadata for restoration
-					if ( isVideo ) {
-						safeUserData.mediaRestoreInfo = {
-							hasVideoTexture: true,
-							videoSrc: object.userData.mediaSource.image ? object.userData.mediaSource.image.src : null,
-							textureUuid: object.userData.mediaSource.uuid
-						};
-						console.log('💾 Stored video metadata:', safeUserData.mediaRestoreInfo);
-					} else if ( isImage ) {
-						// For images, the mediaRestoreInfo should already be set by MediaPlaneGeometry
-						// But ensure it's preserved during serialization
-						if ( !safeUserData.mediaRestoreInfo ) {
-							safeUserData.mediaRestoreInfo = {
-								hasImageTexture: true,
-								imageSrc: object.userData.mediaSource.image ? object.userData.mediaSource.image.src : null,
-								textureUuid: object.userData.mediaSource.uuid
-							};
-						}
-						console.log('💾 Stored image metadata:', safeUserData.mediaRestoreInfo);
-					}
-
-					// Temporarily replace userData
-					object.userData = safeUserData;
-
+					// Replace with safe userData
+					const mediaType = isVideo ? 'video' : 'image';
+					object.userData = mediaUtils.createSafeUserData( object.userData, mediaType );
 				}
-			}
-
 			}
 
 		} );
 
-		// Serialize scene with custom toJSON methods and safe userData
+		// Serialize scene with safe representations
 		const sceneData = this.scene.toJSON();
 
 		// Restore original toJSON methods

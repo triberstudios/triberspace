@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { UIPanel, UIRow, UIInput, UIButton, UIColor, UICheckbox, UIInteger, UITextArea, UIText, UINumber } from './libs/ui.js';
+import { UIPanel, UIRow, UIInput, UIButton, UIColor, UICheckbox, UIInteger, UITextArea, UIText, UINumber, UISelect, UIDiv } from './libs/ui.js';
 import { UIBoolean } from './libs/ui.three.js';
 
 import { SetUuidCommand } from './commands/SetUuidCommand.js';
@@ -10,8 +10,354 @@ import { SetRotationCommand } from './commands/SetRotationCommand.js';
 import { SetScaleCommand } from './commands/SetScaleCommand.js';
 import { SetColorCommand } from './commands/SetColorCommand.js';
 import { SetShadowValueCommand } from './commands/SetShadowValueCommand.js';
+import { SetMaterialMapCommand } from './commands/SetMaterialMapCommand.js';
 
 import { SidebarObjectAnimation } from './Sidebar.Object.Animation.js';
+
+/**
+ * Media plane R2 upload utilities
+ */
+class MediaUploadUtils {
+	/**
+	 * Upload a file to Cloudflare R2 storage
+	 * @param {File} file - The file to upload
+	 * @returns {Promise<string>} The CDN URL of the uploaded file
+	 */
+	static async uploadToR2( file ) {
+		try {
+			const headers = {
+				'Content-Type': 'application/json',
+				'X-Dev-Bypass': 'media-plane-editor'
+			};
+
+			if ( document.cookie ) {
+				headers['Cookie'] = document.cookie;
+			}
+
+			// Get presigned upload URL
+			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
+				method: 'POST',
+				headers: headers,
+				credentials: 'include',
+				body: JSON.stringify( {
+					category: 'temp',
+					entityId: 'media-plane-dev',
+					filename: file.name,
+					fileSize: file.size
+				} )
+			} );
+
+			if ( !presignedResponse.ok ) {
+				throw new Error( `Failed to get presigned URL: ${presignedResponse.status}` );
+			}
+
+			const response = await presignedResponse.json();
+			const { uploadUrl, cdnUrl } = response.data || response;
+
+			// Upload file to R2
+			const uploadResponse = await fetch( uploadUrl, {
+				method: 'PUT',
+				headers: { 'Content-Type': file.type },
+				body: file
+			} );
+
+			if ( !uploadResponse.ok ) {
+				throw new Error( `Failed to upload to R2: ${uploadResponse.status}` );
+			}
+
+			const fileType = MediaUploadUtils.getFileType( file.name );
+			console.log( `📤 ${fileType} uploaded to R2:`, cdnUrl );
+			return cdnUrl;
+
+		} catch ( error ) {
+			console.error( '📤 R2 upload failed:', error );
+			throw error;
+		}
+	}
+
+	/**
+	 * Determine file type from filename
+	 * @param {string} filename - The filename to check
+	 * @returns {string} 'video', 'image', or 'unknown'
+	 */
+	static getFileType( filename ) {
+		if ( /\.(mp4|webm|ogg|avi|mov)$/i.test( filename ) ) {
+			return 'video';
+		} else if ( /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test( filename ) ) {
+			return 'image';
+		}
+		return 'unknown';
+	}
+
+	/**
+	 * Check if URL is a video URL
+	 * @param {string} url - The URL to check
+	 * @returns {boolean} True if it's a video URL
+	 */
+	static isVideoUrl( url ) {
+		return /\.(mp4|webm|ogg|avi|mov)(\?|$)/i.test( url ) ||
+			   url.includes( 'youtube.com' ) ||
+			   url.includes( 'vimeo.com' ) ||
+			   url.includes( 'twitch.tv' );
+	}
+
+	/**
+	 * Create a hidden DOM element for media processing
+	 * @param {string} tagName - 'video' or 'img'
+	 * @returns {HTMLVideoElement|HTMLImageElement} The created element
+	 */
+	static createHiddenMediaElement( tagName ) {
+		const element = document.createElement( tagName );
+
+		if ( tagName === 'video' ) {
+			element.crossOrigin = 'anonymous';
+			element.playsInline = true;
+			element.preload = 'metadata';
+		} else if ( tagName === 'img' ) {
+			element.crossOrigin = 'anonymous';
+		}
+
+		// Hide element
+		element.style.position = 'absolute';
+		element.style.width = '1px';
+		element.style.height = '1px';
+		element.style.left = '-9999px';
+		element.style.opacity = '0';
+		element.style.pointerEvents = 'none';
+
+		document.body.appendChild( element );
+		return element;
+	}
+
+	/**
+	 * Configure video element with user settings
+	 * @param {HTMLVideoElement} video - The video element
+	 * @param {Object} userData - User settings
+	 */
+	static configureVideoElement( video, userData ) {
+		video.autoplay = userData.autoplay !== false;
+		video.loop = userData.loop !== false;
+		video.muted = userData.muted !== false;
+	}
+
+	/**
+	 * Create Three.js texture from media element
+	 * @param {HTMLVideoElement|HTMLImageElement} element - The media element
+	 * @param {string} type - 'video' or 'image'
+	 * @returns {THREE.VideoTexture|THREE.Texture} The created texture
+	 */
+	static createTexture( element, type ) {
+		const texture = type === 'video'
+			? new THREE.VideoTexture( element )
+			: new THREE.Texture( element );
+
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.wrapS = THREE.ClampToEdgeWrapping;
+		texture.wrapT = THREE.ClampToEdgeWrapping;
+		texture.needsUpdate = true;
+
+		if ( type === 'video' ) {
+			texture.format = THREE.RGBAFormat;
+			texture.generateMipmaps = false;
+		}
+
+		return texture;
+	}
+
+	/**
+	 * Create a default "Click to share screen" texture for the editor
+	 * @param {number} aspectRatio - The aspect ratio (width/height) of the target plane
+	 * @returns {THREE.CanvasTexture} The default screenshare texture
+	 */
+	static createDefaultScreenshareTexture( aspectRatio = 2.0 ) {
+		const canvas = document.createElement( 'canvas' );
+
+		// Create canvas with the correct aspect ratio
+		const baseHeight = 256;
+		canvas.height = baseHeight;
+		canvas.width = Math.round( baseHeight * aspectRatio );
+
+		const ctx = canvas.getContext( '2d' );
+
+		// Dark background (matching the design)
+		ctx.fillStyle = '#2a2a2a';
+		ctx.fillRect( 0, 0, canvas.width, canvas.height );
+
+		// Play button circle
+		const centerX = canvas.width / 2;
+		const centerY = canvas.height / 2 - 20; // Slightly above center to leave room for text
+		const circleRadius = 40;
+
+		// Circle background (light gray)
+		ctx.fillStyle = '#d0d0d0';
+		ctx.beginPath();
+		ctx.arc( centerX, centerY, circleRadius, 0, Math.PI * 2 );
+		ctx.fill();
+
+		// Play triangle
+		ctx.fillStyle = '#2a2a2a';
+		ctx.beginPath();
+		const triangleSize = 20;
+		// Move triangle slightly right to center it visually
+		const triangleX = centerX + 3;
+		ctx.moveTo( triangleX - triangleSize / 2, centerY - triangleSize / 2 );
+		ctx.lineTo( triangleX - triangleSize / 2, centerY + triangleSize / 2 );
+		ctx.lineTo( triangleX + triangleSize / 2, centerY );
+		ctx.closePath();
+		ctx.fill();
+
+		// Text below the play button
+		ctx.fillStyle = '#ffffff';
+		ctx.font = '24px Arial, sans-serif';
+		ctx.textAlign = 'center';
+		ctx.fillText( 'Click to share screen', centerX, centerY + circleRadius + 35 );
+
+		const texture = new THREE.CanvasTexture( canvas );
+		texture.needsUpdate = true;
+		return texture;
+	}
+
+	/**
+	 * Create a default "Upload media" texture for the editor
+	 * @param {number} aspectRatio - The aspect ratio (width/height) of the target plane
+	 * @returns {THREE.CanvasTexture} The default upload texture
+	 */
+	static createDefaultUploadTexture( aspectRatio = 2.0 ) {
+		const canvas = document.createElement( 'canvas' );
+
+		// Create canvas with the correct aspect ratio
+		const baseHeight = 256;
+		canvas.height = baseHeight;
+		canvas.width = Math.round( baseHeight * aspectRatio );
+
+		const ctx = canvas.getContext( '2d' );
+
+		// Dark background (matching the design)
+		ctx.fillStyle = '#2a2a2a';
+		ctx.fillRect( 0, 0, canvas.width, canvas.height );
+
+		// Upload icon circle
+		const centerX = canvas.width / 2;
+		const centerY = canvas.height / 2 - 20; // Slightly above center to leave room for text
+		const circleRadius = 40;
+
+		// Circle background (light gray)
+		ctx.fillStyle = '#d0d0d0';
+		ctx.beginPath();
+		ctx.arc( centerX, centerY, circleRadius, 0, Math.PI * 2 );
+		ctx.fill();
+
+		// Upload arrow (up arrow icon)
+		ctx.fillStyle = '#2a2a2a';
+		ctx.beginPath();
+		const arrowSize = 20;
+		// Draw up arrow
+		ctx.moveTo( centerX, centerY - arrowSize / 2 );
+		ctx.lineTo( centerX - arrowSize / 2, centerY + arrowSize / 4 );
+		ctx.lineTo( centerX - arrowSize / 4, centerY + arrowSize / 4 );
+		ctx.lineTo( centerX - arrowSize / 4, centerY + arrowSize / 2 );
+		ctx.lineTo( centerX + arrowSize / 4, centerY + arrowSize / 2 );
+		ctx.lineTo( centerX + arrowSize / 4, centerY + arrowSize / 4 );
+		ctx.lineTo( centerX + arrowSize / 2, centerY + arrowSize / 4 );
+		ctx.closePath();
+		ctx.fill();
+
+		// Text below the upload icon
+		ctx.fillStyle = '#ffffff';
+		ctx.font = '24px Arial, sans-serif';
+		ctx.textAlign = 'center';
+		ctx.fillText( 'Upload media', centerX, centerY + circleRadius + 35 );
+
+		const texture = new THREE.CanvasTexture( canvas );
+		texture.needsUpdate = true;
+		return texture;
+	}
+}
+
+/**
+ * Aspect ratio utility functions
+ */
+const AspectRatioUtils = {
+	/**
+	 * Get numeric ratio from string
+	 * @param {string} ratioString - e.g., "16:9", "4:3", "custom"
+	 * @returns {number|null} - The ratio as a decimal (width/height) or null for custom
+	 */
+	getRatioValue( ratioString ) {
+		if ( ratioString === 'custom' ) return null;
+
+		const ratios = {
+			'16:9': 16 / 9,
+			'4:3': 4 / 3,
+			'1:1': 1 / 1,
+			'3:2': 3 / 2,
+			'21:9': 21 / 9,
+			'9:16': 9 / 16
+		};
+
+		return ratios[ ratioString ] || null;
+	},
+
+	/**
+	 * Calculate height from width and ratio
+	 * @param {number} width
+	 * @param {number} ratio
+	 * @returns {number}
+	 */
+	getHeightFromWidth( width, ratio ) {
+		return width / ratio;
+	},
+
+	/**
+	 * Calculate width from height and ratio
+	 * @param {number} height
+	 * @param {number} ratio
+	 * @returns {number}
+	 */
+	getWidthFromHeight( height, ratio ) {
+		return height * ratio;
+	},
+
+	/**
+	 * Calculate aspect ratio from scale values
+	 * @param {number} scaleX
+	 * @param {number} scaleY
+	 * @returns {number}
+	 */
+	getRatioFromScale( scaleX, scaleY ) {
+		return scaleX / scaleY;
+	},
+
+	/**
+	 * Find closest standard ratio to a given ratio
+	 * @param {number} ratio
+	 * @returns {string} The closest standard ratio key or 'custom'
+	 */
+	findClosestStandardRatio( ratio ) {
+		const standardRatios = {
+			'16:9': 16 / 9,
+			'4:3': 4 / 3,
+			'1:1': 1 / 1,
+			'3:2': 3 / 2,
+			'21:9': 21 / 9,
+			'9:16': 9 / 16
+		};
+
+		let closestRatio = 'custom';
+		let minDifference = Infinity;
+
+		for ( const [ key, value ] of Object.entries( standardRatios ) ) {
+			const difference = Math.abs( ratio - value );
+			if ( difference < minDifference && difference < 0.01 ) { // Tolerance of 0.01
+				minDifference = difference;
+				closestRatio = key;
+			}
+		}
+
+		return closestRatio;
+	}
+};
 
 function SidebarObject( editor ) {
 
@@ -395,8 +741,8 @@ function SidebarObject( editor ) {
 	// scale
 
 	const objectScaleRow = new UIRow();
-	const objectScaleX = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
-	const objectScaleY = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
+	const objectScaleX = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( updateWithAspectRatio );
+	const objectScaleY = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( updateWithAspectRatio );
 	const objectScaleZ = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
 
 	// Property patch button for scale
@@ -407,6 +753,116 @@ function SidebarObject( editor ) {
 	objectScaleRow.add( objectScaleX, objectScaleY, objectScaleZ );
 
 	container.add( objectScaleRow );
+
+	// Media Properties Section (only for PlaneGeometry objects)
+	const mediaSection = new UIPanel();
+	mediaSection.setPadding( '0px' );
+	let isMediaPlane = false;
+
+	// Media Source dropdown
+	const mediaSourceRow = new UIRow();
+	const mediaSourceType = new UISelect().setOptions( {
+		'none': 'None',
+		'upload': 'Upload File',
+		'screenshare': 'Screen Share'
+	} ).onChange( onMediaSourceTypeChange );
+
+	mediaSourceRow.add( new UIText( 'Media Source' ).setClass( 'Label' ) );
+	mediaSourceRow.add( mediaSourceType );
+	mediaSection.add( mediaSourceRow );
+
+	// File Upload Section
+	const uploadSection = new UIDiv();
+	const uploadRow = new UIRow();
+
+	// Create custom file input for media files
+	const mediaFileInput = document.createElement( 'input' );
+	mediaFileInput.type = 'file';
+	mediaFileInput.accept = 'video/*,image/*,.mp4,.webm,.ogg,.avi,.mov,.jpg,.jpeg,.png,.gif,.webp,.bmp';
+	mediaFileInput.style.display = 'none';
+
+	mediaFileInput.addEventListener( 'change', function( event ) {
+		const file = event.target.files[0];
+		if ( !file ) return;
+
+		mediaFileName.setValue( 'Uploading...' );
+		mediaFileName.setColor( '#888' );
+
+		const fileType = MediaUploadUtils.getFileType( file.name );
+		MediaUploadUtils.uploadToR2( file )
+			.then( ( mediaUrl ) => createMediaTexture( mediaUrl, fileType, file.name ) )
+			.catch( ( error ) => {
+				console.error( `Failed to upload ${fileType} to R2:`, error );
+				mediaFileName.setValue( 'Upload failed' );
+			});
+	} );
+
+	const mediaUploadButton = new UIButton( 'Choose File' );
+	mediaUploadButton.onClick( function() {
+		mediaFileInput.click();
+	} );
+
+	const mediaFileName = new UIText( 'No file selected' ).setMarginLeft( '10px' ).setColor( '#888' );
+
+	uploadRow.add( new UIText( 'File' ).setClass( 'Label' ) );
+	uploadRow.add( mediaUploadButton );
+	uploadRow.add( mediaFileName );
+
+	uploadSection.add( uploadRow );
+	document.body.appendChild( mediaFileInput );
+
+	// Media Controls Section
+	const controlsSection = new UIDiv();
+
+	// Autoplay
+	const autoplayRow = new UIRow();
+	const mediaAutoplay = new UICheckbox( false ).onChange( onAutoplayChange );
+	autoplayRow.add( new UIText( 'Autoplay' ).setClass( 'Label' ) );
+	autoplayRow.add( mediaAutoplay );
+	controlsSection.add( autoplayRow );
+
+	// Loop
+	const loopRow = new UIRow();
+	const mediaLoop = new UICheckbox( true ).onChange( onLoopChange );
+	loopRow.add( new UIText( 'Loop' ).setClass( 'Label' ) );
+	loopRow.add( mediaLoop );
+	controlsSection.add( loopRow );
+
+	// Muted
+	const mutedRow = new UIRow();
+	const mediaMuted = new UICheckbox( true ).onChange( onMutedChange );
+	mutedRow.add( new UIText( 'Muted' ).setClass( 'Label' ) );
+	mutedRow.add( mediaMuted );
+	controlsSection.add( mutedRow );
+
+	mediaSection.add( uploadSection );
+	mediaSection.add( controlsSection );
+
+	// Aspect Ratio Controls Section
+	const aspectRatioRow = new UIRow();
+	const aspectRatio = new UISelect().setOptions( {
+		'custom': 'Custom',
+		'16:9': '16:9 (Widescreen)',
+		'4:3': '4:3 (Standard)',
+		'1:1': '1:1 (Square)',
+		'3:2': '3:2 (Photo)',
+		'21:9': '21:9 (Ultrawide)',
+		'9:16': '9:16 (Portrait)'
+	} ).onChange( onAspectRatioChange );
+
+	aspectRatioRow.add( new UIText( 'Aspect Ratio' ).setClass( 'Label' ) );
+	aspectRatioRow.add( aspectRatio );
+	mediaSection.add( aspectRatioRow );
+
+	// Lock Ratio Checkbox
+	const lockRatioRow = new UIRow();
+	const lockRatio = new UICheckbox( false ).onChange( onLockRatioChange );
+	lockRatioRow.add( new UIText( 'Lock Ratio' ).setClass( 'Label' ) );
+	lockRatioRow.add( lockRatio );
+	mediaSection.add( lockRatioRow );
+
+	// Add the media section to the container
+	container.add( mediaSection );
 
 	// fov
 
@@ -696,6 +1152,275 @@ function SidebarObject( editor ) {
 
 	//
 
+	// Media Controls Event Handlers
+
+	function onMediaSourceTypeChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const type = mediaSourceType.getValue();
+		const newUserData = Object.assign( {}, object.userData, { mediaSourceType: type } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Handle different source types
+		if ( type === 'none' ) {
+			clearMedia();
+		} else if ( type === 'screenshare' ) {
+			// Apply default screenshare texture immediately with correct aspect ratio
+			const currentAspectRatio = object.scale.x / object.scale.y;
+			const defaultTexture = MediaUploadUtils.createDefaultScreenshareTexture( currentAspectRatio );
+			applyTextureToObject( defaultTexture );
+
+			// Update userData to reflect screenshare configuration
+			const screenshareUserData = Object.assign( {}, object.userData, {
+				mediaSourceType: 'screenshare',
+				mediaType: 'screenshare',
+				isScreenshareReady: true
+			} );
+			editor.execute( new SetValueCommand( editor, object, 'userData', screenshareUserData ) );
+		}
+
+		updateMediaSectionVisibility();
+	}
+
+	function updateMediaSectionVisibility() {
+		const type = mediaSourceType.getValue();
+		uploadSection.setDisplay( type === 'upload' ? '' : 'none' );
+		controlsSection.setDisplay( type !== 'none' && type !== 'screenshare' ? '' : 'none' );
+	}
+
+	function createMediaTexture( mediaUrl, fileType, fileName ) {
+		if ( fileType === 'video' ) {
+			createVideoTexture( mediaUrl, fileName );
+		} else if ( fileType === 'image' ) {
+			createImageTexture( mediaUrl, fileName );
+		}
+	}
+
+	function createVideoTexture( videoUrl, fileName ) {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const video = MediaUploadUtils.createHiddenMediaElement( 'video' );
+		MediaUploadUtils.configureVideoElement( video, object.userData );
+
+		video.src = videoUrl;
+		video.load();
+
+		video.onloadeddata = function() {
+			const texture = MediaUploadUtils.createTexture( video, 'video' );
+
+			const newUserData = Object.assign( {}, object.userData, {
+				mediaType: 'video',
+				mediaSource: texture,
+				mediaFileName: fileName,
+				mediaRestoreInfo: {
+					hasVideoTexture: true,
+					videoSrc: videoUrl,
+					originalFileName: fileName
+				}
+			} );
+
+			applyMediaTexture( texture, newUserData );
+			mediaFileName.setValue( fileName );
+
+			// Handle autoplay
+			if ( object.userData.autoplay !== false ) {
+				setTimeout(() => {
+					video.play().catch( e => {
+						console.warn( 'Video autoplay failed:', e );
+						video.muted = true;
+						video.play().catch( e2 => {
+							console.warn( 'Video play failed even with muting:', e2 );
+						});
+					});
+				}, 100);
+			}
+		};
+
+		video.onerror = function() {
+			console.error( 'Failed to load video file:', fileName );
+			mediaFileName.setValue( 'Error loading video' );
+		};
+	}
+
+	function createImageTexture( imageUrl, fileName ) {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const image = MediaUploadUtils.createHiddenMediaElement( 'img' );
+
+		image.onload = function() {
+			const texture = MediaUploadUtils.createTexture( image, 'image' );
+
+			const newUserData = Object.assign( {}, object.userData, {
+				mediaType: 'image',
+				mediaSource: texture,
+				mediaFileName: fileName,
+				mediaRestoreInfo: {
+					hasImageTexture: true,
+					imageSrc: imageUrl,
+					originalFileName: fileName
+				}
+			} );
+
+			applyMediaTexture( texture, newUserData );
+			mediaFileName.setValue( fileName );
+		};
+
+		image.onerror = function() {
+			console.error( 'Failed to load image from URL:', imageUrl );
+			mediaFileName.setValue( 'Error loading image' );
+		};
+
+		image.src = imageUrl;
+	}
+
+	function applyMediaTexture( texture, userData ) {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		editor.execute( new SetValueCommand( editor, object, 'userData', userData ) );
+		editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
+
+		// Update material and force render
+		if ( object.material ) {
+			object.material.needsUpdate = true;
+			object.material.map = texture;
+		}
+
+		if ( editor.signals?.sceneGraphChanged ) {
+			editor.signals.sceneGraphChanged.dispatch();
+		}
+	}
+
+	function applyTextureToObject( texture ) {
+		const object = editor.selected;
+		if ( !object || !object.material ) return;
+		editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture ) );
+	}
+
+
+	function onAutoplayChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const newUserData = Object.assign( {}, object.userData, { autoplay: mediaAutoplay.getValue() } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+	}
+
+	function onLoopChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const newUserData = Object.assign( {}, object.userData, { loop: mediaLoop.getValue() } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+	}
+
+	function onMutedChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const newUserData = Object.assign( {}, object.userData, { muted: mediaMuted.getValue() } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+	}
+
+	function clearMedia() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const newUserData = Object.assign( {}, object.userData, {
+			mediaSource: null,
+			mediaType: null
+		} );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+		editor.execute( new SetMaterialMapCommand( editor, object, 'map', null, 0 ) );
+	}
+
+	// Aspect Ratio Event Handlers
+
+	function onAspectRatioChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const ratioValue = aspectRatio.getValue();
+
+		// Store aspect ratio in userData
+		const newUserData = Object.assign( {}, object.userData, { aspectRatio: ratioValue } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Auto-lock ratio when selecting standard ratios
+		if ( ratioValue !== 'custom' ) {
+			lockRatio.setValue( true );
+			onLockRatioChange(); // Update lock state
+
+			// Apply the selected ratio to current scale
+			const ratio = AspectRatioUtils.getRatioValue( ratioValue );
+			if ( ratio ) {
+				const currentScaleX = objectScaleX.getValue();
+				const newScaleY = currentScaleX / ratio;
+				objectScaleY.setValue( newScaleY );
+
+				// Apply scale change
+				const newScale = new THREE.Vector3( currentScaleX, newScaleY, objectScaleZ.getValue() );
+				editor.execute( new SetScaleCommand( editor, object, newScale ) );
+			}
+		} else {
+			// When selecting custom, unlock the ratio
+			lockRatio.setValue( false );
+			onLockRatioChange();
+		}
+	}
+
+	function onLockRatioChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const isLocked = lockRatio.getValue();
+
+		// Store lock state in userData
+		const newUserData = Object.assign( {}, object.userData, { aspectRatioLocked: isLocked } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+	}
+
+	// Aspect-ratio-aware scale update function
+	function updateWithAspectRatio() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		// Check if ratio should be maintained for PlaneGeometry objects
+		const isMediaPlane = object.geometry && object.geometry.type === 'PlaneGeometry';
+		const shouldMaintainRatio = isMediaPlane && lockRatio.getValue() && aspectRatio.getValue() !== 'custom';
+
+		if ( shouldMaintainRatio ) {
+			const ratio = AspectRatioUtils.getRatioValue( aspectRatio.getValue() );
+			if ( ratio ) {
+				// Determine which scale axis was changed by comparing with current values
+				const currentScaleX = object.scale.x;
+				const currentScaleY = object.scale.y;
+				const newScaleX = objectScaleX.getValue();
+				const newScaleY = objectScaleY.getValue();
+
+				// Check which value changed
+				const xChanged = Math.abs( currentScaleX - newScaleX ) > 0.001;
+				const yChanged = Math.abs( currentScaleY - newScaleY ) > 0.001;
+
+				if ( xChanged && !yChanged ) {
+					// X scale changed, adjust Y to maintain ratio
+					const adjustedScaleY = newScaleX / ratio;
+					objectScaleY.setValue( adjustedScaleY );
+				} else if ( yChanged && !xChanged ) {
+					// Y scale changed, adjust X to maintain ratio
+					const adjustedScaleX = newScaleY * ratio;
+					objectScaleX.setValue( adjustedScaleX );
+				}
+			}
+		}
+
+		// Call the regular update function
+		update();
+	}
+
 	function update() {
 
 		const object = editor.selected;
@@ -974,6 +1699,20 @@ function SidebarObject( editor ) {
 
 	}
 
+	function updateMediaRows( object ) {
+		// Show media controls only for PlaneGeometry objects
+		const isPlaneGeometry = object.geometry && object.geometry.type === 'PlaneGeometry';
+		mediaSection.setDisplay( isPlaneGeometry ? '' : 'none' );
+
+		if ( isPlaneGeometry ) {
+			isMediaPlane = true;
+			// Update media section visibility based on current source type
+			updateMediaSectionVisibility();
+		} else {
+			isMediaPlane = false;
+		}
+	}
+
 	// events
 
 	signals.objectSelected.add( function ( object ) {
@@ -983,6 +1722,7 @@ function SidebarObject( editor ) {
 			container.setDisplay( 'block' );
 
 			updateRows( object );
+			updateMediaRows( object );
 			updateUI( object );
 			updateAllPropertyButtonStates();
 
@@ -1179,6 +1919,37 @@ function SidebarObject( editor ) {
 
 		objectUserData.setBorderColor( 'transparent' );
 		objectUserData.setBackgroundColor( '' );
+
+		// Update media controls for PlaneGeometry objects
+		if ( object.geometry && object.geometry.type === 'PlaneGeometry' ) {
+			// Initialize media controls with object's userData values
+			mediaSourceType.setValue( object.userData.mediaSourceType || 'none' );
+			mediaAutoplay.setValue( object.userData.autoplay !== false );
+			mediaLoop.setValue( object.userData.loop !== false );
+			mediaMuted.setValue( object.userData.muted !== false );
+
+			// Initialize aspect ratio controls
+			aspectRatio.setValue( object.userData.aspectRatio || 'custom' );
+			lockRatio.setValue( object.userData.aspectRatioLocked || false );
+
+			// Update filename display if available
+			if ( object.userData.mediaFileName ) {
+				mediaFileName.setValue( object.userData.mediaFileName );
+			} else {
+				mediaFileName.setValue( 'No file selected' );
+			}
+
+			// Auto-detect aspect ratio from current scale if not set
+			if ( !object.userData.aspectRatio ) {
+				const currentRatio = AspectRatioUtils.getRatioFromScale( object.scale.x, object.scale.y );
+				const closestStandardRatio = AspectRatioUtils.findClosestStandardRatio( currentRatio );
+				if ( closestStandardRatio !== 'custom' ) {
+					aspectRatio.setValue( closestStandardRatio );
+					const newUserData = Object.assign( {}, object.userData, { aspectRatio: closestStandardRatio } );
+					editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+				}
+			}
+		}
 
 		updateTransformRows( object );
 
