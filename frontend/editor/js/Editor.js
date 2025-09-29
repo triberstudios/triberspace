@@ -735,6 +735,9 @@ Editor.prototype = {
 
 		this.setScene( await loader.parseAsync( json.scene ) );
 
+		// Restore video textures after scene loading
+		this.restoreVideoTextures();
+
 		// Restore interaction graph if available
 		console.log('Editor.fromJSON: Checking interaction graph restore...', {
 			hasInteractionGraphData: !!json.interactionGraph,
@@ -764,6 +767,257 @@ Editor.prototype = {
 			this.signals.refreshSidebarEnvironment.dispatch();
 
 		}
+
+	},
+
+	prepareSceneForSerialization: function() {
+
+		// Override toJSON for video textures and handle userData
+		const originalToJSONMethods = [];
+		const originalUserData = [];
+
+		this.scene.traverse( function( object ) {
+
+			// Handle video textures AND image textures with HTMLImageElement in materials
+			if ( object.material && object.material.map ) {
+
+				const texture = object.material.map;
+				const needsSerialization = texture.isVideoTexture ||
+					(texture.image && texture.image instanceof HTMLImageElement);
+
+				if ( needsSerialization ) {
+
+				// Store the original toJSON method
+				originalToJSONMethods.push({
+					texture: texture,
+					originalToJSON: texture.toJSON
+				});
+
+				// Override toJSON to return a safe representation
+				texture.toJSON = function( meta ) {
+					const output = {
+						metadata: {
+							version: 4.6,
+							type: 'Texture',
+							generator: 'Texture.toJSON'
+						},
+						uuid: this.uuid,
+						name: this.name || '',
+						image: null, // Don't serialize the video/image element
+						mapping: this.mapping,
+						channel: this.channel,
+						repeat: [ this.repeat.x, this.repeat.y ],
+						offset: [ this.offset.x, this.offset.y ],
+						center: [ this.center.x, this.center.y ],
+						rotation: this.rotation,
+						wrap: [ this.wrapS, this.wrapT ],
+						format: this.format,
+						internalFormat: this.internalFormat,
+						type: this.type,
+						colorSpace: this.colorSpace,
+						minFilter: this.minFilter,
+						magFilter: this.magFilter,
+						anisotropy: this.anisotropy,
+						flipY: this.flipY,
+						generateMipmaps: this.generateMipmaps,
+						premultiplyAlpha: this.premultiplyAlpha,
+						unpackAlignment: this.unpackAlignment,
+						compareFunction: this.compareFunction,
+						// Store media plane specific data
+						isVideoTexture: this.isVideoTexture || false,
+						isImageTexture: (this.image && this.image instanceof HTMLImageElement) || false,
+						mediaPlaneData: {
+							type: this.isVideoTexture ? 'video' : 'image'
+						}
+					};
+
+					// Store video src if available
+					if ( this.image && this.image.src ) {
+						output.mediaPlaneData.videoSrc = this.image.src;
+					}
+
+					return output;
+				};
+
+			}
+
+			// Handle video/image textures stored in userData.mediaSource
+			if ( object.userData && object.userData.mediaSource ) {
+				const isVideo = object.userData.mediaSource.isVideoTexture;
+				const isImage = object.userData.mediaSource.image && object.userData.mediaSource.image instanceof HTMLImageElement;
+
+				if ( isVideo || isImage ) {
+
+					console.log('💾 Preparing to serialize media plane:', object.name, {
+						hasVideoTexture: isVideo,
+						hasImageTexture: isImage,
+						mediaSrc: object.userData.mediaSource.image?.src,
+						mediaType: object.userData.mediaType
+					});
+
+					// Store original userData
+					originalUserData.push({
+						object: object,
+						originalUserData: object.userData
+					});
+
+					// Create safe userData without video/image texture
+					const safeUserData = Object.assign( {}, object.userData );
+
+					// Remove the non-serializable texture
+					safeUserData.mediaSource = null;
+
+					// Store media metadata for restoration
+					if ( isVideo ) {
+						safeUserData.mediaRestoreInfo = {
+							hasVideoTexture: true,
+							videoSrc: object.userData.mediaSource.image ? object.userData.mediaSource.image.src : null,
+							textureUuid: object.userData.mediaSource.uuid
+						};
+						console.log('💾 Stored video metadata:', safeUserData.mediaRestoreInfo);
+					} else if ( isImage ) {
+						// For images, the mediaRestoreInfo should already be set by MediaPlaneGeometry
+						// But ensure it's preserved during serialization
+						if ( !safeUserData.mediaRestoreInfo ) {
+							safeUserData.mediaRestoreInfo = {
+								hasImageTexture: true,
+								imageSrc: object.userData.mediaSource.image ? object.userData.mediaSource.image.src : null,
+								textureUuid: object.userData.mediaSource.uuid
+							};
+						}
+						console.log('💾 Stored image metadata:', safeUserData.mediaRestoreInfo);
+					}
+
+					// Temporarily replace userData
+					object.userData = safeUserData;
+
+				}
+			}
+
+			}
+
+		} );
+
+		// Serialize scene with custom toJSON methods and safe userData
+		const sceneData = this.scene.toJSON();
+
+		// Restore original toJSON methods
+		originalToJSONMethods.forEach( function( data ) {
+			data.texture.toJSON = data.originalToJSON;
+		} );
+
+		// Restore original userData
+		originalUserData.forEach( function( data ) {
+			data.object.userData = data.originalUserData;
+		} );
+
+		return sceneData;
+
+	},
+
+	restoreVideoTextures: function() {
+
+		console.log('🎬 RestoreVideoTextures: Starting video texture restoration...');
+
+		let foundMediaPlanes = 0;
+		let restoredVideos = 0;
+
+		// Find objects that should have video textures based on userData
+		this.scene.traverse( function( object ) {
+
+			if ( object.userData && object.userData.isMediaPlane && object.userData.mediaType === 'video' ) {
+				foundMediaPlanes++;
+				console.log('🎬 Found media plane:', object.name, {
+					hasRestoreInfo: !!object.userData.mediaRestoreInfo,
+					mediaType: object.userData.mediaType,
+					userData: object.userData
+				});
+
+				// Check if we have stored video metadata and the object needs restoration
+				if ( object.userData.mediaRestoreInfo && object.userData.mediaRestoreInfo.hasVideoTexture ) {
+
+					const videoSrc = object.userData.mediaRestoreInfo.videoSrc;
+					console.log('🎬 Attempting to restore video from:', videoSrc);
+
+					if ( videoSrc && object.material ) {
+
+						// Create video element
+						const video = document.createElement( 'video' );
+						video.crossOrigin = 'anonymous';
+						video.autoplay = object.userData.autoplay !== false;
+						video.loop = object.userData.loop !== false;
+						video.muted = object.userData.muted !== false;
+						video.playsInline = true;
+						video.preload = 'metadata';
+
+						// Hide video element
+						video.style.position = 'absolute';
+						video.style.width = '1px';
+						video.style.height = '1px';
+						video.style.left = '-9999px';
+						video.style.opacity = '0';
+						video.style.pointerEvents = 'none';
+						document.body.appendChild( video );
+
+						video.src = videoSrc;
+						video.load();
+
+						video.onloadeddata = function() {
+							console.log('🎬 Video loaded successfully, creating texture...');
+
+							// Create new video texture
+							const texture = new THREE.VideoTexture( video );
+							texture.minFilter = THREE.LinearFilter;
+							texture.magFilter = THREE.LinearFilter;
+							texture.format = THREE.RGBAFormat;
+							texture.generateMipmaps = false;
+							texture.wrapS = THREE.ClampToEdgeWrapping;
+							texture.wrapT = THREE.ClampToEdgeWrapping;
+							texture.needsUpdate = true;
+
+							// Apply texture to material
+							object.material.map = texture;
+							object.material.needsUpdate = true;
+
+							// Update userData
+							object.userData.mediaSource = texture;
+
+							console.log('🎬 Video texture applied to material:', object.name);
+							restoredVideos++;
+
+							// Start playing if autoplay is enabled
+							if ( object.userData.autoplay !== false ) {
+								console.log('🎬 Starting video playback...');
+								setTimeout(() => {
+									video.play().then(() => {
+										console.log('🎬 Video playback started successfully');
+									}).catch( e => {
+										console.warn( '🎬 Video autoplay failed during restore:', e );
+										video.muted = true;
+										video.play().then(() => {
+											console.log('🎬 Video playback started (muted)');
+										}).catch( e2 => {
+											console.warn( '🎬 Video play failed during restore:', e2 );
+										});
+									});
+								}, 100);
+							}
+
+						};
+
+						video.onerror = function() {
+							console.error( '🎬 Failed to restore video from source:', videoSrc );
+						};
+
+					}
+
+				}
+
+			}
+
+		} );
+
+		console.log(`🎬 RestoreVideoTextures: Complete. Found ${foundMediaPlanes} media planes, restored ${restoredVideos} videos`);
 
 	},
 
@@ -832,6 +1086,9 @@ Editor.prototype = {
 			}
 		}
 
+		// Prepare scene for serialization by handling video textures
+		const sceneData = this.prepareSceneForSerialization();
+
 		return {
 
 			metadata: {},
@@ -842,7 +1099,7 @@ Editor.prototype = {
 				toneMappingExposure: this.config.getKey( 'project/renderer/toneMappingExposure' )
 			},
 			camera: this.viewportCamera.toJSON(),
-			scene: this.scene.toJSON(),
+			scene: sceneData,
 			scripts: this.scripts,
 			history: this.history.toJSON(),
 			environment: environment,

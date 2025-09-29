@@ -204,6 +204,28 @@ function MenubarAdd( editor ) {
 	} );
 	meshSubmenu.add( option );
 
+	// Mesh / MediaPlane
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( strings.getKey( 'menubar/add/mesh/mediaplane' ) );
+	option.onClick( function () {
+
+		const geometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
+		const material = new THREE.MeshStandardMaterial();
+		const mesh = new THREE.Mesh( geometry, material );
+		mesh.name = 'MediaPlane';
+
+		// Add metadata to identify this as a media plane
+		mesh.userData.isMediaPlane = true;
+		mesh.userData.mediaSource = null;
+		mesh.userData.mediaType = null;
+
+		editor.execute( new AddObjectCommand( editor, mesh ) );
+
+	} );
+	meshSubmenu.add( option );
+
 	// Mesh / Ring
 
 	option = new UIRow();

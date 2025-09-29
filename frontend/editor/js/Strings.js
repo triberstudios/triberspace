@@ -68,6 +68,7 @@ function Strings( config ) {
 
 			'menubar/add/mesh': 'مش',
 			'menubar/add/mesh/plane': 'صفحه',
+			'menubar/add/mesh/mediaplane': 'صفحه رسانه‌ای',
 			'menubar/add/mesh/box': 'باکس',
 			'menubar/add/mesh/capsule': 'کپسول',
 			'menubar/add/mesh/circle': 'دایره',
@@ -476,6 +477,7 @@ function Strings( config ) {
 
 			'menubar/add/mesh': 'Mesh',
 			'menubar/add/mesh/plane': 'Plane',
+			'menubar/add/mesh/mediaplane': 'Media Plane',
 			'menubar/add/mesh/box': 'Box',
 			'menubar/add/mesh/capsule': 'Capsule',
 			'menubar/add/mesh/circle': 'Circle',

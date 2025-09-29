@@ -24,6 +24,40 @@ export interface AuthenticatedRequest extends FastifyRequest {
 
 export async function authMiddleware(request: AuthenticatedRequest, reply: FastifyReply) {
   try {
+    // Check for dev bypass header (for media plane editor development)
+    const devBypass = request.headers['x-dev-bypass'];
+    if (devBypass === 'media-plane-editor' && process.env.NODE_ENV !== 'production') {
+      // Create a fake user session for development
+      request.user = {
+        id: 'dev-user-123',
+        email: 'dev@triber.space',
+        firstName: 'Dev',
+        lastName: 'User',
+        username: 'devuser',
+        displayUsername: 'devuser',
+        role: 'user',
+        emailVerified: true,
+        image: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as ExtendedUser;
+
+      request.session = {
+        user: request.user,
+        session: {
+          id: 'dev-session-123',
+          userId: 'dev-user-123',
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          token: 'dev-token-123',
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'] || 'dev-agent'
+        }
+      };
+
+      request.log.info('Using dev bypass for media plane editor');
+      return;
+    }
+
     const headers = new Headers();
     Object.entries(request.headers).forEach(([key, value]) => {
       if (value) headers.append(key, Array.isArray(value) ? value[0] : value);
@@ -32,7 +66,7 @@ export async function authMiddleware(request: AuthenticatedRequest, reply: Fasti
     const session = await auth.api.getSession({ headers });
 
     if (!session) {
-      return reply.code(401).send({ 
+      return reply.code(401).send({
         error: {
           code: 'UNAUTHORIZED',
           message: 'Authentication required',
@@ -45,7 +79,7 @@ export async function authMiddleware(request: AuthenticatedRequest, reply: Fasti
     request.session = { ...session, user: session.user as ExtendedUser };
   } catch (error) {
     request.log.error(error as Error, 'Auth middleware error');
-    return reply.code(500).send({ 
+    return reply.code(500).send({
       error: {
         code: 'AUTH_ERROR',
         message: 'Authentication error',

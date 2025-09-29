@@ -35,7 +35,7 @@ const start = async () => {
       ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Dev-Bypass'],
     });
 
     // Serve Sketchfab OAuth callback page

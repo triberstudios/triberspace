@@ -37,6 +37,145 @@ interface SceneLoaderProps {
     onSceneDataChange?: (sceneData: SceneData | null) => void;
 }
 
+// Media texture restoration function for media planes (videos and images)
+function restoreMediaTextures(sceneRoot: THREE.Object3D) {
+    console.log('🎬 RestoreMediaTextures: Starting media texture restoration in React runtime...');
+
+    let foundMediaPlanes = 0;
+    let restoredVideos = 0;
+    let restoredImages = 0;
+
+    // Find objects that should have media textures based on userData
+    sceneRoot.traverse((object: THREE.Object3D) => {
+        if (object.userData && object.userData.isMediaPlane) {
+            const mediaType = object.userData.mediaType;
+
+            if (mediaType === 'video' || mediaType === 'image') {
+                foundMediaPlanes++;
+                console.log('🎬 Found media plane:', object.name, {
+                    hasRestoreInfo: !!object.userData.mediaRestoreInfo,
+                    mediaType: mediaType,
+                    userData: object.userData
+                });
+
+                // Handle video restoration
+                if (mediaType === 'video' && object.userData.mediaRestoreInfo && object.userData.mediaRestoreInfo.hasVideoTexture) {
+                    const videoSrc = object.userData.mediaRestoreInfo.videoSrc;
+                    console.log('🎬 Attempting to restore video from:', videoSrc);
+
+                    if (videoSrc && (object as any).material) {
+                    // Create video element
+                    const video = document.createElement('video');
+                    video.crossOrigin = 'anonymous';
+                    video.autoplay = object.userData.autoplay !== false;
+                    video.loop = object.userData.loop !== false;
+                    video.muted = object.userData.muted !== false;
+                    video.playsInline = true;
+                    video.preload = 'metadata';
+
+                    // Hide video element
+                    video.style.position = 'absolute';
+                    video.style.width = '1px';
+                    video.style.height = '1px';
+                    video.style.left = '-9999px';
+                    video.style.opacity = '0';
+                    video.style.pointerEvents = 'none';
+                    document.body.appendChild(video);
+
+                    video.src = videoSrc;
+                    video.load();
+
+                    video.onloadeddata = function() {
+                        console.log('🎬 Video loaded successfully, creating texture...');
+
+                        // Create new video texture
+                        const texture = new THREE.VideoTexture(video);
+                        texture.minFilter = THREE.LinearFilter;
+                        texture.magFilter = THREE.LinearFilter;
+                        texture.format = THREE.RGBAFormat;
+                        texture.generateMipmaps = false;
+                        texture.wrapS = THREE.ClampToEdgeWrapping;
+                        texture.wrapT = THREE.ClampToEdgeWrapping;
+                        texture.needsUpdate = true;
+
+                        // Apply texture to material
+                        (object as any).material.map = texture;
+                        (object as any).material.needsUpdate = true;
+
+                        // Update userData
+                        object.userData.mediaSource = texture;
+
+                        console.log('🎬 Video texture applied to material:', object.name);
+                        restoredVideos++;
+
+                        // Start playing if autoplay is enabled
+                        if (object.userData.autoplay !== false) {
+                            console.log('🎬 Starting video playback...');
+                            setTimeout(() => {
+                                video.play().then(() => {
+                                    console.log('🎬 Video playback started successfully');
+                                }).catch(e => {
+                                    console.warn('🎬 Video autoplay failed during restore:', e);
+                                    video.muted = true;
+                                    video.play().then(() => {
+                                        console.log('🎬 Video playback started after muting');
+                                    }).catch(e2 => {
+                                        console.warn('🎬 Video playback failed even after muting:', e2);
+                                    });
+                                });
+                            }, 100);
+                        }
+                    };
+
+                    video.onerror = function() {
+                        console.error('🎬 Failed to load video during restore:', videoSrc);
+                    };
+                    }
+                }
+
+                // Handle image restoration
+                if (mediaType === 'image' && object.userData.mediaRestoreInfo && object.userData.mediaRestoreInfo.hasImageTexture) {
+                    const imageSrc = object.userData.mediaRestoreInfo.imageSrc;
+                    console.log('🖼️ Attempting to restore image from:', imageSrc);
+
+                    if (imageSrc && (object as any).material) {
+                        // Create image element
+                        const image = new Image();
+                        image.crossOrigin = 'anonymous';
+
+                        image.onload = function() {
+                            console.log('🖼️ Image loaded successfully, creating texture...');
+
+                            // Create new texture
+                            const texture = new THREE.Texture(image);
+                            texture.needsUpdate = true;
+
+                            // Apply texture to material
+                            (object as any).material.map = texture;
+                            (object as any).material.needsUpdate = true;
+
+                            // Update userData
+                            object.userData.mediaSource = texture;
+
+                            console.log('🖼️ Image texture applied to material:', object.name);
+                            restoredImages++;
+                        };
+
+                        image.onerror = function() {
+                            console.error('🖼️ Failed to load image during restore:', imageSrc);
+                        };
+
+                        // Load image from R2 URL
+                        image.src = imageSrc;
+                    }
+                }
+            }
+        }
+    });
+
+    console.log(`🎬 RestoreMediaTextures: Complete. Found ${foundMediaPlanes} media planes, restored ${restoredVideos} videos and ${restoredImages} images`);
+}
+
 export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChange }: SceneLoaderProps) {
     const [sceneData, setSceneData] = useState<SceneData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -251,6 +390,9 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
                 }
             });
             // console.log('🔆 SceneContent: Lights in scene:', lights);
+
+            // Restore media textures for media planes (videos and images)
+            restoreMediaTextures(groupRef.current);
 
             // Notify that scene objects are loaded and ready for behavior initialization
             if (onSceneLoaded) {

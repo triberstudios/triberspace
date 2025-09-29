@@ -1156,7 +1156,20 @@ function SidebarObject( editor ) {
 
 		try {
 
-			objectUserData.setValue( JSON.stringify( object.userData, null, '  ' ) );
+			// Create a safe copy of userData for display, excluding video textures
+			let displayUserData = { ...object.userData };
+
+			// Remove non-serializable video texture if present
+			if ( displayUserData.mediaSource && displayUserData.mediaSource.isVideoTexture ) {
+				displayUserData = { ...displayUserData };
+				displayUserData.mediaSource = {
+					type: 'VideoTexture',
+					uuid: displayUserData.mediaSource.uuid,
+					note: '[Video texture - not serializable for display]'
+				};
+			}
+
+			objectUserData.setValue( JSON.stringify( displayUserData, null, '  ' ) );
 
 		} catch ( error ) {
 

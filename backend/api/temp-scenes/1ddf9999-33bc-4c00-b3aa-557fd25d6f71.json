@@ -1,0 +1,484 @@
+{
+  "id": "1ddf9999-33bc-4c00-b3aa-557fd25d6f71",
+  "scene": {
+    "metadata": {
+      "version": 4.6,
+      "type": "Object",
+      "generator": "Object3D.toJSON"
+    },
+    "geometries": [
+      {
+        "uuid": "1cfd74f5-8e87-4334-915c-2fa9b7ea9fc1",
+        "type": "BoxGeometry",
+        "width": 1,
+        "height": 1,
+        "depth": 1,
+        "widthSegments": 1,
+        "heightSegments": 1,
+        "depthSegments": 1
+      },
+      {
+        "uuid": "c9d77549-4ea5-4257-9007-6ed668097535",
+        "type": "PlaneGeometry",
+        "width": 1,
+        "height": 1,
+        "widthSegments": 1,
+        "heightSegments": 1
+      },
+      {
+        "uuid": "0b7d9e98-1334-46bd-8f3b-efed2c882e46",
+        "type": "PlaneGeometry",
+        "width": 1,
+        "height": 1,
+        "widthSegments": 1,
+        "heightSegments": 1
+      }
+    ],
+    "materials": [
+      {
+        "uuid": "8586002a-b48c-41b1-a84a-fdef2f940349",
+        "type": "MeshStandardMaterial",
+        "color": 16777215,
+        "roughness": 1,
+        "metalness": 0,
+        "emissive": 0,
+        "envMapRotation": [
+          0,
+          0,
+          0,
+          "XYZ"
+        ],
+        "envMapIntensity": 1,
+        "blendColor": 0
+      },
+      {
+        "uuid": "60119d53-1a16-456b-8af3-eefd9801f35a",
+        "type": "MeshStandardMaterial",
+        "color": 16777215,
+        "roughness": 1,
+        "metalness": 0,
+        "emissive": 0,
+        "map": "dc2359b4-a9e2-48a6-b8b5-9dae4fff3ca0",
+        "envMapRotation": [
+          0,
+          0,
+          0,
+          "XYZ"
+        ],
+        "envMapIntensity": 1,
+        "blendColor": 0
+      },
+      {
+        "uuid": "c2ebe74a-fb1c-4e71-be29-32c417fa11b9",
+        "type": "MeshStandardMaterial",
+        "color": 16777215,
+        "roughness": 1,
+        "metalness": 0,
+        "emissive": 0,
+        "map": "fd658156-6f4c-428d-90b3-5133cdc33a58",
+        "envMapRotation": [
+          0,
+          0,
+          0,
+          "XYZ"
+        ],
+        "envMapIntensity": 1,
+        "blendColor": 0
+      }
+    ],
+    "object": {
+      "uuid": "b3fa6761-46e8-4377-8f8a-3271c856c462",
+      "type": "Scene",
+      "name": "Scene",
+      "layers": 1,
+      "matrix": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "children": [
+        {
+          "uuid": "ad653070-6375-468b-b94f-af27dc5f9442",
+          "type": "Mesh",
+          "name": "Cube",
+          "layers": 1,
+          "matrix": [
+            -0.9783647889782635,
+            0.04280233968751845,
+            -0.20241121363400977,
+            0,
+            3.4694469519536134e-18,
+            -0.9783647889782634,
+            -0.20688726323173798,
+            0,
+            -0.20688726323173798,
+            -0.20241121363400974,
+            0.9571976603124813,
+            0,
+            -2.223055463923176,
+            0.5,
+            0,
+            1
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "geometry": "1cfd74f5-8e87-4334-915c-2fa9b7ea9fc1",
+          "material": "8586002a-b48c-41b1-a84a-fdef2f940349"
+        },
+        {
+          "uuid": "9902ec29-6a87-42de-96bf-5d1c59f7706e",
+          "type": "DirectionalLight",
+          "name": "DirectionalLight",
+          "layers": 1,
+          "matrix": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            5,
+            8,
+            3,
+            1
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "color": 16777215,
+          "intensity": 1,
+          "shadow": {
+            "camera": {
+              "uuid": "8ad6ed3d-d7a8-4ada-9ff7-b208b93fce0e",
+              "type": "OrthographicCamera",
+              "layers": 1,
+              "up": [
+                0,
+                1,
+                0
+              ],
+              "zoom": 1,
+              "left": -5,
+              "right": 5,
+              "top": 5,
+              "bottom": -5,
+              "near": 0.5,
+              "far": 500
+            }
+          }
+        },
+        {
+          "uuid": "f164e9df-b915-4959-a0b4-4eb63e79d770",
+          "type": "Mesh",
+          "name": "MediaPlane",
+          "userData": {
+            "isMediaPlane": true,
+            "mediaSource": null,
+            "mediaType": "video",
+            "mediaSourceType": "upload",
+            "mediaFileName": "previewVideoHB.mp4",
+            "mediaRestoreInfo": {
+              "hasVideoTexture": true,
+              "videoSrc": "https://cdn.triber.space/temp/media-plane-dev/previewVideoHB.mp4",
+              "textureUuid": "dc2359b4-a9e2-48a6-b8b5-9dae4fff3ca0"
+            }
+          },
+          "layers": 1,
+          "matrix": [
+            1.7507210315095052,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1.1885687915503433,
+            0,
+            1
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "geometry": "c9d77549-4ea5-4257-9007-6ed668097535",
+          "material": "60119d53-1a16-456b-8af3-eefd9801f35a"
+        },
+        {
+          "uuid": "91d28b35-b50c-43d7-859c-5ca1cebeb411",
+          "type": "Mesh",
+          "name": "MediaPlane",
+          "userData": {
+            "isMediaPlane": true,
+            "mediaSource": null,
+            "mediaType": "image",
+            "mediaSourceType": "upload",
+            "mediaUrl": "https://www.youtube.com/watch?v=hWExjD5BigM",
+            "mediaFileName": "IMG_071EE618F0ED-1.jpeg",
+            "mediaRestoreInfo": {
+              "hasImageTexture": true,
+              "imageSrc": "https://cdn.triber.space/temp/media-plane-dev/IMG_071EE618F0ED-1.jpeg",
+              "originalFileName": "IMG_071EE618F0ED-1.jpeg"
+            }
+          },
+          "layers": 1,
+          "matrix": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "geometry": "0b7d9e98-1334-46bd-8f3b-efed2c882e46",
+          "material": "c2ebe74a-fb1c-4e71-be29-32c417fa11b9"
+        }
+      ],
+      "backgroundRotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "environmentRotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ]
+    }
+  },
+  "camera": {
+    "metadata": {
+      "version": 4.6,
+      "type": "Object",
+      "generator": "Object3D.toJSON"
+    },
+    "object": {
+      "uuid": "6104c80d-5bb5-4f43-8154-d60ef13ca235",
+      "type": "PerspectiveCamera",
+      "name": "Camera",
+      "layers": 1,
+      "matrix": [
+        0.9765571799306757,
+        -3.469446951953614e-18,
+        -0.21525815739675422,
+        0,
+        -0.05676893615380437,
+        0.9645979353210102,
+        -0.2575424451666318,
+        0,
+        0.20763757418591428,
+        0.2637249005582187,
+        0.9419850394840386,
+        0,
+        0.6957001573867467,
+        0.8836235712370568,
+        3.156168351486469,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "fov": 50,
+      "zoom": 1,
+      "near": 0.01,
+      "far": 5000,
+      "focus": 10,
+      "aspect": 1.6202945990180033,
+      "filmGauge": 35,
+      "filmOffset": 0
+    }
+  },
+  "compiledBehaviors": {
+    "behaviors": [
+      {
+        "objectUuid": "ad653070-6375-468b-b94f-af27dc5f9442",
+        "objectName": "Cube",
+        "behaviors": [
+          {
+            "type": "spin",
+            "nodeId": "node_1",
+            "objectUuid": "ad653070-6375-468b-b94f-af27dc5f9442",
+            "speed": 5,
+            "axis": "x",
+            "direction": 1,
+            "startTime": 25405.599999904633
+          },
+          {
+            "type": "spin",
+            "nodeId": "node_1",
+            "objectUuid": "ad653070-6375-468b-b94f-af27dc5f9442",
+            "speed": 5,
+            "axis": "y",
+            "direction": 1,
+            "startTime": 25405.599999904633
+          }
+        ],
+        "updateFunction": {
+          "objectUuid": "ad653070-6375-468b-b94f-af27dc5f9442",
+          "code": "// Generated behavior function for object ad653070-6375-468b-b94f-af27dc5f9442\nfunction updateBehavior(object, deltaTime, elapsedTime) {\n    if (!object || object.uuid !== 'ad653070-6375-468b-b94f-af27dc5f9442') return;\n\n    const currentTime = elapsedTime; // Use provided elapsed time\n\n    \n    // Spin behavior - 5 RPM, clockwise\n    {\n        const elapsedSeconds = currentTime / 1000; // currentTime is already elapsed time in ms\n        const radiansPerSecond = (5 / 60) * 2 * Math.PI;\n        const rotationRadians = elapsedSeconds * radiansPerSecond * 1;\n        object.rotation.x = rotationRadians;\n    }\n\n\n    // Spin behavior - 5 RPM, clockwise\n    {\n        const elapsedSeconds = currentTime / 1000; // currentTime is already elapsed time in ms\n        const radiansPerSecond = (5 / 60) * 2 * Math.PI;\n        const rotationRadians = elapsedSeconds * radiansPerSecond * 1;\n        object.rotation.y = rotationRadians;\n    }\n}"
+        }
+      }
+    ],
+    "errors": [],
+    "metadata": {
+      "compiledAt": "2025-09-29T18:26:14.222Z",
+      "totalConnections": 2,
+      "behaviorCount": 1
+    }
+  },
+  "interactionGraph": {
+    "nodes": {
+      "node_1": {
+        "id": "node_1",
+        "type": "Spin",
+        "position": {
+          "x": 245,
+          "y": 87.5
+        },
+        "properties": {},
+        "inputs": [
+          {
+            "name": "speed",
+            "dataType": "number",
+            "value": 5
+          },
+          {
+            "name": "clockwise",
+            "dataType": "boolean",
+            "value": true
+          }
+        ],
+        "startTime": 1759157239814
+      },
+      "node_2": {
+        "id": "node_2",
+        "type": "ObjectProperty",
+        "position": {
+          "x": 595,
+          "y": 87.5
+        },
+        "properties": {
+          "initialRotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "inputs": [
+          {
+            "name": "x",
+            "dataType": "number",
+            "value": 394031.93999999994
+          },
+          {
+            "name": "y",
+            "dataType": "number",
+            "value": 394031.93999999994
+          },
+          {
+            "name": "z",
+            "dataType": "number",
+            "value": 0
+          }
+        ],
+        "propertyType": "rotation",
+        "objectUuid": "ad653070-6375-468b-b94f-af27dc5f9442",
+        "objectName": "Cube"
+      }
+    },
+    "connections": [
+      {
+        "id": "node_1-0-node_2-0",
+        "fromNodeId": "node_1",
+        "fromOutputIndex": 0,
+        "toNodeId": "node_2",
+        "toInputIndex": 0
+      },
+      {
+        "id": "node_1-0-node_2-1",
+        "fromNodeId": "node_1",
+        "fromOutputIndex": 0,
+        "toNodeId": "node_2",
+        "toInputIndex": 1
+      }
+    ],
+    "metadata": {
+      "version": "1.0",
+      "timestamp": 1759170374222
+    }
+  },
+  "environment": null,
+  "project": {
+    "shadows": true,
+    "shadowType": 1,
+    "toneMapping": 0,
+    "toneMappingExposure": 1
+  },
+  "metadata": {
+    "name": "Preview Scene",
+    "description": "Generated from Triber Editor",
+    "creator": "Editor User",
+    "createdAt": "2025-09-29T18:26:14.223Z"
+  },
+  "scripts": {},
+  "history": {
+    "undos": [],
+    "redos": []
+  },
+  "uploadedAt": "2025-09-29T18:26:14.232Z",
+  "expiresAt": "2025-09-30T18:26:14.232Z"
+}

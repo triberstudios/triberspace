@@ -273,7 +273,13 @@ function SidebarGeometry( editor ) {
 
 				} else {
 
-					const { GeometryParametersPanel } = await import( `./Sidebar.Geometry.${ geometry.type }.js` );
+					// Check if this is a media plane
+					const isMediaPlane = object.userData && object.userData.isMediaPlane;
+					const geometryFile = isMediaPlane && geometry.type === 'PlaneGeometry'
+						? 'MediaPlaneGeometry'
+						: geometry.type;
+
+					const { GeometryParametersPanel } = await import( `./Sidebar.Geometry.${ geometryFile }.js` );
 
 					parameters.add( new GeometryParametersPanel( editor, object ) );
 
