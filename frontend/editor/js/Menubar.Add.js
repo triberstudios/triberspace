@@ -525,6 +525,36 @@ function MenubarAdd( editor ) {
 	} );
 	cameraSubmenu.add( option );
 
+	// Audio
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( 'Spatial Audio' );
+	option.onClick( function () {
+
+		// Create an invisible sphere to represent the audio source
+		const geometry = new THREE.SphereGeometry( 0.1, 16, 16 );
+		const material = new THREE.MeshBasicMaterial( {
+			color: 0x00ff00,
+			transparent: true,
+			opacity: 0.5
+		} );
+		const audioObject = new THREE.Mesh( geometry, material );
+		audioObject.name = 'SpatialAudio';
+
+		// Add metadata to identify this as a spatial audio object
+		audioObject.userData.isSpatialAudio = true;
+		audioObject.userData.audioFile = null;
+		audioObject.userData.spatialAudio = true; // Enable spatial audio by default
+		audioObject.userData.volume = 0.5;
+		audioObject.userData.audioMaxDistance = 15;
+		audioObject.userData.audioRolloff = 1.5;
+
+		editor.execute( new AddObjectCommand( editor, audioObject ) );
+
+	} );
+	options.add( option );
+
 	return container;
 
 }

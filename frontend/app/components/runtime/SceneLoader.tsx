@@ -85,6 +85,7 @@ class MediaRestoreUtils {
         video.autoplay = userData.autoplay !== false;
         video.loop = userData.loop !== false;
         video.muted = userData.muted !== false;
+        video.volume = userData.volume !== undefined ? userData.volume : 0.5;
     }
 
     /**
@@ -351,6 +352,331 @@ class MediaRestoreUtils {
 }
 
 /**
+ * Audio utilities for spatial audio management in runtime
+ */
+class AudioUtils {
+    /**
+     * Create or get the audio listener for the given camera
+     * @param camera - The camera to attach the listener to
+     * @returns The audio listener
+     */
+    static createAudioListener(camera: THREE.Camera): THREE.AudioListener {
+        // Check if camera already has an audio listener
+        let listener = camera.getObjectByProperty('type', 'AudioListener') as THREE.AudioListener;
+
+        if (!listener) {
+            listener = new THREE.AudioListener();
+
+            // Create offset object like V2World implementation for better spatial positioning
+            const listenerOffsetObject = new THREE.Object3D();
+            const cameraDistance = 4; // Match V2World camera distance
+            listenerOffsetObject.position.set(0, -0.5, -cameraDistance);
+            listenerOffsetObject.add(listener);
+            camera.add(listenerOffsetObject);
+
+            console.log('🔊 AudioListener created with positional offset:', {
+                offset: listenerOffsetObject.position,
+                cameraDistance,
+                cameraPosition: camera.position,
+                cameraName: camera.name || 'unnamed',
+                hasContext: !!listener.context,
+                contextState: listener.context?.state
+            });
+
+            // Add debugging for listener position updates
+            const originalUpdateMatrixWorld = listenerOffsetObject.updateMatrixWorld;
+            listenerOffsetObject.updateMatrixWorld = function(force) {
+                originalUpdateMatrixWorld.call(this, force);
+                const worldPos = new THREE.Vector3();
+                listener.getWorldPosition(worldPos);
+                console.log('🎧 AudioListener world position update:', {
+                    listenerWorldPos: worldPos,
+                    cameraPos: camera.position,
+                    offsetObjPos: listenerOffsetObject.position
+                });
+            };
+        } else {
+            console.log('🔊 Existing AudioListener found:', {
+                listenerPosition: listener.position,
+                cameraPosition: camera.position,
+                hasContext: !!listener.context,
+                contextState: listener.context?.state
+            });
+        }
+
+        return listener;
+    }
+
+    /**
+     * Create positional audio from a video element
+     * @param listener - The audio listener
+     * @param video - The video element
+     * @param audioSettings - Audio configuration settings
+     * @returns The positional audio object
+     */
+    static createPositionalAudio(
+        listener: THREE.AudioListener,
+        video: HTMLVideoElement,
+        audioSettings: any = {}
+    ): THREE.PositionalAudio {
+        const audio = new THREE.PositionalAudio(listener);
+
+        // Set V2World-inspired audio settings for better spatial audio
+        const settings = {
+            maxDistance: audioSettings.maxDistance || 15, // V2World uses 15 for noticeable falloff
+            rolloffFactor: audioSettings.rolloffFactor || 1.5, // V2World uses 1.5 for stronger effect
+            distanceModel: audioSettings.distanceModel || 'linear', // V2World uses linear for more dramatic falloff
+            refDistance: audioSettings.refDistance || 1, // V2World uses 1 for immediate proximity
+            volume: audioSettings.volume || 0.5,
+            ...audioSettings
+        };
+
+        console.log('🔊 Creating PositionalAudio with V2World-inspired settings:', settings);
+
+        // Set audio properties using V2World configuration
+        audio.setMediaElementSource(video);
+        audio.setRefDistance(settings.refDistance);
+        audio.setMaxDistance(settings.maxDistance);
+        audio.setRolloffFactor(settings.rolloffFactor);
+        audio.setDistanceModel(settings.distanceModel);
+
+        // Don't set manual volume - let WebAudio PannerNode calculate volume automatically based on distance
+        // audio.setVolume(settings.volume); // REMOVED - this was overriding spatial calculations
+
+        console.log('🔊 PositionalAudio created successfully:', {
+            hasContext: !!audio.context,
+            hasSource: !!audio.source,
+            maxDistance: audio.getMaxDistance(),
+            rolloffFactor: audio.getRolloffFactor(),
+            volume: audio.getVolume(),
+            distanceModel: audio.getDistanceModel(),
+            refDistance: audio.getRefDistance(),
+            videoElement: video.src || video.currentSrc,
+            videoReady: video.readyState >= 2
+        });
+
+        // Handle audio context suspension like V2World
+        if (audio.context?.state === "suspended") {
+            console.log('🔊 Audio context suspended, attempting to resume...');
+            audio.context.resume().catch((error) => {
+                console.error("🔇 Failed to resume audio context:", error);
+            });
+        }
+
+        // Add debugging for PositionalAudio position and distance calculations
+        const debugPositionalAudio = () => {
+            const audioWorldPos = new THREE.Vector3();
+            const listenerWorldPos = new THREE.Vector3();
+
+            audio.getWorldPosition(audioWorldPos);
+            listener.getWorldPosition(listenerWorldPos);
+
+            const distance = audioWorldPos.distanceTo(listenerWorldPos);
+
+            console.log('🎵 PositionalAudio Debug:', {
+                audioWorldPos,
+                listenerWorldPos,
+                distance,
+                maxDistance: audio.getMaxDistance(),
+                gain: audio.gain?.gain?.value,
+                playing: !video.paused,
+                volume: video.volume,
+                muted: video.muted
+            });
+        };
+
+        // Debug every 2 seconds
+        const debugInterval = setInterval(debugPositionalAudio, 2000);
+
+        // Store interval reference for cleanup
+        (audio as any).debugInterval = debugInterval;
+
+        return audio;
+    }
+
+    /**
+     * Update audio settings for existing positional audio
+     * @param audio - The positional audio object
+     * @param settings - New audio settings
+     */
+    static updateAudioSettings(audio: THREE.PositionalAudio, settings: any) {
+        if (settings.maxDistance !== undefined) {
+            audio.setMaxDistance(settings.maxDistance);
+        }
+        if (settings.rolloffFactor !== undefined) {
+            audio.setRolloffFactor(settings.rolloffFactor);
+        }
+        if (settings.distanceModel !== undefined) {
+            audio.setDistanceModel(settings.distanceModel);
+        }
+        if (settings.volume !== undefined) {
+            audio.setVolume(settings.volume);
+        }
+    }
+
+    /**
+     * Remove audio from an object
+     * @param object - The object to remove audio from
+     */
+    static removeAudio(object: THREE.Object3D) {
+        const audio = object.getObjectByProperty('type', 'PositionalAudio') as THREE.PositionalAudio;
+        if (audio) {
+            // Clean up debug interval if it exists
+            if ((audio as any).debugInterval) {
+                clearInterval((audio as any).debugInterval);
+                console.log('🔊 Cleaned up debug interval for audio object');
+            }
+
+            audio.disconnect();
+            object.remove(audio);
+            console.log('🔊 Removed PositionalAudio from object:', object.name || 'unnamed');
+        }
+    }
+
+    /**
+     * Get the positional audio object from a THREE.js object
+     * @param object - The object to search
+     * @returns The positional audio or null
+     */
+    static getPositionalAudio(object: THREE.Object3D): THREE.PositionalAudio | null {
+        return object.getObjectByProperty('type', 'PositionalAudio') as THREE.PositionalAudio || null;
+    }
+
+    /**
+     * Setup spatial audio for a media plane object with video
+     * @param object - The media plane object
+     * @param camera - The camera with audio listener
+     */
+    static setupSpatialAudio(object: THREE.Object3D, camera: THREE.Camera) {
+        const userData = object.userData;
+
+        console.log('🔊 Spatial audio check for object:', object.name, {
+            mediaType: userData.mediaType,
+            hasMediaSource: !!userData.mediaSource,
+            spatialAudio: userData.spatialAudio,
+            spatialAudioEnabled: userData.spatialAudio !== false
+        });
+
+        if (userData.mediaType !== 'video' || !userData.mediaSource) {
+            console.log('🔇 Skipping spatial audio: not a video or no media source');
+            return;
+        }
+
+        if (!userData.spatialAudio) {
+            console.log('🔇 Skipping spatial audio: spatialAudio disabled in userData');
+            return;
+        }
+
+        // Get video element from texture
+        const texture = userData.mediaSource as THREE.VideoTexture;
+        const video = texture.image as HTMLVideoElement;
+
+        if (!video) return;
+
+        // Create audio listener if needed
+        const listener = AudioUtils.createAudioListener(camera);
+
+        // Remove existing audio
+        AudioUtils.removeAudio(object);
+
+        // Create spatial audio with V2World-inspired settings
+        const audioSettings = {
+            maxDistance: userData.audioMaxDistance || 15, // V2World default for noticeable falloff
+            rolloffFactor: userData.audioRolloff || 1.5, // V2World default for stronger effect
+            distanceModel: 'linear', // V2World uses linear for more dramatic falloff
+            refDistance: 1, // V2World default for immediate proximity
+            volume: userData.volume || 0.5
+        };
+
+        const spatialAudio = AudioUtils.createPositionalAudio(listener, video, audioSettings);
+        object.add(spatialAudio);
+
+        // Mute the original video element to prevent double audio
+        video.muted = true;
+
+        // Get initial positions for debugging
+        const objectWorldPos = new THREE.Vector3();
+        const listenerWorldPos = new THREE.Vector3();
+        object.getWorldPosition(objectWorldPos);
+        listener.getWorldPosition(listenerWorldPos);
+        const initialDistance = objectWorldPos.distanceTo(listenerWorldPos);
+
+        console.log('🔊 Spatial audio successfully setup for object:', object.name, {
+            maxDistance: audioSettings.maxDistance,
+            rolloffFactor: audioSettings.rolloffFactor,
+            volume: audioSettings.volume,
+            hasAudioListener: !!listener,
+            audioNodeConnected: !!spatialAudio.context,
+            objectWorldPos,
+            listenerWorldPos,
+            initialDistance,
+            audioAttachedTo: object.name || 'unnamed object'
+        });
+    }
+}
+
+/**
+ * Set up spatial audio for a dedicated spatial audio object
+ * @param object - The Three.js object with spatial audio data
+ * @param camera - The camera for AudioListener
+ */
+function setupSpatialAudioObject(object: THREE.Object3D, camera: THREE.Camera) {
+    if (!object.userData?.isSpatialAudio || !object.userData?.audioFile) {
+        return;
+    }
+
+    console.log('🔊 Setting up spatial audio object:', {
+        objectName: object.name,
+        audioFile: object.userData.audioFile,
+        audioSettings: {
+            volume: object.userData.volume,
+            maxDistance: object.userData.audioMaxDistance,
+            rolloffFactor: object.userData.audioRolloff
+        }
+    });
+
+    // Get or create audio listener
+    const listener = AudioUtils.createAudioListener(camera);
+
+    // Remove any existing audio
+    const existingAudio = object.getObjectByProperty('type', 'PositionalAudio');
+    if (existingAudio) {
+        object.remove(existingAudio);
+    }
+
+    // Create spatial audio
+    const audio = new THREE.PositionalAudio(listener);
+    const audioLoader = new THREE.AudioLoader();
+
+    audioLoader.load(object.userData.audioFile, function(buffer) {
+        audio.setBuffer(buffer);
+        audio.setLoop(true);
+        audio.setRefDistance(1);
+        audio.setMaxDistance(object.userData.audioMaxDistance || 15);
+        audio.setRolloffFactor(object.userData.audioRolloff || 1.5);
+        audio.setDistanceModel('linear');
+        audio.setVolume(object.userData.volume || 0.5);
+
+        // Start playing the audio
+        audio.play();
+
+        console.log('🔊 Spatial audio object setup complete:', {
+            objectName: object.name,
+            audioPlaying: audio.isPlaying,
+            settings: {
+                maxDistance: object.userData.audioMaxDistance || 15,
+                rolloffFactor: object.userData.audioRolloff || 1.5,
+                volume: object.userData.volume || 0.5
+            }
+        });
+    }, undefined, function(error) {
+        console.error('🔊 Failed to load audio file for spatial audio object:', error);
+    });
+
+    object.add(audio);
+}
+
+/**
  * Set up click handling for screenshare-enabled media planes
  * @param sceneRoot - The root object to traverse
  * @param camera - The Three.js camera for raycasting
@@ -483,32 +809,51 @@ function setupScreenshareClickHandling(sceneRoot: THREE.Object3D, camera: THREE.
 /**
  * Restore media textures for media planes in a Three.js scene
  * @param sceneRoot - The root object to traverse
+ * @param camera - The camera for spatial audio setup
  */
-function restoreMediaTextures(sceneRoot: THREE.Object3D) {
+function restoreMediaTextures(sceneRoot: THREE.Object3D, camera: THREE.Camera) {
     console.log('🎬 Starting media texture restoration...');
 
     const stats = { found: 0, restoredVideos: 0, restoredImages: 0 };
 
     sceneRoot.traverse((object: THREE.Object3D) => {
+        // Debug: Log all objects with userData
+        if (object.userData && Object.keys(object.userData).length > 0) {
+            console.log('🔍 Object with userData:', object.name, object.userData);
+        }
+
+        // Handle spatial audio objects
+        if (object.userData?.isSpatialAudio) {
+            console.log('🔊 Found spatial audio object:', object.name, object.userData);
+            if (object.userData.audioFile) {
+                setupSpatialAudioObject(object, camera);
+            }
+            return;
+        }
+
         if (!object.userData?.isMediaPlane) {
             return;
         }
 
         // Check for both mediaSourceType (new) and mediaType (legacy)
         const sourceType = object.userData.mediaSourceType || object.userData.mediaType;
+        const actualMediaType = object.userData.mediaType; // The actual type of media (video/image)
+
         if (!sourceType) {
+            console.log('⚠️ Media plane found but no source type:', object.name);
             return;
         }
 
         const { mediaRestoreInfo } = object.userData;
 
-        if (sourceType === 'video' || sourceType === 'image') {
+        // Check for uploaded media files
+        if (sourceType === 'upload') {
             stats.found++;
-            console.log(`🎬 Found ${sourceType} plane:`, object.name);
+            console.log(`🎬 Found ${sourceType} plane with media type: ${actualMediaType}`, object.name);
 
-            if (sourceType === 'video' && mediaRestoreInfo?.hasVideoTexture) {
-                restoreVideoTexture(object, mediaRestoreInfo.videoSrc, stats);
-            } else if (sourceType === 'image' && mediaRestoreInfo?.hasImageTexture) {
+            if (actualMediaType === 'video' && mediaRestoreInfo?.hasVideoTexture) {
+                restoreVideoTexture(object, mediaRestoreInfo.videoSrc, stats, camera);
+            } else if (actualMediaType === 'image' && mediaRestoreInfo?.hasImageTexture) {
                 restoreImageTexture(object, mediaRestoreInfo.imageSrc, stats);
             }
         } else if (sourceType === 'screenshare') {
@@ -533,8 +878,9 @@ function restoreMediaTextures(sceneRoot: THREE.Object3D) {
  * @param object - The Three.js object
  * @param videoSrc - The video source URL
  * @param stats - Statistics tracking object
+ * @param camera - The camera for spatial audio setup
  */
-function restoreVideoTexture(object: THREE.Object3D, videoSrc: string, stats: any) {
+function restoreVideoTexture(object: THREE.Object3D, videoSrc: string, stats: any, camera: THREE.Camera) {
     if (!videoSrc || !(object as any).material) {
         return;
     }
@@ -556,6 +902,16 @@ function restoreVideoTexture(object: THREE.Object3D, videoSrc: string, stats: an
         // Handle autoplay with delay for texture readiness
         setTimeout(() => {
             MediaRestoreUtils.handleVideoAutoplay(video, object.userData.autoplay !== false);
+
+            // Setup spatial audio if enabled
+            console.log('🔊 Attempting to setup spatial audio for restored video:', {
+                objectName: object.name,
+                userData: object.userData,
+                hasMediaSource: !!object.userData.mediaSource,
+                mediaType: object.userData.mediaType,
+                spatialAudio: object.userData.spatialAudio
+            });
+            AudioUtils.setupSpatialAudio(object, camera);
         }, 100);
     };
 
@@ -816,7 +1172,7 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
             // console.log('🔆 SceneContent: Lights in scene:', lights);
 
             // Restore media textures for media planes (videos and images)
-            restoreMediaTextures(groupRef.current);
+            restoreMediaTextures(groupRef.current, camera);
 
             // Set up click handling for screenshare-enabled media planes
             const cleanupClickHandling = setupScreenshareClickHandling(groupRef.current, camera, gl.domElement);

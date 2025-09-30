@@ -112,6 +112,10 @@ function Editor() {
 
 	this.camera = _DEFAULT_CAMERA.clone();
 
+	// Add audio listener for spatial audio support
+	this.audioListener = new THREE.AudioListener();
+	this.camera.add( this.audioListener );
+
 	this.scene = new THREE.Scene();
 	this.scene.name = 'Scene';
 

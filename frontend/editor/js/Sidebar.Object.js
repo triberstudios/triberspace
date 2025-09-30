@@ -138,6 +138,7 @@ class MediaUploadUtils {
 		video.autoplay = userData.autoplay !== false;
 		video.loop = userData.loop !== false;
 		video.muted = userData.muted !== false;
+		video.volume = userData.volume !== undefined ? userData.volume : 0.5;
 	}
 
 	/**
@@ -163,6 +164,18 @@ class MediaUploadUtils {
 		}
 
 		return texture;
+	}
+
+	/**
+	 * Get the video element from a VideoTexture
+	 * @param {THREE.VideoTexture} texture - The video texture
+	 * @returns {HTMLVideoElement|null} The video element or null if not found
+	 */
+	static getVideoElementFromTexture( texture ) {
+		if ( texture && texture.isVideoTexture && texture.image ) {
+			return texture.image;
+		}
+		return null;
 	}
 
 	/**
@@ -272,6 +285,99 @@ class MediaUploadUtils {
 		const texture = new THREE.CanvasTexture( canvas );
 		texture.needsUpdate = true;
 		return texture;
+	}
+}
+
+/**
+ * Audio utilities for spatial audio management
+ */
+class AudioUtils {
+	/**
+	 * Create or get the audio listener for the given camera
+	 * @param {THREE.Camera} camera - The camera to attach the listener to
+	 * @returns {THREE.AudioListener} The audio listener
+	 */
+	static createAudioListener( camera ) {
+		// Check if camera already has an audio listener
+		let listener = camera.getObjectByProperty( 'type', 'AudioListener' );
+
+		if ( !listener ) {
+			listener = new THREE.AudioListener();
+			camera.add( listener );
+		}
+
+		return listener;
+	}
+
+	/**
+	 * Create positional audio from a video element
+	 * @param {THREE.AudioListener} listener - The audio listener
+	 * @param {HTMLVideoElement} video - The video element
+	 * @param {Object} audioSettings - Audio configuration settings
+	 * @returns {THREE.PositionalAudio} The positional audio object
+	 */
+	static createPositionalAudio( listener, video, audioSettings = {} ) {
+		const audio = new THREE.PositionalAudio( listener );
+
+		// Set default audio settings
+		const settings = {
+			maxDistance: audioSettings.maxDistance || 50,
+			rolloffFactor: audioSettings.rolloffFactor || 1,
+			distanceModel: audioSettings.distanceModel || 'inverse',
+			volume: audioSettings.volume || 0.5,
+			...audioSettings
+		};
+
+		// Set audio properties
+		audio.setMediaElementSource( video );
+		audio.setRefDistance( 1 );
+		audio.setMaxDistance( settings.maxDistance );
+		audio.setRolloffFactor( settings.rolloffFactor );
+		audio.setDistanceModel( settings.distanceModel );
+		audio.setVolume( settings.volume );
+
+		return audio;
+	}
+
+	/**
+	 * Update audio settings for existing positional audio
+	 * @param {THREE.PositionalAudio} audio - The positional audio object
+	 * @param {Object} settings - New audio settings
+	 */
+	static updateAudioSettings( audio, settings ) {
+		if ( settings.maxDistance !== undefined ) {
+			audio.setMaxDistance( settings.maxDistance );
+		}
+		if ( settings.rolloffFactor !== undefined ) {
+			audio.setRolloffFactor( settings.rolloffFactor );
+		}
+		if ( settings.distanceModel !== undefined ) {
+			audio.setDistanceModel( settings.distanceModel );
+		}
+		if ( settings.volume !== undefined ) {
+			audio.setVolume( settings.volume );
+		}
+	}
+
+	/**
+	 * Remove audio from an object
+	 * @param {THREE.Object3D} object - The object to remove audio from
+	 */
+	static removeAudio( object ) {
+		const audio = object.getObjectByProperty( 'type', 'PositionalAudio' );
+		if ( audio ) {
+			audio.disconnect();
+			object.remove( audio );
+		}
+	}
+
+	/**
+	 * Get the positional audio object from a THREE.js object
+	 * @param {THREE.Object3D} object - The object to search
+	 * @returns {THREE.PositionalAudio|null} The positional audio or null
+	 */
+	static getPositionalAudio( object ) {
+		return object.getObjectByProperty( 'type', 'PositionalAudio' ) || null;
 	}
 }
 
@@ -764,6 +870,7 @@ function SidebarObject( editor ) {
 	const mediaSourceType = new UISelect().setOptions( {
 		'none': 'None',
 		'upload': 'Upload File',
+		'audio': 'Audio File',
 		'screenshare': 'Screen Share'
 	} ).onChange( onMediaSourceTypeChange );
 
@@ -835,6 +942,34 @@ function SidebarObject( editor ) {
 	mutedRow.add( mediaMuted );
 	controlsSection.add( mutedRow );
 
+	// Volume
+	const volumeRow = new UIRow();
+	const mediaVolume = new UINumber( 50 ).setRange( 0, 100 ).setStep( 1 ).setUnit( '%' ).setWidth( '60px' ).onChange( onVolumeChange );
+	volumeRow.add( new UIText( 'Volume' ).setClass( 'Label' ) );
+	volumeRow.add( mediaVolume );
+	controlsSection.add( volumeRow );
+
+	// Spatial Audio
+	const spatialAudioRow = new UIRow();
+	const spatialAudioEnabled = new UICheckbox( true ).onChange( onSpatialAudioChange );
+	spatialAudioRow.add( new UIText( 'Spatial Audio' ).setClass( 'Label' ) );
+	spatialAudioRow.add( spatialAudioEnabled );
+	controlsSection.add( spatialAudioRow );
+
+	// Audio Max Distance
+	const maxDistanceRow = new UIRow();
+	const audioMaxDistance = new UINumber( 15 ).setRange( 1, 200 ).setStep( 1 ).setWidth( '60px' ).onChange( onAudioMaxDistanceChange );
+	maxDistanceRow.add( new UIText( 'Max Distance' ).setClass( 'Label' ) );
+	maxDistanceRow.add( audioMaxDistance );
+	controlsSection.add( maxDistanceRow );
+
+	// Audio Rolloff Factor
+	const rolloffRow = new UIRow();
+	const audioRolloff = new UINumber( 1.5 ).setRange( 0.1, 3 ).setStep( 0.1 ).setPrecision( 1 ).setWidth( '60px' ).onChange( onAudioRolloffChange );
+	rolloffRow.add( new UIText( 'Rolloff Factor' ).setClass( 'Label' ) );
+	rolloffRow.add( audioRolloff );
+	controlsSection.add( rolloffRow );
+
 	mediaSection.add( uploadSection );
 	mediaSection.add( controlsSection );
 
@@ -863,6 +998,108 @@ function SidebarObject( editor ) {
 
 	// Add the media section to the container
 	container.add( mediaSection );
+
+	// Spatial Audio Object Section (only for spatial audio objects)
+	const spatialAudioSection = new UIPanel();
+	spatialAudioSection.setPadding( '0px' );
+
+	// Audio File Upload Section
+	const audioFileRow = new UIRow();
+	const audioFileInput = document.createElement( 'input' );
+	audioFileInput.type = 'file';
+	audioFileInput.accept = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
+	audioFileInput.style.display = 'none';
+
+	const audioFileName = new UIText( 'No audio file selected' ).setClass( 'Label' );
+	const audioFileButton = new UIButton( 'Choose Audio File' ).onClick( function() {
+		audioFileInput.click();
+	});
+
+	audioFileInput.addEventListener( 'change', function( event ) {
+		const file = event.target.files[0];
+		if ( !file ) return;
+
+		console.log( '🔊 Starting audio file upload:', {
+			fileName: file.name,
+			fileSize: file.size,
+			fileType: file.type,
+			maxSizeAllowed: 20 * 1024 * 1024 // 20MB
+		});
+
+		// Check file size (20MB limit for audio)
+		if ( file.size > 20 * 1024 * 1024 ) {
+			console.error( '🔊 Audio file too large:', file.size, 'bytes' );
+			audioFileName.setValue( 'File too large (max 20MB)' );
+			audioFileName.setColor( '#ff4444' );
+			return;
+		}
+
+		audioFileName.setValue( 'Uploading...' );
+		audioFileName.setColor( '#888' );
+
+		// Get file type like media uploads do
+		const fileType = MediaUploadUtils.getFileType( file.name );
+		console.log( '🔊 Detected file type:', fileType );
+
+		MediaUploadUtils.uploadToR2( file )
+			.then( url => {
+				console.log( '🔊 Audio upload successful:', url );
+				const object = editor.selected;
+				if ( !object ) return;
+
+				const newUserData = Object.assign( {}, object.userData, {
+					audioFile: url,
+					audioFileName: file.name
+				});
+
+				editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+				audioFileName.setValue( file.name );
+				audioFileName.setColor( '#ffffff' );
+			})
+			.catch( error => {
+				console.error( '🔊 Audio upload failed:', {
+					error: error,
+					errorMessage: error.message,
+					errorStack: error.stack,
+					fileName: file.name,
+					fileSize: file.size,
+					fileType: file.type
+				});
+				audioFileName.setValue( 'Upload failed - check console' );
+				audioFileName.setColor( '#ff4444' );
+			});
+	});
+
+	audioFileRow.add( new UIText( 'Audio File' ).setClass( 'Label' ) );
+	audioFileRow.add( audioFileButton );
+	spatialAudioSection.add( audioFileRow );
+
+	const audioFileNameRow = new UIRow();
+	audioFileNameRow.add( audioFileName );
+	spatialAudioSection.add( audioFileNameRow );
+
+	// Spatial Audio Controls for dedicated audio objects
+	const audioVolumeRow = new UIRow();
+	const audioVolume = new UINumber( 0.5 ).setRange( 0, 1 ).setStep( 0.1 ).setPrecision( 1 ).setWidth( '60px' ).onChange( onAudioVolumeChange );
+	audioVolumeRow.add( new UIText( 'Volume' ).setClass( 'Label' ) );
+	audioVolumeRow.add( audioVolume );
+	spatialAudioSection.add( audioVolumeRow );
+
+	const audioObjectMaxDistanceRow = new UIRow();
+	const audioObjectMaxDistance = new UINumber( 15 ).setRange( 1, 200 ).setStep( 1 ).setWidth( '60px' ).onChange( onAudioObjectMaxDistanceChange );
+	audioObjectMaxDistanceRow.add( new UIText( 'Max Distance' ).setClass( 'Label' ) );
+	audioObjectMaxDistanceRow.add( audioObjectMaxDistance );
+	spatialAudioSection.add( audioObjectMaxDistanceRow );
+
+	const audioObjectRolloffRow = new UIRow();
+	const audioObjectRolloff = new UINumber( 1.5 ).setRange( 0.1, 3 ).setStep( 0.1 ).setPrecision( 1 ).setWidth( '60px' ).onChange( onAudioObjectRolloffChange );
+	audioObjectRolloffRow.add( new UIText( 'Rolloff Factor' ).setClass( 'Label' ) );
+	audioObjectRolloffRow.add( audioObjectRolloff );
+	spatialAudioSection.add( audioObjectRolloffRow );
+
+	// Add the spatial audio section to the container
+	container.add( spatialAudioSection );
 
 	// fov
 
@@ -1175,7 +1412,8 @@ function SidebarObject( editor ) {
 			const screenshareUserData = Object.assign( {}, object.userData, {
 				mediaSourceType: 'screenshare',
 				mediaType: 'screenshare',
-				isScreenshareReady: true
+				isScreenshareReady: true,
+				isMediaPlane: true
 			} );
 			editor.execute( new SetValueCommand( editor, object, 'userData', screenshareUserData ) );
 		}
@@ -1185,8 +1423,28 @@ function SidebarObject( editor ) {
 
 	function updateMediaSectionVisibility() {
 		const type = mediaSourceType.getValue();
+		const object = editor.selected;
+		const isVideo = object && object.userData && object.userData.mediaType === 'video';
+
+		// Show upload section only for upload type
 		uploadSection.setDisplay( type === 'upload' ? '' : 'none' );
-		controlsSection.setDisplay( type !== 'none' && type !== 'screenshare' ? '' : 'none' );
+
+		// Show controls section when media is already loaded
+		const showControls = type !== 'none' && object && object.userData.mediaSource;
+		controlsSection.setDisplay( showControls ? '' : 'none' );
+
+		// Show/hide media controls based on media type
+		// Media controls should be visible for video content and screenshare
+		const showMediaControls = type === 'screenshare' || isVideo;
+
+		// Show/hide individual media control rows
+		autoplayRow.setDisplay( showMediaControls ? '' : 'none' );
+		loopRow.setDisplay( showMediaControls ? '' : 'none' );
+		mutedRow.setDisplay( showMediaControls ? '' : 'none' );
+		volumeRow.setDisplay( showMediaControls ? '' : 'none' );
+		spatialAudioRow.setDisplay( showMediaControls ? '' : 'none' );
+		maxDistanceRow.setDisplay( showMediaControls ? '' : 'none' );
+		rolloffRow.setDisplay( showMediaControls ? '' : 'none' );
 	}
 
 	function createMediaTexture( mediaUrl, fileType, fileName ) {
@@ -1280,7 +1538,9 @@ function SidebarObject( editor ) {
 		const object = editor.selected;
 		if ( !object ) return;
 
-		editor.execute( new SetValueCommand( editor, object, 'userData', userData ) );
+		// Mark as media plane for runtime restoration
+		const updatedUserData = Object.assign( {}, userData, { isMediaPlane: true } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', updatedUserData ) );
 		editor.execute( new SetMaterialMapCommand( editor, object, 'map', texture, 0 ) );
 
 		// Update material and force render
@@ -1292,6 +1552,14 @@ function SidebarObject( editor ) {
 		if ( editor.signals?.sceneGraphChanged ) {
 			editor.signals.sceneGraphChanged.dispatch();
 		}
+
+		// Apply spatial audio if video and spatial audio is enabled
+		if ( userData.mediaType === 'video' ) {
+			updateAudioForMediaPlane( object );
+		}
+
+		// Update media section visibility after media is applied
+		updateMediaSectionVisibility();
 	}
 
 	function applyTextureToObject( texture ) {
@@ -1325,16 +1593,103 @@ function SidebarObject( editor ) {
 		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
 	}
 
+	function onVolumeChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const volume = mediaVolume.getValue() / 100; // Convert percentage to 0-1 range
+		const newUserData = Object.assign( {}, object.userData, { volume: volume } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Update current video volume if media is playing
+		if ( object.userData.mediaSource && object.userData.mediaType === 'video' ) {
+			const videoElement = MediaUploadUtils.getVideoElementFromTexture( object.userData.mediaSource );
+			if ( videoElement ) {
+				videoElement.volume = volume;
+			}
+		}
+	}
+
+	function onSpatialAudioChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const spatialEnabled = spatialAudioEnabled.getValue();
+		const newUserData = Object.assign( {}, object.userData, { spatialAudio: spatialEnabled } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Toggle between regular audio and spatial audio
+		if ( object.userData.mediaSource && object.userData.mediaType === 'video' ) {
+			updateAudioForMediaPlane( object );
+		}
+	}
+
+	function onAudioMaxDistanceChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const maxDistance = audioMaxDistance.getValue();
+		const newUserData = Object.assign( {}, object.userData, { audioMaxDistance: maxDistance } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Update existing spatial audio if present
+		updateAudioForMediaPlane( object );
+	}
+
+	function onAudioRolloffChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const rolloff = audioRolloff.getValue();
+		const newUserData = Object.assign( {}, object.userData, { audioRolloff: rolloff } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Update existing spatial audio if present
+		updateAudioForMediaPlane( object );
+	}
+
+	function updateAudioForMediaPlane( object ) {
+		if ( !object.userData.mediaSource || object.userData.mediaType !== 'video' ) return;
+
+		const videoElement = MediaUploadUtils.getVideoElementFromTexture( object.userData.mediaSource );
+		if ( !videoElement ) return;
+
+		// Remove existing spatial audio
+		AudioUtils.removeAudio( object );
+
+		// Add spatial audio if enabled
+		if ( object.userData.spatialAudio ) {
+			const audioSettings = {
+				maxDistance: object.userData.audioMaxDistance || 15,
+				rolloffFactor: object.userData.audioRolloff || 1.5,
+				volume: object.userData.volume || 0.5
+			};
+
+			const spatialAudio = AudioUtils.createPositionalAudio( editor.audioListener, videoElement, audioSettings );
+			object.add( spatialAudio );
+
+			// Mute the original video element to prevent double audio
+			videoElement.muted = true;
+		} else {
+			// Restore original video audio settings
+			videoElement.muted = object.userData.muted !== false;
+		}
+	}
+
 	function clearMedia() {
 		const object = editor.selected;
 		if ( !object ) return;
 
 		const newUserData = Object.assign( {}, object.userData, {
 			mediaSource: null,
-			mediaType: null
+			mediaType: null,
+			isMediaPlane: false
 		} );
 		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
 		editor.execute( new SetMaterialMapCommand( editor, object, 'map', null, 0 ) );
+
+		// Update media section visibility after clearing media
+		updateMediaSectionVisibility();
 	}
 
 	// Aspect Ratio Event Handlers
@@ -1927,6 +2282,12 @@ function SidebarObject( editor ) {
 			mediaAutoplay.setValue( object.userData.autoplay !== false );
 			mediaLoop.setValue( object.userData.loop !== false );
 			mediaMuted.setValue( object.userData.muted !== false );
+			mediaVolume.setValue( ( object.userData.volume || 0.5 ) * 100 ); // Convert 0-1 range to percentage
+
+			// Initialize spatial audio controls
+			spatialAudioEnabled.setValue( object.userData.spatialAudio !== false );
+			audioMaxDistance.setValue( object.userData.audioMaxDistance || 15 );
+			audioRolloff.setValue( object.userData.audioRolloff || 1.5 );
 
 			// Initialize aspect ratio controls
 			aspectRatio.setValue( object.userData.aspectRatio || 'custom' );
@@ -1951,8 +2312,80 @@ function SidebarObject( editor ) {
 			}
 		}
 
+		// Update spatial audio section visibility and values
+		const isSpatialAudioObject = object.userData && object.userData.isSpatialAudio;
+		spatialAudioSection.setDisplay( isSpatialAudioObject ? '' : 'none' );
+
+		if ( isSpatialAudioObject ) {
+			// Update spatial audio controls with object values
+			audioVolume.setValue( object.userData.volume || 0.5 );
+			audioObjectMaxDistance.setValue( object.userData.audioMaxDistance || 15 );
+			audioObjectRolloff.setValue( object.userData.audioRolloff || 1.5 );
+
+			// Update audio file name display
+			if ( object.userData.audioFile && object.userData.audioFileName ) {
+				audioFileName.setValue( object.userData.audioFileName );
+				audioFileName.setColor( '#ffffff' );
+			} else {
+				audioFileName.setValue( 'No audio file selected' );
+				audioFileName.setColor( '#888' );
+			}
+		}
+
 		updateTransformRows( object );
 
+	}
+
+	// Spatial Audio Object Event Handlers
+	function onAudioVolumeChange() {
+		const object = editor.selected;
+		if ( !object || !object.userData.isSpatialAudio ) return;
+		const newUserData = Object.assign( {}, object.userData, { volume: audioVolume.getValue() } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+		updateSpatialAudioObject( object );
+	}
+
+	function onAudioObjectMaxDistanceChange() {
+		const object = editor.selected;
+		if ( !object || !object.userData.isSpatialAudio ) return;
+		const newUserData = Object.assign( {}, object.userData, { audioMaxDistance: audioObjectMaxDistance.getValue() } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+		updateSpatialAudioObject( object );
+	}
+
+	function onAudioObjectRolloffChange() {
+		const object = editor.selected;
+		if ( !object || !object.userData.isSpatialAudio ) return;
+		const newUserData = Object.assign( {}, object.userData, { audioRolloff: audioObjectRolloff.getValue() } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+		updateSpatialAudioObject( object );
+	}
+
+	function updateSpatialAudioObject( object ) {
+		if ( !object.userData.isSpatialAudio || !object.userData.audioFile ) return;
+
+		// Remove existing audio
+		const existingAudio = object.getObjectByProperty( 'type', 'PositionalAudio' );
+		if ( existingAudio ) {
+			object.remove( existingAudio );
+		}
+
+		// Create new spatial audio
+		const audio = new THREE.PositionalAudio( editor.audioListener );
+		const audioLoader = new THREE.AudioLoader();
+
+		audioLoader.load( object.userData.audioFile, function( buffer ) {
+			audio.setBuffer( buffer );
+			audio.setLoop( true );
+			audio.setRefDistance( 1 );
+			audio.setMaxDistance( object.userData.audioMaxDistance || 15 );
+			audio.setRolloffFactor( object.userData.audioRolloff || 1.5 );
+			audio.setDistanceModel( 'linear' );
+			audio.setVolume( object.userData.volume || 0.5 );
+			audio.play();
+		});
+
+		object.add( audio );
 	}
 
 	return container;
