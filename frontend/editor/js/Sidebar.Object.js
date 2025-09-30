@@ -869,9 +869,7 @@ function SidebarObject( editor ) {
 	// Media Source dropdown
 	const mediaSourceRow = new UIRow();
 	const mediaSourceType = new UISelect().setOptions( {
-		'none': 'None',
 		'upload': 'Upload File',
-		'audio': 'Audio File',
 		'screenshare': 'Screen Share'
 	} ).onChange( onMediaSourceTypeChange );
 
@@ -2615,7 +2613,7 @@ function SidebarObject( editor ) {
 		// Update media controls for PlaneGeometry objects
 		if ( object.geometry && object.geometry.type === 'PlaneGeometry' ) {
 			// Initialize media controls with object's userData values
-			mediaSourceType.setValue( object.userData.mediaSourceType || 'none' );
+			mediaSourceType.setValue( object.userData.mediaSourceType || 'upload' );
 			mediaAutoplay.setValue( object.userData.autoplay !== false );
 			mediaLoop.setValue( object.userData.loop !== false );
 			mediaMuted.setValue( object.userData.muted === true );

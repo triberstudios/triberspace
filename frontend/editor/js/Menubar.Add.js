@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { UIPanel, UIRow } from './libs/ui.js';
 
 import { AddObjectCommand } from './commands/AddObjectCommand.js';
+import { SketchfabBrowser } from './sketchfab/SketchfabBrowser.js';
 
 function MenubarAdd( editor ) {
 
@@ -204,27 +205,6 @@ function MenubarAdd( editor ) {
 	} );
 	meshSubmenu.add( option );
 
-	// Mesh / MediaPlane
-
-	option = new UIRow();
-	option.setClass( 'option' );
-	option.setTextContent( strings.getKey( 'menubar/add/mesh/mediaplane' ) );
-	option.onClick( function () {
-
-		const geometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
-		const material = new THREE.MeshStandardMaterial();
-		const mesh = new THREE.Mesh( geometry, material );
-		mesh.name = 'MediaPlane';
-
-		// Add metadata to identify this as a media plane
-		mesh.userData.isMediaPlane = true;
-		mesh.userData.mediaSource = null;
-		mesh.userData.mediaType = null;
-
-		editor.execute( new AddObjectCommand( editor, mesh ) );
-
-	} );
-	meshSubmenu.add( option );
 
 	// Mesh / Ring
 
@@ -525,6 +505,28 @@ function MenubarAdd( editor ) {
 	} );
 	cameraSubmenu.add( option );
 
+	// Media Object
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( 'Media Object' );
+	option.onClick( function () {
+
+		const geometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
+		const material = new THREE.MeshStandardMaterial();
+		const mesh = new THREE.Mesh( geometry, material );
+		mesh.name = 'MediaObject';
+
+		// Add metadata to identify this as a media plane
+		mesh.userData.isMediaPlane = true;
+		mesh.userData.mediaSource = null;
+		mesh.userData.mediaType = null;
+
+		editor.execute( new AddObjectCommand( editor, mesh ) );
+
+	} );
+	options.add( option );
+
 	// Audio
 
 	option = new UIRow();
@@ -551,6 +553,63 @@ function MenubarAdd( editor ) {
 		audioObject.userData.audioRolloff = 1.5;
 
 		editor.execute( new AddObjectCommand( editor, audioObject ) );
+
+	} );
+	options.add( option );
+
+	// Import from Sketchfab
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( 'Import from Sketchfab' );
+	option.onClick( function () {
+
+		// Create and show Sketchfab browser
+		const sketchfabBrowser = new SketchfabBrowser( editor );
+		const browserWindow = document.createElement( 'div' );
+		browserWindow.style.cssText = `
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.8);
+			z-index: 1000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		`;
+
+		const browserContainer = document.createElement( 'div' );
+		browserContainer.style.cssText = `
+			width: 80%;
+			height: 80%;
+			background: #2a2a2a;
+			border-radius: 8px;
+			overflow: hidden;
+			position: relative;
+		`;
+
+		// Add close button
+		const closeButton = document.createElement( 'button' );
+		closeButton.textContent = '×';
+		closeButton.style.cssText = `
+			position: absolute;
+			top: 10px;
+			right: 15px;
+			background: none;
+			border: none;
+			color: white;
+			font-size: 24px;
+			cursor: pointer;
+			z-index: 1001;
+		`;
+		closeButton.onclick = () => document.body.removeChild( browserWindow );
+
+		browserContainer.appendChild( sketchfabBrowser.container.dom );
+		browserContainer.appendChild( closeButton );
+		browserWindow.appendChild( browserContainer );
+		document.body.appendChild( browserWindow );
 
 	} );
 	options.add( option );
