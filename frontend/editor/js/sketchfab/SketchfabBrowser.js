@@ -13,10 +13,15 @@ function SketchfabBrowser( editor ) {
 	const auth = new SketchfabAuth();
 	const loader = new SketchfabLoader( editor );
 
+	// Pagination configuration
+	const PAGE_SIZE = 24;
+
 	let currentResults = [];
 	let currentPage = 1;
-	let totalPages = 1;
 	let isLoading = false;
+	let lastSearchQuery = ''; // Track search query changes
+	let nextCursor = null; // Store cursor for next page
+	let hasMorePages = false; // Track if there are more pages available
 
 	const container = new UIPanel();
 	container.setClass( 'sketchfab-modal-content' );
@@ -66,7 +71,9 @@ function SketchfabBrowser( editor ) {
 	} );
 
 	const searchButton = new UIButton( 'Search' );
-	searchButton.dom.addEventListener( 'click', performSearch );
+	searchButton.dom.addEventListener( 'click', function() {
+		performSearch();
+	} );
 
 	const sortSelect = new UISelect();
 	sortSelect.setOptions( {
@@ -75,7 +82,9 @@ function SketchfabBrowser( editor ) {
 		'-publishedAt': 'Most recent',
 		'name': 'Name A-Z'
 	} );
-	sortSelect.dom.addEventListener( 'change', performSearch );
+	sortSelect.dom.addEventListener( 'change', function() {
+		performSearch();
+	} );
 
 	const licenseSelect = new UISelect();
 	licenseSelect.setOptions( {
@@ -84,13 +93,15 @@ function SketchfabBrowser( editor ) {
 		'CC BY': 'CC BY',
 		'CC BY-SA': 'CC BY-SA'
 	} );
-	licenseSelect.dom.addEventListener( 'change', performSearch );
+	licenseSelect.dom.addEventListener( 'change', function() {
+		performSearch();
+	} );
 
 	// Create horizontal search row container with grouped elements
 	const searchRow = new UIPanel();
 	searchRow.setClass( 'search-row' );
 
-	// Add all controls directly to the row - tabs first, then search
+	// Add all controls directly to the row - right aligned
 	searchRow.add( sortSelect );
 	searchRow.add( licenseSelect );
 	searchRow.add( searchInput );
@@ -105,34 +116,36 @@ function SketchfabBrowser( editor ) {
 	resultsSection.setClass( 'results-section' );
 	resultsSection.setDisplay( 'none' );
 
-	const resultsHeader = new UIPanel();
-	resultsHeader.setClass( 'results-header' );
-
-	const resultsInfo = new UIText();
-	resultsInfo.setClass( 'results-info' );
-
-	const prevButton = new UIButton( '← Previous' );
-	prevButton.dom.addEventListener( 'click', () => navigatePage( currentPage - 1 ) );
-
-	const nextButton = new UIButton( 'Next →' );
-	nextButton.dom.addEventListener( 'click', () => navigatePage( currentPage + 1 ) );
-
-	const pageInfo = new UIText();
-	pageInfo.setClass( 'page-info' );
-
-	resultsHeader.add( resultsInfo );
-	resultsHeader.add( new UIBreak() );
-	resultsHeader.add( prevButton );
-	resultsHeader.add( pageInfo );
-	resultsHeader.add( nextButton );
-
 	const resultsList = new UIPanel();
 	resultsList.setClass( 'results-list' );
 
-	resultsSection.add( resultsHeader );
 	resultsSection.add( resultsList );
 
 	container.add( resultsSection );
+
+	// Pagination Footer (at bottom)
+	const paginationFooter = new UIPanel();
+	paginationFooter.setClass( 'pagination-footer' );
+	paginationFooter.setDisplay( 'block' ); // Always show, we'll control button states
+
+	const prevButton = new UIButton( '← Previous' );
+	prevButton.dom.addEventListener( 'click', function() {
+		navigatePage( currentPage - 1 );
+	} );
+
+	const pageInfo = new UIText( 'Ready to search' );
+	pageInfo.setClass( 'page-info' );
+
+	const nextButton = new UIButton( 'Next →' );
+	nextButton.dom.addEventListener( 'click', function() {
+		navigatePage( currentPage + 1 );
+	} );
+
+	paginationFooter.add( prevButton );
+	paginationFooter.add( pageInfo );
+	paginationFooter.add( nextButton );
+
+	container.add( paginationFooter );
 
 	// Loading indicator
 	const loadingIndicator = new UIPanel();
@@ -144,8 +157,9 @@ function SketchfabBrowser( editor ) {
 
 	container.add( loadingIndicator );
 
-	// Initialize authentication status
+	// Initialize authentication status and pagination controls
 	updateAuthStatus();
+	updatePaginationControls();
 
 	// Authentication event handlers
 	function handleAuthClick() {
@@ -199,6 +213,13 @@ function SketchfabBrowser( editor ) {
 			searchSection.setDisplay( 'none' );
 			resultsSection.setDisplay( 'none' );
 
+			// Reset all state when signed out
+			currentResults = [];
+			currentPage = 1;
+			hasMorePages = false;
+			isLoading = false;
+			updatePaginationControls();
+
 		}
 
 	}
@@ -206,7 +227,13 @@ function SketchfabBrowser( editor ) {
 	// Search functionality
 	async function performSearch( page = 1 ) {
 
-		if ( isLoading || ! auth.isAuthenticated() ) return;
+		page = validatePageParam( page );
+
+		if ( ! auth.isAuthenticated() ) {
+			return;
+		}
+
+		resetStateForNewSearch( page );
 
 		isLoading = true;
 		showLoading( true );
@@ -214,29 +241,12 @@ function SketchfabBrowser( editor ) {
 		try {
 
 			const api = auth.getAPI();
+			const searchOptions = buildSearchOptions( page );
 			const query = searchInput.getValue();
-			const sortBy = sortSelect.getValue();
-			const license = licenseSelect.getValue();
-
-			const searchOptions = {
-				sortBy: sortBy,
-				offset: ( page - 1 ) * 24,
-				count: 24
-			};
-
-			if ( license ) {
-
-				searchOptions.license = license;
-
-			}
 
 			const response = await api.searchModels( query, searchOptions );
 
-			currentResults = response.results || [];
-			currentPage = page;
-			totalPages = Math.ceil( ( response.count || 0 ) / 24 );
-
-			displayResults( response );
+			handleSearchResponse( response );
 
 		} catch ( error ) {
 
@@ -251,21 +261,104 @@ function SketchfabBrowser( editor ) {
 
 	}
 
+	// Helper functions for search
+	function validatePageParam( page ) {
+		return ( typeof page === 'number' && !isNaN( page ) && page >= 1 ) ? page : 1;
+	}
+
+	function resetStateForNewSearch( page ) {
+		if ( page === 1 ) {
+			currentPage = 1;
+			currentResults = [];
+			hasMorePages = false;
+			lastSearchQuery = searchInput.getValue();
+			nextCursor = null;
+		}
+	}
+
+	function buildSearchOptions( page ) {
+		const sortBy = sortSelect.getValue();
+		const license = licenseSelect.getValue();
+
+		const searchOptions = {
+			sortBy: sortBy,
+			count: PAGE_SIZE
+		};
+
+		// Add cursor for pagination if not on page 1
+		if ( page > 1 && nextCursor ) {
+			searchOptions.cursor = nextCursor;
+		}
+
+		if ( license ) {
+			searchOptions.license = license;
+		}
+
+		return searchOptions;
+	}
+
+	function handleSearchResponse( response ) {
+		// Validate API response structure
+		if ( ! response || typeof response !== 'object' ) {
+			throw new Error( 'Invalid API response' );
+		}
+
+		currentResults = Array.isArray( response.results ) ? response.results : [];
+
+		// Extract cursor information from response
+		extractCursors( response );
+
+		// Update pagination state based on response
+		hasMorePages = !!response.next;
+
+		displayResults( response );
+
+		// Update pagination controls after all state changes
+		updatePaginationControls();
+	}
+
+	// Extract cursor values from API response
+	function extractCursors( response ) {
+
+		// Reset cursors
+		nextCursor = null;
+
+		// Extract cursor from next URL
+		if ( response.next ) {
+			try {
+				const nextUrl = new URL( response.next );
+				nextCursor = nextUrl.searchParams.get( 'cursor' );
+			} catch ( e ) {
+				// Ignore cursor extraction errors
+			}
+		}
+
+
+		// Update pagination state based on response
+		hasMorePages = !!response.next;
+
+	}
+
+
+	// Simplified pagination state - just ensure currentPage is set correctly
+	function updatePaginationState( response, requestedPage ) {
+
+		// Ensure requestedPage is a valid number
+		if ( typeof requestedPage !== 'number' || isNaN( requestedPage ) || requestedPage < 1 ) {
+			requestedPage = 1;
+		}
+
+		// Only update currentPage if it's not already set correctly
+		// (it should already be set by navigatePage before the API call)
+		if (currentPage !== requestedPage) {
+			currentPage = requestedPage;
+		}
+
+	}
+
 	function displayResults( response ) {
 
 		resultsSection.setDisplay( 'block' );
-
-		// Update results info
-		const count = response.count || 0;
-		const start = ( currentPage - 1 ) * 24 + 1;
-		const end = Math.min( currentPage * 24, count );
-
-		resultsInfo.setValue( `Showing ${start}-${end} of ${count} models` );
-
-		// Update pagination
-		prevButton.dom.disabled = currentPage <= 1;
-		nextButton.dom.disabled = currentPage >= totalPages;
-		pageInfo.setValue( `Page ${currentPage} of ${totalPages}` );
 
 		// Clear previous results
 		resultsList.clear();
@@ -279,7 +372,7 @@ function SketchfabBrowser( editor ) {
 
 		} else {
 
-			currentResults.forEach( model => {
+			currentResults.forEach( ( model, index ) => {
 
 				const modelItem = createModelItem( model );
 				resultsList.add( modelItem );
@@ -379,9 +472,64 @@ function SketchfabBrowser( editor ) {
 
 	}
 
+	// Update pagination controls (optimized)
+	function updatePaginationControls() {
+
+		// Cache DOM elements for better performance
+		const prevButtonDOM = prevButton.dom;
+		const nextButtonDOM = nextButton.dom;
+
+		// Handle case when we don't have results yet
+		if ( currentResults.length === 0 ) {
+			prevButtonDOM.disabled = true;
+			nextButtonDOM.disabled = true;
+			pageInfo.setValue( currentPage === 1 ? 'Ready to search' : 'No results' );
+			return;
+		}
+
+		// Calculate button states
+		const prevDisabled = currentPage <= 1;
+		const nextDisabled = !hasMorePages;
+
+		// Batch DOM updates to reduce reflow
+		if ( prevButtonDOM.disabled !== prevDisabled ) {
+			prevButtonDOM.disabled = prevDisabled;
+		}
+
+		if ( nextButtonDOM.disabled !== nextDisabled ) {
+			nextButtonDOM.disabled = nextDisabled;
+		}
+
+		// Update page info
+		pageInfo.setValue( `${currentPage}` );
+
+	}
+
 	function navigatePage( page ) {
 
-		if ( page < 1 || page > totalPages || isLoading ) return;
+		// Allow navigation even during loading, but prevent rapid clicks to same page
+		if ( isLoading && page === currentPage ) {
+			return;
+		}
+
+		// Basic validation
+		if ( page < 1 ) {
+			return;
+		}
+
+		if ( page === currentPage ) {
+			return;
+		}
+
+		// Block navigation to next page if we know there are no more pages
+		if ( page > currentPage && !hasMorePages ) {
+			return;
+		}
+
+		// Update current page IMMEDIATELY before loading starts
+		currentPage = page;
+		isLoading = true;
+		updatePaginationControls();
 
 		performSearch( page );
 
@@ -396,6 +544,10 @@ function SketchfabBrowser( editor ) {
 		resultsList.add( errorText );
 
 		resultsSection.setDisplay( 'block' );
+
+		// Reset loading state
+		isLoading = false;
+		updatePaginationControls();
 
 	}
 
@@ -426,6 +578,16 @@ function SketchfabBrowser( editor ) {
 
 			const isVisible = container.dom.style.display !== 'none';
 			container.setDisplay( isVisible ? 'none' : 'block' );
+
+		},
+
+		destroy: function () {
+
+			// Clean up any event listeners or resources
+			currentResults = [];
+			currentPage = 1;
+			totalPages = 0;
+			isLoading = false;
 
 		}
 

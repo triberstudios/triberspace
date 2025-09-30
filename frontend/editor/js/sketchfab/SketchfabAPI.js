@@ -117,7 +117,11 @@ class SketchfabAPI {
 			...options
 		} );
 
-		return await this.makeRequest( `/search?type=models&${params.toString()}` );
+		const fullUrl = `/search?type=models&${params.toString()}`;
+
+		const response = await this.makeRequest( fullUrl );
+
+		return response;
 
 	}
 
