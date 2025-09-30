@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import lamejs from '@breezystack/lamejs';
 
 import { UIPanel, UIRow, UIInput, UIButton, UIColor, UICheckbox, UIInteger, UITextArea, UIText, UINumber, UISelect, UIDiv } from './libs/ui.js';
 import { UIBoolean } from './libs/ui.three.js';
@@ -1558,16 +1559,16 @@ function SidebarObject( editor ) {
 					length: originalAudioBuffer.length
 				});
 
-				// Convert to optimized format (22kHz mono) to reduce file size
+				// Convert to optimized format with higher quality for MP3
 				const optimizedBuffer = await convertToOptimizedAudio(originalAudioBuffer, audioContext);
 				console.log( '🎵 Audio optimized:', {
 					originalSize: `${originalAudioBuffer.numberOfChannels} channels @ ${originalAudioBuffer.sampleRate}Hz`,
 					optimizedSize: `${optimizedBuffer.numberOfChannels} channels @ ${optimizedBuffer.sampleRate}Hz`
 				});
 
-				// Convert AudioBuffer to WAV file
-				const audioBlob = await audioBufferToWav(optimizedBuffer);
-				console.log( '🎵 Audio extracted as WAV blob, size:', audioBlob.size, 'bytes' );
+				// Convert AudioBuffer to MP3 file
+				const audioBlob = await audioBufferToMp3(optimizedBuffer);
+				console.log( '🎵 Audio extracted as MP3 blob, size:', audioBlob.size, 'bytes' );
 
 				// Upload the extracted audio
 				const audioUrl = await uploadAudioBlob(audioBlob, videoFile.name, object);
@@ -1577,7 +1578,7 @@ function SidebarObject( editor ) {
 					object.userData.spatialAudio = {};
 				}
 				object.userData.spatialAudio.audioUrl = audioUrl;
-				object.userData.spatialAudio.audioFilename = videoFile.name.replace(/\.[^/.]+$/, '') + '_audio.wav';
+				object.userData.spatialAudio.audioFilename = videoFile.name.replace(/\.[^/.]+$/, '') + '_audio.mp3';
 				object.userData.spatialAudio.duration = optimizedBuffer.duration;
 
 				// Update the object in the editor
@@ -1664,8 +1665,8 @@ function SidebarObject( editor ) {
 						channels: audioBuffer.numberOfChannels
 					});
 
-					// Convert to WAV and upload
-					const audioBlob = await audioBufferToWav(audioBuffer);
+					// Convert to MP3 and upload
+					const audioBlob = await audioBufferToMp3(audioBuffer);
 					const audioUrl = await uploadAudioBlob(audioBlob, videoFile.name, object);
 
 					// Store in userData
@@ -1673,7 +1674,7 @@ function SidebarObject( editor ) {
 						object.userData.spatialAudio = {};
 					}
 					object.userData.spatialAudio.audioUrl = audioUrl;
-					object.userData.spatialAudio.audioFilename = videoFile.name.replace(/\.[^/.]+$/, '') + '_audio.wav';
+					object.userData.spatialAudio.audioFilename = videoFile.name.replace(/\.[^/.]+$/, '') + '_audio.mp3';
 					object.userData.spatialAudio.duration = audioBuffer.duration;
 
 					// Update object
@@ -1705,10 +1706,10 @@ function SidebarObject( editor ) {
 		});
 	}
 
-	// Helper function to convert audio to optimized format (22kHz mono)
+	// Helper function to convert audio to optimized format (44.1kHz stereo for better MP3 quality)
 	async function convertToOptimizedAudio(originalBuffer, audioContext) {
-		const targetSampleRate = 22050; // 22kHz
-		const targetChannels = 1; // Mono
+		const targetSampleRate = 44100; // 44.1kHz (CD quality)
+		const targetChannels = Math.min(originalBuffer.numberOfChannels, 2); // Keep stereo if available, otherwise mono
 
 		// Create offline context for resampling
 		const lengthInSamples = Math.ceil(originalBuffer.duration * targetSampleRate);
@@ -1727,46 +1728,66 @@ function SidebarObject( editor ) {
 		return optimizedBuffer;
 	}
 
-	// Helper function to convert AudioBuffer to WAV blob
-	function audioBufferToWav(buffer) {
-		const length = buffer.length;
+	// Helper function to convert AudioBuffer to MP3 blob using lamejs
+	async function audioBufferToMp3(buffer, bitrate = 128) {
 		const numberOfChannels = buffer.numberOfChannels;
 		const sampleRate = buffer.sampleRate;
-		const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
-		const view = new DataView(arrayBuffer);
+		const length = buffer.length;
 
-		// WAV header
-		const writeString = (offset, string) => {
-			for (let i = 0; i < string.length; i++) {
-				view.setUint8(offset + i, string.charCodeAt(i));
-			}
-		};
+		console.log('🎵 Converting to MP3:', {
+			channels: numberOfChannels,
+			sampleRate: sampleRate,
+			length: length,
+			bitrate: bitrate
+		});
 
-		writeString(0, 'RIFF');
-		view.setUint32(4, 36 + length * numberOfChannels * 2, true);
-		writeString(8, 'WAVE');
-		writeString(12, 'fmt ');
-		view.setUint32(16, 16, true); // PCM format
-		view.setUint16(20, 1, true); // PCM
-		view.setUint16(22, numberOfChannels, true);
-		view.setUint32(24, sampleRate, true);
-		view.setUint32(28, sampleRate * numberOfChannels * 2, true);
-		view.setUint16(32, numberOfChannels * 2, true);
-		view.setUint16(34, 16, true);
-		writeString(36, 'data');
-		view.setUint32(40, length * numberOfChannels * 2, true);
+		// Create MP3 encoder
+		const mp3encoder = new lamejs.Mp3Encoder(numberOfChannels, sampleRate, bitrate);
+		const mp3Data = [];
 
-		// Convert audio data
-		let offset = 44;
+		// Convert float samples to 16-bit PCM
+		const samples = new Int16Array(length * numberOfChannels);
+		let sampleIndex = 0;
+
 		for (let i = 0; i < length; i++) {
 			for (let channel = 0; channel < numberOfChannels; channel++) {
 				const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-				view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-				offset += 2;
+				samples[sampleIndex++] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
 			}
 		}
 
-		return new Blob([arrayBuffer], { type: 'audio/wav' });
+		// Encode in chunks for better performance
+		const chunkSize = 1152; // Standard MP3 frame size
+		for (let i = 0; i < samples.length; i += chunkSize * numberOfChannels) {
+			const chunk = samples.subarray(i, i + chunkSize * numberOfChannels);
+			let mp3buf;
+
+			if (numberOfChannels === 1) {
+				mp3buf = mp3encoder.encodeBuffer(chunk);
+			} else {
+				// For stereo, separate left and right channels
+				const left = new Int16Array(chunk.length / 2);
+				const right = new Int16Array(chunk.length / 2);
+				for (let j = 0; j < chunk.length; j += 2) {
+					left[j / 2] = chunk[j];
+					right[j / 2] = chunk[j + 1];
+				}
+				mp3buf = mp3encoder.encodeBuffer(left, right);
+			}
+
+			if (mp3buf.length > 0) {
+				mp3Data.push(new Int8Array(mp3buf));
+			}
+		}
+
+		// Flush remaining data
+		const mp3buf = mp3encoder.flush();
+		if (mp3buf.length > 0) {
+			mp3Data.push(new Int8Array(mp3buf));
+		}
+
+		// Combine all MP3 data into a single blob
+		return new Blob(mp3Data, { type: 'audio/mp3' });
 	}
 
 	// Helper function to upload audio blob
@@ -1774,7 +1795,7 @@ function SidebarObject( editor ) {
 		// Sanitize filename by removing extension and special characters
 		const baseName = originalVideoName.replace(/\.[^/.]+$/, ''); // Remove extension
 		const sanitizedName = baseName.replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace special chars with underscore
-		const audioFileName = sanitizedName + '_audio.wav';
+		const audioFileName = sanitizedName + '_audio.mp3';
 
 		console.log( '🎵 Uploading extracted audio:', {
 			original: originalVideoName,
@@ -1783,7 +1804,7 @@ function SidebarObject( editor ) {
 
 		// Convert Blob to File object (MediaUploadUtils expects a File with .name and .size properties)
 		const audioFile = new File([audioBlob], audioFileName, {
-			type: 'audio/wav',
+			type: 'audio/mp3',
 			lastModified: Date.now()
 		});
 
