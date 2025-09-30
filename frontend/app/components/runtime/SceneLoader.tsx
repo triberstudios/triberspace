@@ -389,11 +389,6 @@ class AudioUtils {
                 originalUpdateMatrixWorld.call(this, force);
                 const worldPos = new THREE.Vector3();
                 listener.getWorldPosition(worldPos);
-                console.log('🎧 AudioListener world position update:', {
-                    listenerWorldPos: worldPos,
-                    cameraPos: camera.position,
-                    offsetObjPos: listenerOffsetObject.position
-                });
             };
         } else {
             console.log('🔊 Existing AudioListener found:', {
@@ -527,6 +522,12 @@ class AudioUtils {
                 console.log('🔊 Cleaned up debug interval for audio object');
             }
 
+            // Clean up audio/video synchronization
+            if ((audio as any).cleanupSync) {
+                (audio as any).cleanupSync();
+                console.log('🔊 Cleaned up audio/video synchronization');
+            }
+
             audio.disconnect();
             object.remove(audio);
             console.log('🔊 Removed PositionalAudio from object:', object.name || 'unnamed');
@@ -543,6 +544,117 @@ class AudioUtils {
     }
 
     /**
+     * Setup audio/video synchronization for extracted audio
+     * @param audio - The THREE.js PositionalAudio object
+     * @param video - The HTMLVideoElement to sync with
+     */
+    static setupAudioVideoSync(audio: THREE.PositionalAudio, video: HTMLVideoElement) {
+        let syncInterval: number | null = null;
+        let isManualSeek = false;
+
+        // Function to sync audio position with video position
+        const syncAudioPosition = () => {
+            if (audio.isPlaying && !isManualSeek) {
+                const timeDifference = Math.abs(video.currentTime - (audio.context.currentTime - (audio as any).startTime || 0));
+
+                // If audio and video are more than 0.2 seconds apart, resync
+                if (timeDifference > 0.2) {
+                    console.log('🎵 Resyncing audio to video position:', {
+                        videoTime: video.currentTime,
+                        audioTime: audio.context.currentTime - ((audio as any).startTime || 0),
+                        timeDifference
+                    });
+
+                    // Stop and restart audio at correct position
+                    audio.stop();
+                    if (!video.paused) {
+                        // Store the start time for position tracking
+                        (audio as any).startTime = audio.context.currentTime - video.currentTime;
+                        audio.play();
+                    }
+                }
+            }
+        };
+
+        // Video event handlers
+        const onVideoPlay = () => {
+            console.log('🎵 Video play event - starting audio');
+            if (!audio.isPlaying) {
+                (audio as any).startTime = audio.context.currentTime - video.currentTime;
+                audio.play();
+            }
+
+            // Start sync monitoring
+            if (syncInterval) clearInterval(syncInterval);
+            syncInterval = setInterval(syncAudioPosition, 1000) as any; // Check every second
+        };
+
+        const onVideoPause = () => {
+            console.log('🎵 Video pause event - pausing audio');
+            if (audio.isPlaying) {
+                audio.pause();
+            }
+
+            // Stop sync monitoring
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+        };
+
+        const onVideoSeeked = () => {
+            console.log('🎵 Video seek event - syncing audio to position:', video.currentTime);
+            isManualSeek = true;
+
+            if (audio.isPlaying) {
+                audio.stop();
+                if (!video.paused) {
+                    (audio as any).startTime = audio.context.currentTime - video.currentTime;
+                    audio.play();
+                }
+            }
+
+            // Reset manual seek flag after a short delay
+            setTimeout(() => {
+                isManualSeek = false;
+            }, 100);
+        };
+
+        const onVideoEnded = () => {
+            console.log('🎵 Video ended - stopping audio');
+            if (audio.isPlaying) {
+                audio.stop();
+            }
+
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+        };
+
+        // Add event listeners
+        video.addEventListener('play', onVideoPlay);
+        video.addEventListener('pause', onVideoPause);
+        video.addEventListener('seeked', onVideoSeeked);
+        video.addEventListener('ended', onVideoEnded);
+
+        // Store cleanup function for later removal
+        (audio as any).cleanupSync = () => {
+            video.removeEventListener('play', onVideoPlay);
+            video.removeEventListener('pause', onVideoPause);
+            video.removeEventListener('seeked', onVideoSeeked);
+            video.removeEventListener('ended', onVideoEnded);
+
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+        };
+
+        console.log('🎵 Audio/video synchronization setup complete');
+    }
+
+    /**
      * Setup spatial audio for a media plane object with video
      * @param object - The media plane object
      * @param camera - The camera with audio listener
@@ -554,7 +666,8 @@ class AudioUtils {
             mediaType: userData.mediaType,
             hasMediaSource: !!userData.mediaSource,
             spatialAudio: userData.spatialAudio,
-            spatialAudioEnabled: userData.spatialAudio !== false
+            spatialAudioEnabled: userData.spatialAudio !== false,
+            hasExtractedAudio: !!(userData.spatialAudio && userData.spatialAudio.audioUrl)
         });
 
         if (userData.mediaType !== 'video' || !userData.mediaSource) {
@@ -562,16 +675,10 @@ class AudioUtils {
             return;
         }
 
-        if (!userData.spatialAudio) {
+        if (!userData.spatialAudio || !userData.spatialAudio.enabled) {
             console.log('🔇 Skipping spatial audio: spatialAudio disabled in userData');
             return;
         }
-
-        // Get video element from texture
-        const texture = userData.mediaSource as THREE.VideoTexture;
-        const video = texture.image as HTMLVideoElement;
-
-        if (!video) return;
 
         // Create audio listener if needed
         const listener = AudioUtils.createAudioListener(camera);
@@ -579,14 +686,110 @@ class AudioUtils {
         // Remove existing audio
         AudioUtils.removeAudio(object);
 
-        // Create spatial audio with V2World-inspired settings
+        // Audio settings
         const audioSettings = {
-            maxDistance: userData.audioMaxDistance || 15, // V2World default for noticeable falloff
-            rolloffFactor: userData.audioRolloff || 1.5, // V2World default for stronger effect
-            distanceModel: 'linear', // V2World uses linear for more dramatic falloff
-            refDistance: 1, // V2World default for immediate proximity
+            maxDistance: userData.audioMaxDistance || 15,
+            rolloffFactor: userData.audioRolloff || 1.5,
+            distanceModel: 'linear',
+            refDistance: 1,
             volume: userData.volume || 0.5
         };
+
+        // Check if we have extracted audio URL (preferred method)
+        if (userData.spatialAudio.audioUrl) {
+            console.log('🎵 Using extracted audio for spatial audio:', userData.spatialAudio.audioUrl);
+
+            // Create PositionalAudio using AudioLoader (like spatial audio objects)
+            const audio = new THREE.PositionalAudio(listener);
+            const audioLoader = new THREE.AudioLoader();
+
+            audioLoader.load(userData.spatialAudio.audioUrl, function(buffer) {
+                audio.setBuffer(buffer);
+                audio.setLoop(true);
+                audio.setRefDistance(audioSettings.refDistance);
+                audio.setMaxDistance(audioSettings.maxDistance);
+                audio.setRolloffFactor(audioSettings.rolloffFactor);
+                audio.setDistanceModel(audioSettings.distanceModel);
+                audio.setVolume(audioSettings.volume);
+
+                // Get video element to sync audio with video playback
+                const texture = userData.mediaSource as THREE.VideoTexture;
+                const video = texture.image as HTMLVideoElement;
+
+                if (video) {
+                    // Mute the original video to prevent double audio
+                    video.muted = true;
+
+                    // Store reference for synchronization
+                    (audio as any).videoElement = video;
+
+                    // Set up comprehensive audio/video synchronization
+                    AudioUtils.setupAudioVideoSync(audio, video);
+
+                    // Resume AudioContext if suspended (handle browser autoplay policy)
+                    if (audio.context?.state === 'suspended') {
+                        console.log('🔊 AudioContext suspended, setting up user gesture listener');
+                        const resumeAudioContext = () => {
+                            if (audio.context?.state === 'suspended') {
+                                audio.context.resume().then(() => {
+                                    console.log('🔊 AudioContext resumed after user gesture');
+                                    // Try to start audio again if video is playing
+                                    if (!video.paused && !audio.isPlaying) {
+                                        audio.play();
+                                    }
+                                });
+                            }
+                            // Remove listeners after first interaction
+                            document.removeEventListener('click', resumeAudioContext);
+                            document.removeEventListener('keydown', resumeAudioContext);
+                            document.removeEventListener('touchstart', resumeAudioContext);
+                        };
+
+                        // Add event listeners for user interaction
+                        document.addEventListener('click', resumeAudioContext, { once: true });
+                        document.addEventListener('keydown', resumeAudioContext, { once: true });
+                        document.addEventListener('touchstart', resumeAudioContext, { once: true });
+                    }
+
+                    // Initial sync - start audio if video is already playing
+                    if (!video.paused) {
+                        audio.play();
+                    }
+                }
+
+                console.log('🎵 Extracted audio spatial audio setup complete:', {
+                    objectName: object.name,
+                    audioPlaying: audio.isPlaying,
+                    audioUrl: userData.spatialAudio.audioUrl,
+                    settings: audioSettings
+                });
+            }, undefined, function(error) {
+                console.error('🎵 Failed to load extracted audio, falling back to video element:', error);
+                // Fallback to video element method
+                AudioUtils.setupVideoElementSpatialAudio(object, listener, audioSettings, camera);
+            });
+
+            object.add(audio);
+        } else {
+            console.log('🔇 No extracted audio found, using video element for spatial audio');
+            // Fallback to original video element method
+            AudioUtils.setupVideoElementSpatialAudio(object, listener, audioSettings, camera);
+        }
+    }
+
+    /**
+     * Setup spatial audio using video element (fallback method)
+     * @param object - The media plane object
+     * @param listener - The audio listener
+     * @param audioSettings - Audio configuration
+     * @param camera - The camera
+     */
+    static setupVideoElementSpatialAudio(object: THREE.Object3D, listener: THREE.AudioListener, audioSettings: any, camera: THREE.Camera) {
+        // Get video element from texture
+        const texture = object.userData.mediaSource as THREE.VideoTexture;
+        const video = texture.image as HTMLVideoElement;
+
+        if (!video) return;
 
         const spatialAudio = AudioUtils.createPositionalAudio(listener, video, audioSettings);
         object.add(spatialAudio);
@@ -601,7 +804,7 @@ class AudioUtils {
         listener.getWorldPosition(listenerWorldPos);
         const initialDistance = objectWorldPos.distanceTo(listenerWorldPos);
 
-        console.log('🔊 Spatial audio successfully setup for object:', object.name, {
+        console.log('🔊 Video element spatial audio setup complete:', object.name, {
             maxDistance: audioSettings.maxDistance,
             rolloffFactor: audioSettings.rolloffFactor,
             volume: audioSettings.volume,

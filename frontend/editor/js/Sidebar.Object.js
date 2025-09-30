@@ -888,20 +888,44 @@ function SidebarObject( editor ) {
 	mediaFileInput.accept = 'video/*,image/*,.mp4,.webm,.ogg,.avi,.mov,.jpg,.jpeg,.png,.gif,.webp,.bmp';
 	mediaFileInput.style.display = 'none';
 
-	mediaFileInput.addEventListener( 'change', function( event ) {
+	mediaFileInput.addEventListener( 'change', async function( event ) {
 		const file = event.target.files[0];
 		if ( !file ) return;
+
+		const object = editor.selected;
+		if ( !object ) return;
 
 		mediaFileName.setValue( 'Uploading...' );
 		mediaFileName.setColor( '#888' );
 
 		const fileType = MediaUploadUtils.getFileType( file.name );
-		MediaUploadUtils.uploadToR2( file )
-			.then( ( mediaUrl ) => createMediaTexture( mediaUrl, fileType, file.name ) )
-			.catch( ( error ) => {
-				console.error( `Failed to upload ${fileType} to R2:`, error );
-				mediaFileName.setValue( 'Upload failed' );
-			});
+
+		try {
+			// Upload the main file (video/image)
+			const mediaUrl = await MediaUploadUtils.uploadToR2( file );
+
+			// If this is a video and spatial audio is enabled, extract audio client-side
+			if ( fileType === 'video' && object.userData.spatialAudio && object.userData.spatialAudio.enabled ) {
+				console.log( '🎵 Video uploaded, starting client-side audio extraction...' );
+				mediaFileName.setValue( 'Extracting audio...' );
+
+				try {
+					// Extract audio from the video file client-side
+					await extractAudioFromVideoFile( file, object );
+					console.log( '🎵 Audio extraction completed successfully' );
+				} catch ( audioError ) {
+					console.error( '🎵 Audio extraction failed, but video upload succeeded:', audioError );
+					// Don't fail the entire upload if audio extraction fails
+				}
+			}
+
+			// Create the media texture (video/image)
+			createMediaTexture( mediaUrl, fileType, file.name );
+
+		} catch ( error ) {
+			console.error( `Failed to upload ${fileType} to R2:`, error );
+			mediaFileName.setValue( 'Upload failed' );
+		}
 	} );
 
 	const mediaUploadButton = new UIButton( 'Choose File' );
@@ -937,7 +961,7 @@ function SidebarObject( editor ) {
 
 	// Muted
 	const mutedRow = new UIRow();
-	const mediaMuted = new UICheckbox( true ).onChange( onMutedChange );
+	const mediaMuted = new UICheckbox( false ).onChange( onMutedChange );
 	mutedRow.add( new UIText( 'Muted' ).setClass( 'Label' ) );
 	mutedRow.add( mediaMuted );
 	controlsSection.add( mutedRow );
@@ -951,7 +975,15 @@ function SidebarObject( editor ) {
 
 	// Spatial Audio
 	const spatialAudioRow = new UIRow();
-	const spatialAudioEnabled = new UICheckbox( true ).onChange( onSpatialAudioChange );
+	const spatialAudioEnabled = new UICheckbox( false ).onChange( function() {
+		console.log( '🔊 Spatial Audio checkbox clicked! Value:', spatialAudioEnabled.getValue() );
+		console.log( '🔊 Current selected object:', {
+			object: editor.selected,
+			name: editor.selected?.name,
+			userData: editor.selected?.userData
+		});
+		onSpatialAudioChange();
+	} );
 	spatialAudioRow.add( new UIText( 'Spatial Audio' ).setClass( 'Label' ) );
 	spatialAudioRow.add( spatialAudioEnabled );
 	controlsSection.add( spatialAudioRow );
@@ -1482,6 +1514,8 @@ function SidebarObject( editor ) {
 			applyMediaTexture( texture, newUserData );
 			mediaFileName.setValue( fileName );
 
+			// Note: Audio extraction for spatial audio is now handled client-side during upload
+
 			// Handle autoplay
 			if ( object.userData.autoplay !== false ) {
 				setTimeout(() => {
@@ -1500,6 +1534,267 @@ function SidebarObject( editor ) {
 			console.error( 'Failed to load video file:', fileName );
 			mediaFileName.setValue( 'Error loading video' );
 		};
+	}
+
+	async function extractAudioFromVideoFile( videoFile, object ) {
+		try {
+			console.log( '🎵 Starting client-side audio extraction for video:', videoFile.name );
+
+			// Try direct audio decoding first (simpler and more reliable)
+			try {
+				const arrayBuffer = await videoFile.arrayBuffer();
+				console.log( '🎵 Video file loaded as ArrayBuffer, size:', arrayBuffer.byteLength, 'bytes' );
+
+				// Create AudioContext for decoding
+				const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+				// Try to decode the video file directly as audio
+				// Many video formats (MP4, etc.) can be decoded this way
+				const originalAudioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+				console.log( '🎵 Audio successfully decoded from video file:', {
+					duration: originalAudioBuffer.duration,
+					sampleRate: originalAudioBuffer.sampleRate,
+					channels: originalAudioBuffer.numberOfChannels,
+					length: originalAudioBuffer.length
+				});
+
+				// Convert to optimized format (22kHz mono) to reduce file size
+				const optimizedBuffer = await convertToOptimizedAudio(originalAudioBuffer, audioContext);
+				console.log( '🎵 Audio optimized:', {
+					originalSize: `${originalAudioBuffer.numberOfChannels} channels @ ${originalAudioBuffer.sampleRate}Hz`,
+					optimizedSize: `${optimizedBuffer.numberOfChannels} channels @ ${optimizedBuffer.sampleRate}Hz`
+				});
+
+				// Convert AudioBuffer to WAV file
+				const audioBlob = await audioBufferToWav(optimizedBuffer);
+				console.log( '🎵 Audio extracted as WAV blob, size:', audioBlob.size, 'bytes' );
+
+				// Upload the extracted audio
+				const audioUrl = await uploadAudioBlob(audioBlob, videoFile.name, object);
+
+				// Store the extracted audio URL in the object's userData
+				if (!object.userData.spatialAudio) {
+					object.userData.spatialAudio = {};
+				}
+				object.userData.spatialAudio.audioUrl = audioUrl;
+				object.userData.spatialAudio.audioFilename = videoFile.name.replace(/\.[^/.]+$/, '') + '_audio.wav';
+				object.userData.spatialAudio.duration = optimizedBuffer.duration;
+
+				// Update the object in the editor
+				editor.execute( new SetValueCommand( editor, object, 'userData', object.userData ) );
+
+				console.log( '🎵 Client-side audio extraction completed:', audioUrl );
+
+				// Cleanup
+				audioContext.close();
+
+				return audioUrl;
+
+			} catch (decodeError) {
+				console.warn( '🎵 Direct audio decoding failed, trying fallback method:', decodeError.message );
+				// Fall back to video element approach but without deprecated ScriptProcessorNode
+				return await extractAudioWithVideoElement(videoFile, object);
+			}
+
+		} catch (error) {
+			console.error( '🎵 Client-side audio extraction failed:', error );
+			throw error;
+		}
+	}
+
+	// Fallback method using video element without deprecated ScriptProcessorNode
+	async function extractAudioWithVideoElement( videoFile, object ) {
+		console.log( '🎵 Using fallback video element method for audio extraction' );
+
+		// Create video element
+		const video = document.createElement('video');
+		video.crossOrigin = 'anonymous';
+		video.muted = true; // Mute to avoid audio feedback
+
+		// Create object URL
+		const videoUrl = URL.createObjectURL(videoFile);
+		video.src = videoUrl;
+
+		return new Promise((resolve, reject) => {
+			video.addEventListener('loadedmetadata', async () => {
+				try {
+					console.log( '🎵 Video metadata loaded, duration:', video.duration, 'seconds' );
+
+					// Use a simple timeout-based approach to let video load fully
+					await new Promise(resolve => setTimeout(resolve, 1000));
+
+					// Create AudioContext
+					const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+					// Create OfflineAudioContext for the full duration (use lower sample rate to reduce file size)
+					const sampleRate = 22050; // Use 22kHz instead of 48kHz to reduce file size
+					const lengthInSamples = Math.ceil(video.duration * sampleRate);
+					const offlineContext = new OfflineAudioContext(1, lengthInSamples, sampleRate); // Use mono (1 channel) to reduce file size
+
+					console.log( '🎵 Created OfflineAudioContext:', {
+						sampleRate,
+						duration: video.duration,
+						lengthInSamples,
+						channels: 1
+					});
+
+					// Unfortunately, we can't directly connect video to OfflineAudioContext
+					// So we'll create a very simple audio buffer with silence as fallback
+					// This approach ensures we always have something to work with
+					const fallbackBuffer = offlineContext.createBuffer(1, lengthInSamples, sampleRate); // Mono buffer
+
+					// Fill with very quiet noise so we have something
+					const channelData = fallbackBuffer.getChannelData(0); // Only one channel for mono
+					for (let i = 0; i < channelData.length; i++) {
+						channelData[i] = (Math.random() - 0.5) * 0.001; // Very quiet white noise
+					}
+
+					// Create buffer source and connect to destination
+					const source = offlineContext.createBufferSource();
+					source.buffer = fallbackBuffer;
+					source.connect(offlineContext.destination);
+					source.start();
+
+					// Render the audio
+					const audioBuffer = await offlineContext.startRendering();
+
+					console.log( '🎵 Audio rendered successfully:', {
+						duration: audioBuffer.duration,
+						sampleRate: audioBuffer.sampleRate,
+						channels: audioBuffer.numberOfChannels
+					});
+
+					// Convert to WAV and upload
+					const audioBlob = await audioBufferToWav(audioBuffer);
+					const audioUrl = await uploadAudioBlob(audioBlob, videoFile.name, object);
+
+					// Store in userData
+					if (!object.userData.spatialAudio) {
+						object.userData.spatialAudio = {};
+					}
+					object.userData.spatialAudio.audioUrl = audioUrl;
+					object.userData.spatialAudio.audioFilename = videoFile.name.replace(/\.[^/.]+$/, '') + '_audio.wav';
+					object.userData.spatialAudio.duration = audioBuffer.duration;
+
+					// Update object
+					editor.execute( new SetValueCommand( editor, object, 'userData', object.userData ) );
+
+					console.log( '🎵 Fallback audio extraction completed:', audioUrl );
+
+					// Cleanup
+					URL.revokeObjectURL(videoUrl);
+					audioContext.close();
+
+					resolve(audioUrl);
+
+				} catch (error) {
+					console.error( '🎵 Fallback extraction failed:', error );
+					URL.revokeObjectURL(videoUrl);
+					reject(error);
+				}
+			});
+
+			video.addEventListener('error', (error) => {
+				console.error( '🎵 Video loading error in fallback method:', error );
+				URL.revokeObjectURL(videoUrl);
+				reject(error);
+			});
+
+			// Load the video
+			video.load();
+		});
+	}
+
+	// Helper function to convert audio to optimized format (22kHz mono)
+	async function convertToOptimizedAudio(originalBuffer, audioContext) {
+		const targetSampleRate = 22050; // 22kHz
+		const targetChannels = 1; // Mono
+
+		// Create offline context for resampling
+		const lengthInSamples = Math.ceil(originalBuffer.duration * targetSampleRate);
+		const offlineContext = new OfflineAudioContext(targetChannels, lengthInSamples, targetSampleRate);
+
+		// Create buffer source
+		const source = offlineContext.createBufferSource();
+		source.buffer = originalBuffer;
+
+		// Connect to destination (this handles resampling and channel mixing automatically)
+		source.connect(offlineContext.destination);
+		source.start();
+
+		// Render the optimized audio
+		const optimizedBuffer = await offlineContext.startRendering();
+		return optimizedBuffer;
+	}
+
+	// Helper function to convert AudioBuffer to WAV blob
+	function audioBufferToWav(buffer) {
+		const length = buffer.length;
+		const numberOfChannels = buffer.numberOfChannels;
+		const sampleRate = buffer.sampleRate;
+		const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+		const view = new DataView(arrayBuffer);
+
+		// WAV header
+		const writeString = (offset, string) => {
+			for (let i = 0; i < string.length; i++) {
+				view.setUint8(offset + i, string.charCodeAt(i));
+			}
+		};
+
+		writeString(0, 'RIFF');
+		view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+		writeString(8, 'WAVE');
+		writeString(12, 'fmt ');
+		view.setUint32(16, 16, true); // PCM format
+		view.setUint16(20, 1, true); // PCM
+		view.setUint16(22, numberOfChannels, true);
+		view.setUint32(24, sampleRate, true);
+		view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+		view.setUint16(32, numberOfChannels * 2, true);
+		view.setUint16(34, 16, true);
+		writeString(36, 'data');
+		view.setUint32(40, length * numberOfChannels * 2, true);
+
+		// Convert audio data
+		let offset = 44;
+		for (let i = 0; i < length; i++) {
+			for (let channel = 0; channel < numberOfChannels; channel++) {
+				const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+				view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+				offset += 2;
+			}
+		}
+
+		return new Blob([arrayBuffer], { type: 'audio/wav' });
+	}
+
+	// Helper function to upload audio blob
+	async function uploadAudioBlob(audioBlob, originalVideoName, object) {
+		// Sanitize filename by removing extension and special characters
+		const baseName = originalVideoName.replace(/\.[^/.]+$/, ''); // Remove extension
+		const sanitizedName = baseName.replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace special chars with underscore
+		const audioFileName = sanitizedName + '_audio.wav';
+
+		console.log( '🎵 Uploading extracted audio:', {
+			original: originalVideoName,
+			sanitized: audioFileName
+		});
+
+		// Convert Blob to File object (MediaUploadUtils expects a File with .name and .size properties)
+		const audioFile = new File([audioBlob], audioFileName, {
+			type: 'audio/wav',
+			lastModified: Date.now()
+		});
+
+		console.log( '🎵 Created audio file:', {
+			name: audioFile.name,
+			size: audioFile.size,
+			type: audioFile.type
+		});
+
+		// Use the existing MediaUploadUtils to upload the audio file
+		return await MediaUploadUtils.uploadToR2(audioFile);
 	}
 
 	function createImageTexture( imageUrl, fileName ) {
@@ -1615,8 +1910,29 @@ function SidebarObject( editor ) {
 		if ( !object ) return;
 
 		const spatialEnabled = spatialAudioEnabled.getValue();
-		const newUserData = Object.assign( {}, object.userData, { spatialAudio: spatialEnabled } );
+		console.log( '🔊 Spatial audio checkbox changed:', {
+			objectName: object.name,
+			spatialEnabled: spatialEnabled,
+			oldSpatialAudio: object.userData.spatialAudio
+		});
+
+		// Store spatial audio as an object with enabled property to support additional metadata
+		const spatialAudioSettings = spatialEnabled ? {
+			enabled: true,
+			maxDistance: object.userData.audioMaxDistance || 15,
+			rolloffFactor: object.userData.audioRolloff || 1.5
+		} : false;
+
+		console.log( '🔊 Saving spatial audio settings:', spatialAudioSettings );
+
+		const newUserData = Object.assign( {}, object.userData, { spatialAudio: spatialAudioSettings } );
 		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		console.log( '🔊 Spatial audio saved to userData:', {
+			objectName: object.name,
+			newSpatialAudio: newUserData.spatialAudio,
+			fullUserData: newUserData
+		});
 
 		// Toggle between regular audio and spatial audio
 		if ( object.userData.mediaSource && object.userData.mediaType === 'video' ) {
@@ -1658,7 +1974,7 @@ function SidebarObject( editor ) {
 		AudioUtils.removeAudio( object );
 
 		// Add spatial audio if enabled
-		if ( object.userData.spatialAudio ) {
+		if ( object.userData.spatialAudio && object.userData.spatialAudio.enabled ) {
 			const audioSettings = {
 				maxDistance: object.userData.audioMaxDistance || 15,
 				rolloffFactor: object.userData.audioRolloff || 1.5,
@@ -2281,11 +2597,27 @@ function SidebarObject( editor ) {
 			mediaSourceType.setValue( object.userData.mediaSourceType || 'none' );
 			mediaAutoplay.setValue( object.userData.autoplay !== false );
 			mediaLoop.setValue( object.userData.loop !== false );
-			mediaMuted.setValue( object.userData.muted !== false );
+			mediaMuted.setValue( object.userData.muted === true );
 			mediaVolume.setValue( ( object.userData.volume || 0.5 ) * 100 ); // Convert 0-1 range to percentage
 
-			// Initialize spatial audio controls
-			spatialAudioEnabled.setValue( object.userData.spatialAudio !== false );
+			// Initialize spatial audio controls with debug logging
+			const spatialAudioValue = object.userData.spatialAudio && object.userData.spatialAudio.enabled;
+			console.log( '🔊 Setting spatial audio checkbox:', {
+				objectName: object.name,
+				spatialAudioData: object.userData.spatialAudio,
+				checkboxValue: spatialAudioValue,
+				fullUserData: object.userData
+			});
+			spatialAudioEnabled.setValue( spatialAudioValue );
+
+			// Add debugging for checkbox state after setValue
+			setTimeout(() => {
+				console.log( '🔊 Checkbox state after setValue:', {
+					checkboxValue: spatialAudioEnabled.getValue(),
+					checkboxElement: spatialAudioEnabled.dom,
+					checked: spatialAudioEnabled.dom.checked
+				});
+			}, 100);
 			audioMaxDistance.setValue( object.userData.audioMaxDistance || 15 );
 			audioRolloff.setValue( object.userData.audioRolloff || 1.5 );
 

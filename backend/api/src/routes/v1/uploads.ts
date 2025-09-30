@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { 
-  generatePresignedUploadUrl, 
-  deleteFile, 
+import {
+  generatePresignedUploadUrl,
+  deleteFile,
   fileExists,
   UPLOAD_CATEGORIES,
   FILE_LIMITS,
@@ -222,4 +222,5 @@ export async function v1UploadsRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
 }
