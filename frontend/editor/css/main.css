@@ -16,7 +16,7 @@ body {
 	font-size: 14px;
 	margin: 0;
 	overflow: hidden;
-	background-color: #1a1a1a;
+	background-color: #0f0f0f;
 }
 
 /* Blender-style modular container system */
@@ -25,7 +25,7 @@ body {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background-color: #1a1a1a;
+	background-color: #0f0f0f;
 }
 
 .main-content {
@@ -34,7 +34,7 @@ body {
 	flex-direction: row;
 	padding: 8px;
 	padding-top: 0;
-	background-color: #1a1a1a;
+	background-color: #0f0f0f;
 	overflow: hidden;
 	gap: 0;
 }
@@ -416,12 +416,71 @@ select {
 #menubar {
 	position: relative;
 	width: 100%;
-	height: 32px;
-	background: #1a1a1a;
+	height: 48px;
+	background: #0f0f0f;
 	padding: 0;
 	margin: 0;
 	border-bottom: none;
+	display: flex;
+	align-items: center;
 }
+
+	.menubar-logo-container {
+		padding: 4px 8px 4px 12px;
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
+	.menubar-logo {
+		height: 20px;
+		width: auto;
+	}
+
+	.menubar-actions {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 16px;
+	}
+
+	.menubar-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 6px;
+		font-family: 'Work Sans', sans-serif;
+		font-size: 12px;
+		font-weight: 500;
+		transition: all 0.2s ease;
+		border: none;
+		cursor: pointer;
+		padding: 6px 12px;
+		height: 32px;
+		outline: none;
+	}
+
+	.menubar-btn-primary {
+		background: #FCFDE8;
+		color: #000000;
+		box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	}
+
+	.menubar-btn-primary:hover:not(:disabled) {
+		background: #FCFDE8;
+	}
+
+	.menubar-btn-secondary {
+		background: transparent;
+		color: #f9fafb;
+		border: 1px solid #ffffff50;
+		box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	}
+
+	.menubar-btn-secondary:hover:not(:disabled) {
+		background: #ffffff10;
+	}
 
 	#menubar .menu {
 		float: left;
