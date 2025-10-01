@@ -12,6 +12,7 @@ import { SetScaleCommand } from './commands/SetScaleCommand.js';
 import { SetColorCommand } from './commands/SetColorCommand.js';
 import { SetShadowValueCommand } from './commands/SetShadowValueCommand.js';
 import { SetMaterialMapCommand } from './commands/SetMaterialMapCommand.js';
+import { SetGeometryCommand } from './commands/SetGeometryCommand.js';
 
 import { SidebarObjectAnimation } from './Sidebar.Object.Animation.js';
 
@@ -866,6 +867,27 @@ function SidebarObject( editor ) {
 	mediaSection.setPadding( '0px' );
 	let isMediaPlane = false;
 
+	// Media Shape Selection (only for media objects)
+	const mediaShapeRow = new UIRow();
+	const mediaShape = new UISelect().setOptions( {
+		'plane': 'Plane',
+		'sphere': 'Sphere',
+		'box': 'Box',
+		'cylinder': 'Cylinder'
+	} ).onChange( onMediaShapeChange );
+
+	mediaShapeRow.add( new UIText( 'Media Shape' ).setClass( 'Label' ) );
+	mediaShapeRow.add( mediaShape );
+	mediaSection.add( mediaShapeRow );
+
+	// Double-Sided Control (only for media objects)
+	const doubleSidedRow = new UIRow();
+	const doubleSided = new UICheckbox( true ).onChange( onDoubleSidedChange );
+
+	doubleSidedRow.add( new UIText( 'Double Sided' ).setClass( 'Label' ) );
+	doubleSidedRow.add( doubleSided );
+	mediaSection.add( doubleSidedRow );
+
 	// Media Source dropdown
 	const mediaSourceRow = new UIRow();
 	const mediaSourceType = new UISelect().setOptions( {
@@ -1422,6 +1444,79 @@ function SidebarObject( editor ) {
 
 	// Media Controls Event Handlers
 
+	// Media shape change handler
+	function onMediaShapeChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const newShape = mediaShape.getValue();
+		const currentShape = object.userData.mediaShape || 'plane';
+
+		if ( newShape !== currentShape ) {
+			switchMediaShape( object, newShape );
+		}
+	}
+
+	// Double-sided checkbox handler
+	function onDoubleSidedChange() {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const isDoubleSided = doubleSided.getValue();
+
+		// Update userData
+		const newUserData = Object.assign( {}, object.userData, { doubleSided: isDoubleSided } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+
+		// Update material
+		if ( object.material ) {
+			object.material.side = isDoubleSided ? THREE.DoubleSide : THREE.FrontSide;
+			object.material.needsUpdate = true;
+		}
+	}
+
+	// Switch media shape and preserve texture/settings
+	function switchMediaShape( object, newShape ) {
+		const currentTexture = object.material.map;
+		const currentUserData = Object.assign( {}, object.userData );
+
+		// Update shape in userData
+		currentUserData.mediaShape = newShape;
+
+		let newGeometry;
+		switch ( newShape ) {
+			case 'plane':
+				newGeometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
+				break;
+			case 'sphere':
+				newGeometry = new THREE.SphereGeometry( 0.5, 32, 16 );
+				break;
+			case 'box':
+				newGeometry = new THREE.BoxGeometry( 1, 1, 1, 1, 1, 1 );
+				break;
+			case 'cylinder':
+				newGeometry = new THREE.CylinderGeometry( 0.5, 0.5, 1, 32, 1 );
+				break;
+		}
+
+		// Update geometry
+		editor.execute( new SetGeometryCommand( editor, object, newGeometry ) );
+
+		// Preserve texture and settings
+		editor.execute( new SetValueCommand( editor, object, 'userData', currentUserData ) );
+
+		// Ensure material remains double-sided if it was before
+		if ( object.material && currentUserData.doubleSided ) {
+			object.material.side = THREE.DoubleSide;
+			object.material.needsUpdate = true;
+		}
+
+		// Force geometry panel refresh to show correct controls
+		if ( editor.signals && editor.signals.geometryChanged ) {
+			editor.signals.geometryChanged.dispatch( object );
+		}
+	}
+
 	function onMediaSourceTypeChange() {
 		const object = editor.selected;
 		if ( !object ) return;
@@ -1512,6 +1607,10 @@ function SidebarObject( editor ) {
 
 			applyMediaTexture( texture, newUserData );
 			mediaFileName.setValue( fileName );
+
+			// Update UI to reflect video has loaded
+			updateMediaRows( object );
+			updateMediaSectionVisibility();
 
 			// Note: Audio extraction for spatial audio is now handled client-side during upload
 
@@ -2078,8 +2177,8 @@ function SidebarObject( editor ) {
 		const object = editor.selected;
 		if ( !object ) return;
 
-		// Check if ratio should be maintained for PlaneGeometry objects
-		const isMediaPlane = object.geometry && object.geometry.type === 'PlaneGeometry';
+		// Check if ratio should be maintained for media objects
+		const isMediaPlane = object.userData && object.userData.isMediaPlane;
 		const shouldMaintainRatio = isMediaPlane && lockRatio.getValue() && aspectRatio.getValue() !== 'custom';
 
 		if ( shouldMaintainRatio ) {
@@ -2390,11 +2489,11 @@ function SidebarObject( editor ) {
 	}
 
 	function updateMediaRows( object ) {
-		// Show media controls only for PlaneGeometry objects
-		const isPlaneGeometry = object.geometry && object.geometry.type === 'PlaneGeometry';
-		mediaSection.setDisplay( isPlaneGeometry ? '' : 'none' );
+		// Show media controls only for media objects
+		const isMediaObject = object.userData && object.userData.isMediaPlane;
+		mediaSection.setDisplay( isMediaObject ? '' : 'none' );
 
-		if ( isPlaneGeometry ) {
+		if ( isMediaObject ) {
 			isMediaPlane = true;
 			// Update media section visibility based on current source type
 			updateMediaSectionVisibility();
@@ -2610,8 +2709,8 @@ function SidebarObject( editor ) {
 		objectUserData.setBorderColor( 'transparent' );
 		objectUserData.setBackgroundColor( '' );
 
-		// Update media controls for PlaneGeometry objects
-		if ( object.geometry && object.geometry.type === 'PlaneGeometry' ) {
+		// Update media controls for media objects
+		if ( object.userData && object.userData.isMediaPlane ) {
 			// Initialize media controls with object's userData values
 			mediaSourceType.setValue( object.userData.mediaSourceType || 'upload' );
 			mediaAutoplay.setValue( object.userData.autoplay !== false );
@@ -2659,6 +2758,33 @@ function SidebarObject( editor ) {
 					aspectRatio.setValue( closestStandardRatio );
 					const newUserData = Object.assign( {}, object.userData, { aspectRatio: closestStandardRatio } );
 					editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+				}
+			}
+
+			// Update shape and double-sided controls for media objects
+			if ( object.userData && object.userData.isMediaPlane ) {
+				mediaShape.setValue( object.userData.mediaShape || 'plane' );
+				doubleSided.setValue( object.userData.doubleSided !== false );
+
+				// Ensure media section visibility is updated for new media objects
+				updateMediaSectionVisibility();
+			}
+
+			// Check if object has a video texture that might still be loading
+			if ( object.userData && object.userData.mediaSource && object.userData.mediaSource.isVideoTexture ) {
+				const videoElement = MediaUploadUtils.getVideoElementFromTexture( object.userData.mediaSource );
+				if ( videoElement && ( videoElement.readyState < 4 || !videoElement.videoWidth ) ) {
+					// Video is still loading, add listener to update UI when ready
+					const onVideoReady = () => {
+						if ( editor.selected === object ) {
+							updateMediaRows( object );
+							updateMediaSectionVisibility();
+						}
+						videoElement.removeEventListener( 'loadeddata', onVideoReady );
+						videoElement.removeEventListener( 'canplaythrough', onVideoReady );
+					};
+					videoElement.addEventListener( 'loadeddata', onVideoReady );
+					videoElement.addEventListener( 'canplaythrough', onVideoReady );
 				}
 			}
 		}

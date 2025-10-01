@@ -514,6 +514,7 @@ function MenubarAdd( editor ) {
 
 		const geometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
 		const material = new THREE.MeshStandardMaterial();
+		material.side = THREE.DoubleSide; // Make double-sided by default
 		const mesh = new THREE.Mesh( geometry, material );
 		mesh.name = 'MediaObject';
 
@@ -521,6 +522,9 @@ function MenubarAdd( editor ) {
 		mesh.userData.isMediaPlane = true;
 		mesh.userData.mediaSource = null;
 		mesh.userData.mediaType = null;
+		mesh.userData.mediaShape = 'plane'; // Default shape
+		mesh.userData.doubleSided = true; // Track double-sided state
+		mesh.userData.mediaSourceType = 'upload'; // Default to upload file
 
 		editor.execute( new AddObjectCommand( editor, mesh ) );
 

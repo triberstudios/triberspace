@@ -29,6 +29,15 @@ class AddObjectCommand extends Command {
 		this.editor.addObject( this.object );
 		this.editor.select( this.object );
 
+		// Switch to Scene tab to show the newly added object
+		setTimeout(() => {
+			const sidebar = document.getElementById('sidebar');
+			const sceneTab = sidebar?.querySelector('#scene'); // Tab has id="scene"
+			if (sceneTab) {
+				sceneTab.click();
+			}
+		}, 0);
+
 	}
 
 	undo() {

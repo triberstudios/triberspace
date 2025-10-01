@@ -994,6 +994,11 @@ Editor.prototype = {
 							console.log('🎬 Video texture applied to material:', object.name);
 							restoredVideos++;
 
+							// Trigger UI update for this object if it's currently selected
+							if ( this.selected === object ) {
+								this.signals.objectChanged.dispatch( object );
+							}
+
 							// Start playing if autoplay is enabled
 							if ( object.userData.autoplay !== false ) {
 								console.log('🎬 Starting video playback...');

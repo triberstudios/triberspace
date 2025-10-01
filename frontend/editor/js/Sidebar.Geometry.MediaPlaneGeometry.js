@@ -333,62 +333,343 @@ function GeometryParametersPanel( editor, object ) {
 	const geometry = object.geometry;
 	const parameters = geometry.parameters;
 
-	// Basic Plane Geometry Controls
+	// Media Shape Selection
+	const shapeRow = new UIRow();
+	const mediaShape = new UISelect().setOptions( {
+		'plane': 'Plane',
+		'sphere': 'Sphere',
+		'box': 'Box',
+		'cylinder': 'Cylinder'
+	} ).onChange( onMediaShapeChange );
 
-	// width
-	const widthRow = new UIRow();
-	const width = new UINumber( parameters.width ).onChange( updateGeometry );
+	shapeRow.add( new UIText( 'Media Shape' ).setClass( 'Label' ) );
+	shapeRow.add( mediaShape );
+	container.add( shapeRow );
 
-	widthRow.add( new UIText( strings.getKey( 'sidebar/geometry/plane_geometry/width' ) ).setClass( 'Label' ) );
-	widthRow.add( width );
+	// Double-Sided Control
+	const doubleSidedRow = new UIRow();
+	const doubleSided = new UICheckbox( object.userData.doubleSided !== false ).onChange( onDoubleSidedChange );
 
-	container.add( widthRow );
+	doubleSidedRow.add( new UIText( 'Double Sided' ).setClass( 'Label' ) );
+	doubleSidedRow.add( doubleSided );
+	container.add( doubleSidedRow );
 
-	// height
-	const heightRow = new UIRow();
-	const height = new UINumber( parameters.height ).onChange( updateGeometry );
+	// Dimension Controls Container (will be populated based on shape)
+	const dimensionContainer = new UIDiv();
+	container.add( dimensionContainer );
 
-	heightRow.add( new UIText( strings.getKey( 'sidebar/geometry/plane_geometry/height' ) ).setClass( 'Label' ) );
-	heightRow.add( height );
+	// Store current shape for reference
+	let currentShape = object.userData.mediaShape || 'plane';
+	mediaShape.setValue( currentShape );
 
-	container.add( heightRow );
+	// Dimension control variables (will be created based on shape)
+	let width, height, widthSegments, heightSegments, radius, depth;
+	let radiusTop, radiusBottom, radialSegments, depthSegments;
 
-	// widthSegments
-	const widthSegmentsRow = new UIRow();
-	const widthSegments = new UIInteger( parameters.widthSegments ).setRange( 1, Infinity ).onChange( updateGeometry );
+	// Initialize dimension controls based on current shape
+	updateDimensionControls( currentShape );
 
-	widthSegmentsRow.add( new UIText( strings.getKey( 'sidebar/geometry/plane_geometry/widthsegments' ) ).setClass( 'Label' ) );
-	widthSegmentsRow.add( widthSegments );
+	// Double-sided checkbox handler
+	function onDoubleSidedChange() {
+		const isDoubleSided = doubleSided.getValue();
 
-	container.add( widthSegmentsRow );
+		// Update userData
+		const newUserData = Object.assign( {}, object.userData, { doubleSided: isDoubleSided } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
 
-	// heightSegments
-	const heightSegmentsRow = new UIRow();
-	const heightSegments = new UIInteger( parameters.heightSegments ).setRange( 1, Infinity ).onChange( updateGeometry );
+		// Update material
+		if ( object.material ) {
+			object.material.side = isDoubleSided ? THREE.DoubleSide : THREE.FrontSide;
+			object.material.needsUpdate = true;
+		}
+	}
 
-	heightSegmentsRow.add( new UIText( strings.getKey( 'sidebar/geometry/plane_geometry/heightsegments' ) ).setClass( 'Label' ) );
-	heightSegmentsRow.add( heightSegments );
+	// Media shape change handler
+	function onMediaShapeChange() {
+		const newShape = mediaShape.getValue();
+		if ( newShape !== currentShape ) {
+			switchMediaShape( newShape );
+			currentShape = newShape;
+		}
+	}
 
-	container.add( heightSegmentsRow );
+	// Update dimension controls based on selected shape
+	function updateDimensionControls( shape ) {
+		// Clear existing controls
+		dimensionContainer.clear();
+
+		const geometry = object.geometry;
+		const parameters = geometry.parameters;
+
+		if ( shape === 'plane' ) {
+			createPlaneControls( parameters );
+		} else if ( shape === 'sphere' ) {
+			createSphereControls( parameters );
+		} else if ( shape === 'box' ) {
+			createBoxControls( parameters );
+		} else if ( shape === 'cylinder' ) {
+			createCylinderControls( parameters );
+		}
+	}
+
+	// Create plane-specific controls
+	function createPlaneControls( parameters ) {
+		// Width
+		const widthRow = new UIRow();
+		width = new UINumber( parameters.width || 1 ).onChange( updateGeometry );
+		widthRow.add( new UIText( 'Width' ).setClass( 'Label' ) );
+		widthRow.add( width );
+		dimensionContainer.add( widthRow );
+
+		// Height
+		const heightRow = new UIRow();
+		height = new UINumber( parameters.height || 1 ).onChange( updateGeometry );
+		heightRow.add( new UIText( 'Height' ).setClass( 'Label' ) );
+		heightRow.add( height );
+		dimensionContainer.add( heightRow );
+
+		// Width Segments
+		const widthSegmentsRow = new UIRow();
+		widthSegments = new UIInteger( parameters.widthSegments || 1 ).setRange( 1, Infinity ).onChange( updateGeometry );
+		widthSegmentsRow.add( new UIText( 'Width Segments' ).setClass( 'Label' ) );
+		widthSegmentsRow.add( widthSegments );
+		dimensionContainer.add( widthSegmentsRow );
+
+		// Height Segments
+		const heightSegmentsRow = new UIRow();
+		heightSegments = new UIInteger( parameters.heightSegments || 1 ).setRange( 1, Infinity ).onChange( updateGeometry );
+		heightSegmentsRow.add( new UIText( 'Height Segments' ).setClass( 'Label' ) );
+		heightSegmentsRow.add( heightSegments );
+		dimensionContainer.add( heightSegmentsRow );
+	}
+
+	// Create sphere-specific controls
+	function createSphereControls( parameters ) {
+		// Radius
+		const radiusRow = new UIRow();
+		radius = new UINumber( parameters.radius || 0.5 ).onChange( updateGeometry );
+		radiusRow.add( new UIText( 'Radius' ).setClass( 'Label' ) );
+		radiusRow.add( radius );
+		dimensionContainer.add( radiusRow );
+
+		// Width Segments
+		const widthSegmentsRow = new UIRow();
+		widthSegments = new UIInteger( parameters.widthSegments || 32 ).setRange( 3, Infinity ).onChange( updateGeometry );
+		widthSegmentsRow.add( new UIText( 'Width Segments' ).setClass( 'Label' ) );
+		widthSegmentsRow.add( widthSegments );
+		dimensionContainer.add( widthSegmentsRow );
+
+		// Height Segments
+		const heightSegmentsRow = new UIRow();
+		heightSegments = new UIInteger( parameters.heightSegments || 16 ).setRange( 2, Infinity ).onChange( updateGeometry );
+		heightSegmentsRow.add( new UIText( 'Height Segments' ).setClass( 'Label' ) );
+		heightSegmentsRow.add( heightSegments );
+		dimensionContainer.add( heightSegmentsRow );
+	}
+
+	// Create box-specific controls
+	function createBoxControls( parameters ) {
+		// Width
+		const widthRow = new UIRow();
+		width = new UINumber( parameters.width || 1 ).onChange( updateGeometry );
+		widthRow.add( new UIText( 'Width' ).setClass( 'Label' ) );
+		widthRow.add( width );
+		dimensionContainer.add( widthRow );
+
+		// Height
+		const heightRow = new UIRow();
+		height = new UINumber( parameters.height || 1 ).onChange( updateGeometry );
+		heightRow.add( new UIText( 'Height' ).setClass( 'Label' ) );
+		heightRow.add( height );
+		dimensionContainer.add( heightRow );
+
+		// Depth
+		const depthRow = new UIRow();
+		depth = new UINumber( parameters.depth || 1 ).onChange( updateGeometry );
+		depthRow.add( new UIText( 'Depth' ).setClass( 'Label' ) );
+		depthRow.add( depth );
+		dimensionContainer.add( depthRow );
+
+		// Width Segments
+		const widthSegmentsRow = new UIRow();
+		widthSegments = new UIInteger( parameters.widthSegments || 1 ).setRange( 1, Infinity ).onChange( updateGeometry );
+		widthSegmentsRow.add( new UIText( 'Width Segments' ).setClass( 'Label' ) );
+		widthSegmentsRow.add( widthSegments );
+		dimensionContainer.add( widthSegmentsRow );
+
+		// Height Segments
+		const heightSegmentsRow = new UIRow();
+		heightSegments = new UIInteger( parameters.heightSegments || 1 ).setRange( 1, Infinity ).onChange( updateGeometry );
+		heightSegmentsRow.add( new UIText( 'Height Segments' ).setClass( 'Label' ) );
+		heightSegmentsRow.add( heightSegments );
+		dimensionContainer.add( heightSegmentsRow );
+
+		// Depth Segments
+		const depthSegmentsRow = new UIRow();
+		depthSegments = new UIInteger( parameters.depthSegments || 1 ).setRange( 1, Infinity ).onChange( updateGeometry );
+		depthSegmentsRow.add( new UIText( 'Depth Segments' ).setClass( 'Label' ) );
+		depthSegmentsRow.add( depthSegments );
+		dimensionContainer.add( depthSegmentsRow );
+	}
+
+	// Create cylinder-specific controls
+	function createCylinderControls( parameters ) {
+		// Radius Top
+		const radiusTopRow = new UIRow();
+		radiusTop = new UINumber( parameters.radiusTop || 0.5 ).onChange( updateGeometry );
+		radiusTopRow.add( new UIText( 'Radius Top' ).setClass( 'Label' ) );
+		radiusTopRow.add( radiusTop );
+		dimensionContainer.add( radiusTopRow );
+
+		// Radius Bottom
+		const radiusBottomRow = new UIRow();
+		radiusBottom = new UINumber( parameters.radiusBottom || 0.5 ).onChange( updateGeometry );
+		radiusBottomRow.add( new UIText( 'Radius Bottom' ).setClass( 'Label' ) );
+		radiusBottomRow.add( radiusBottom );
+		dimensionContainer.add( radiusBottomRow );
+
+		// Height
+		const heightRow = new UIRow();
+		height = new UINumber( parameters.height || 1 ).onChange( updateGeometry );
+		heightRow.add( new UIText( 'Height' ).setClass( 'Label' ) );
+		heightRow.add( height );
+		dimensionContainer.add( heightRow );
+
+		// Radial Segments
+		const radialSegmentsRow = new UIRow();
+		radialSegments = new UIInteger( parameters.radialSegments || 32 ).setRange( 3, Infinity ).onChange( updateGeometry );
+		radialSegmentsRow.add( new UIText( 'Radial Segments' ).setClass( 'Label' ) );
+		radialSegmentsRow.add( radialSegments );
+		dimensionContainer.add( radialSegmentsRow );
+
+		// Height Segments
+		const heightSegmentsRow = new UIRow();
+		heightSegments = new UIInteger( parameters.heightSegments || 1 ).setRange( 1, Infinity ).onChange( updateGeometry );
+		heightSegmentsRow.add( new UIText( 'Height Segments' ).setClass( 'Label' ) );
+		heightSegmentsRow.add( heightSegments );
+		dimensionContainer.add( heightSegmentsRow );
+	}
+
+	// Switch media shape and preserve texture/settings
+	function switchMediaShape( newShape ) {
+		const currentTexture = object.material.map;
+		const currentUserData = Object.assign( {}, object.userData );
+
+		// Update shape in userData
+		currentUserData.mediaShape = newShape;
+
+		let newGeometry;
+		switch ( newShape ) {
+			case 'plane':
+				newGeometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
+				break;
+			case 'sphere':
+				newGeometry = new THREE.SphereGeometry( 0.5, 32, 16 );
+				break;
+			case 'box':
+				newGeometry = new THREE.BoxGeometry( 1, 1, 1, 1, 1, 1 );
+				break;
+			case 'cylinder':
+				newGeometry = new THREE.CylinderGeometry( 0.5, 0.5, 1, 32, 1 );
+				break;
+		}
+
+		// Update geometry
+		editor.execute( new SetGeometryCommand( editor, object, newGeometry ) );
+
+		// Preserve texture and settings
+		editor.execute( new SetValueCommand( editor, object, 'userData', currentUserData ) );
+
+		// Ensure material remains double-sided if it was before
+		if ( object.material && currentUserData.doubleSided ) {
+			object.material.side = THREE.DoubleSide;
+			object.material.needsUpdate = true;
+		}
+
+		// Update dimension controls for new shape
+		updateDimensionControls( newShape );
+	}
 
 	//
 
 	function refreshUI() {
 		const parameters = object.geometry.parameters;
+		const shape = object.userData.mediaShape || 'plane';
 
-		width.setValue( parameters.width );
-		height.setValue( parameters.height );
-		widthSegments.setValue( parameters.widthSegments );
-		heightSegments.setValue( parameters.heightSegments );
+		// Update shape dropdown
+		mediaShape.setValue( shape );
+		doubleSided.setValue( object.userData.doubleSided !== false );
+
+		// Update dimension controls based on shape
+		if ( shape === 'plane' && width && height && widthSegments && heightSegments ) {
+			width.setValue( parameters.width );
+			height.setValue( parameters.height );
+			widthSegments.setValue( parameters.widthSegments );
+			heightSegments.setValue( parameters.heightSegments );
+		} else if ( shape === 'sphere' && radius && widthSegments && heightSegments ) {
+			radius.setValue( parameters.radius );
+			widthSegments.setValue( parameters.widthSegments );
+			heightSegments.setValue( parameters.heightSegments );
+		} else if ( shape === 'box' && width && height && depth ) {
+			width.setValue( parameters.width );
+			height.setValue( parameters.height );
+			depth.setValue( parameters.depth );
+			if ( widthSegments ) widthSegments.setValue( parameters.widthSegments );
+			if ( heightSegments ) heightSegments.setValue( parameters.heightSegments );
+			if ( depthSegments ) depthSegments.setValue( parameters.depthSegments );
+		} else if ( shape === 'cylinder' && radiusTop && radiusBottom && height ) {
+			radiusTop.setValue( parameters.radiusTop );
+			radiusBottom.setValue( parameters.radiusBottom );
+			height.setValue( parameters.height );
+			if ( radialSegments ) radialSegments.setValue( parameters.radialSegments );
+			if ( heightSegments ) heightSegments.setValue( parameters.heightSegments );
+		}
 	}
 
 	function updateGeometry() {
-		editor.execute( new SetGeometryCommand( editor, object, new THREE.PlaneGeometry(
-			width.getValue(),
-			height.getValue(),
-			widthSegments.getValue(),
-			heightSegments.getValue()
-		) ) );
+		const shape = object.userData.mediaShape || 'plane';
+		let newGeometry;
+
+		switch ( shape ) {
+			case 'plane':
+				newGeometry = new THREE.PlaneGeometry(
+					width ? width.getValue() : 1,
+					height ? height.getValue() : 1,
+					widthSegments ? widthSegments.getValue() : 1,
+					heightSegments ? heightSegments.getValue() : 1
+				);
+				break;
+			case 'sphere':
+				newGeometry = new THREE.SphereGeometry(
+					radius ? radius.getValue() : 0.5,
+					widthSegments ? widthSegments.getValue() : 32,
+					heightSegments ? heightSegments.getValue() : 16
+				);
+				break;
+			case 'box':
+				newGeometry = new THREE.BoxGeometry(
+					width ? width.getValue() : 1,
+					height ? height.getValue() : 1,
+					depth ? depth.getValue() : 1,
+					widthSegments ? widthSegments.getValue() : 1,
+					heightSegments ? heightSegments.getValue() : 1,
+					depthSegments ? depthSegments.getValue() : 1
+				);
+				break;
+			case 'cylinder':
+				newGeometry = new THREE.CylinderGeometry(
+					radiusTop ? radiusTop.getValue() : 0.5,
+					radiusBottom ? radiusBottom.getValue() : 0.5,
+					height ? height.getValue() : 1,
+					radialSegments ? radialSegments.getValue() : 32,
+					heightSegments ? heightSegments.getValue() : 1
+				);
+				break;
+			default:
+				newGeometry = new THREE.PlaneGeometry( 1, 1, 1, 1 );
+		}
+
+		editor.execute( new SetGeometryCommand( editor, object, newGeometry ) );
 	}
 
 	// Aspect ratio-aware dimension change handlers
