@@ -610,7 +610,14 @@ function MenubarAdd( editor ) {
 		`;
 		closeButton.onclick = () => document.body.removeChild( browserWindow );
 
-		browserContainer.appendChild( sketchfabBrowser.container.dom );
+		// Add click-outside-to-close functionality
+		browserWindow.onclick = ( event ) => {
+			if ( event.target === browserWindow ) {
+				document.body.removeChild( browserWindow );
+			}
+		};
+
+		browserContainer.appendChild( sketchfabBrowser.container );
 		browserContainer.appendChild( closeButton );
 		browserWindow.appendChild( browserContainer );
 		document.body.appendChild( browserWindow );
