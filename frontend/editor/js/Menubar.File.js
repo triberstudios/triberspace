@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 import { UIPanel, UIRow, UIHorizontalRule } from './libs/ui.js';
-import { SketchfabBrowser } from './sketchfab/SketchfabBrowser.js';
 
 function MenubarFile( editor ) {
 
