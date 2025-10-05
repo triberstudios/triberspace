@@ -7,6 +7,13 @@ interface SketchfabTokenRequest {
   };
 }
 
+interface SketchfabSearchRequest {
+  Body: {
+    query: string;
+    count?: number;
+  };
+}
+
 export async function v1SketchfabRoutes(fastify: FastifyInstance) {
   // Exchange authorization code for access token
   fastify.post<SketchfabTokenRequest>('/token', async (request, reply) => {
@@ -72,6 +79,84 @@ export async function v1SketchfabRoutes(fastify: FastifyInstance) {
         success: false,
         error: 'internal_error',
         message: 'Failed to process token exchange'
+      });
+    }
+  });
+
+  // Search Sketchfab models
+  fastify.post<SketchfabSearchRequest>('/search', async (request, reply) => {
+    const { query, count = 3 } = request.body;
+
+    if (!query) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    try {
+      // Use Sketchfab's public search API
+      const searchUrl = new URL('https://api.sketchfab.com/v3/search');
+      searchUrl.searchParams.set('type', 'models');
+      searchUrl.searchParams.set('q', query);
+      searchUrl.searchParams.set('downloadable', 'true');
+      searchUrl.searchParams.set('count', count.toString());
+      searchUrl.searchParams.set('sort_by', '-likeCount'); // Sort by popularity
+
+      const response = await fetch(searchUrl.toString(), {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        fastify.log.error(`Sketchfab search failed: ${response.status}`);
+        return reply.status(500).send({
+          success: false,
+          error: 'search_failed',
+          message: 'Failed to search Sketchfab'
+        });
+      }
+
+      const data = await response.json() as {
+        results?: Array<{
+          uid: string;
+          name: string;
+          thumbnails?: {
+            images: Array<{ url: string; width: number; height: number }>;
+          };
+          viewerUrl?: string;
+          archives?: {
+            gltf?: { url: string };
+          };
+        }>;
+      };
+
+      // Format results for frontend
+      const models = (data.results || []).map(model => ({
+        uid: model.uid,
+        name: model.name,
+        thumbnail: model.thumbnails?.images?.[0]?.url || '',
+        viewerUrl: model.viewerUrl || `https://sketchfab.com/models/${model.uid}`,
+        downloadUrl: model.archives?.gltf?.url || null
+      }));
+
+      return reply.send({
+        success: true,
+        data: {
+          models,
+          query,
+          count: models.length
+        }
+      });
+
+    } catch (error) {
+      fastify.log.error('Sketchfab search error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'internal_error',
+        message: 'Failed to process search request'
       });
     }
   });

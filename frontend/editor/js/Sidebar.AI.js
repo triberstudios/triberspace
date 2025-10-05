@@ -267,6 +267,162 @@ function SidebarAI( editor ) {
 	// Chat message management
 	const messages = [];
 
+	function renderModelCards(models) {
+		if (!models || models.length === 0) {
+			addMessage("No models found. Try a different search term.", false, false);
+			return;
+		}
+
+		// Create container for model cards
+		const cardsContainer = document.createElement('div');
+		cardsContainer.style.cssText = `
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-bottom: 12px;
+			width: 100%;
+		`;
+
+		models.forEach(model => {
+			const card = document.createElement('div');
+			card.style.cssText = `
+				display: flex;
+				flex-direction: row;
+				gap: 12px;
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				border-radius: 12px;
+				padding: 12px;
+				cursor: pointer;
+				transition: all 0.2s ease;
+			`;
+
+			// Thumbnail
+			const thumbnail = document.createElement('img');
+			thumbnail.src = model.thumbnail;
+			thumbnail.alt = model.name;
+			thumbnail.style.cssText = `
+				width: 80px;
+				height: 80px;
+				border-radius: 8px;
+				object-fit: cover;
+				flex-shrink: 0;
+				background: rgba(0, 0, 0, 0.3);
+			`;
+
+			// Content area
+			const contentArea = document.createElement('div');
+			contentArea.style.cssText = `
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+				min-width: 0;
+			`;
+
+			// Title
+			const title = document.createElement('div');
+			title.textContent = model.name;
+			title.style.cssText = `
+				color: #e2e8f0;
+				font-size: 14px;
+				font-weight: 600;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			`;
+
+			// Add button
+			const addButton = document.createElement('button');
+			addButton.textContent = 'Add to scene';
+			addButton.style.cssText = `
+				padding: 4px 8px;
+				background: rgba(255, 255, 255, 0.1);
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				border-radius: 6px;
+				color: #e2e8f0;
+				font-size: 11px;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				align-self: flex-start;
+			`;
+
+			addButton.addEventListener('mouseenter', () => {
+				if (!addButton.disabled) {
+					addButton.style.background = 'rgba(255, 255, 255, 0.15)';
+				}
+			});
+			addButton.addEventListener('mouseleave', () => {
+				if (!addButton.disabled && !addButton.classList.contains('success') && !addButton.classList.contains('error')) {
+					addButton.style.background = 'rgba(255, 255, 255, 0.1)';
+				}
+			});
+
+			addButton.addEventListener('click', async (e) => {
+				e.stopPropagation();
+				addButton.disabled = true;
+				addButton.textContent = 'Adding...';
+				addButton.style.background = 'rgba(255, 255, 255, 0.05)';
+
+				try {
+					await commandExecutor.executeCommand({
+						action: 'importSketchfabModel',
+						uid: model.uid,
+						downloadUrl: model.downloadUrl,
+						name: model.name,
+						viewerUrl: model.viewerUrl
+					});
+
+					addButton.textContent = 'Added ✓';
+					addButton.style.background = 'rgba(72, 187, 120, 0.3)';
+					addButton.style.borderColor = 'rgba(72, 187, 120, 0.5)';
+					addButton.classList.add('success');
+
+					addMessage(`Added "${model.name}" to the scene!`, false, false);
+
+				} catch (error) {
+					console.error('Failed to add model:', error);
+					addButton.textContent = 'Failed';
+					addButton.style.background = 'rgba(252, 129, 129, 0.3)';
+					addButton.style.borderColor = 'rgba(252, 129, 129, 0.5)';
+					addButton.classList.add('error');
+					addMessage(`Failed to add model: ${error.message}`, false, true);
+
+					setTimeout(() => {
+						addButton.disabled = false;
+						addButton.textContent = 'Add to scene';
+						addButton.style.background = 'rgba(255, 255, 255, 0.1)';
+						addButton.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+						addButton.classList.remove('error');
+					}, 2000);
+				}
+			});
+
+			contentArea.appendChild(title);
+			contentArea.appendChild(addButton);
+
+			card.appendChild(thumbnail);
+			card.appendChild(contentArea);
+
+			// Hover effect
+			card.addEventListener('mouseenter', () => {
+				card.style.background = 'rgba(255, 255, 255, 0.12)';
+			});
+			card.addEventListener('mouseleave', () => {
+				card.style.background = 'rgba(255, 255, 255, 0.08)';
+			});
+
+			cardsContainer.appendChild(card);
+		});
+
+		messagesArea.appendChild(cardsContainer);
+
+		// Auto-scroll to show latest messages
+		setTimeout(() => {
+			messagesArea.scrollTop = messagesArea.scrollHeight;
+		}, 10);
+	}
+
 	function addMessage(content, isUser = false, isError = false) {
 		// Hide empty state when adding first message
 		if (messages.length === 0) {
@@ -378,7 +534,19 @@ function SidebarAI( editor ) {
 			if (result.commands && result.commands.length > 0) {
 				// Execute commands
 				const executionResults = await commandExecutor.executeCommands(result.commands);
-				
+
+				// Check if this was a Sketchfab search
+				const searchResult = executionResults.find(r => r.success && r.command.action === 'searchSketchfab');
+				if (searchResult && searchResult.result) {
+					// Show AI response first
+					if (result.response) {
+						addMessage(result.response);
+					}
+					// Then render model cards
+					renderModelCards(searchResult.result.models);
+					return;
+				}
+
 				// Check for failures
 				const failures = executionResults.filter(r => !r.success);
 				if (failures.length > 0) {

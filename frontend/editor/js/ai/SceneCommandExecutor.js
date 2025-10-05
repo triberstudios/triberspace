@@ -97,6 +97,12 @@ class SceneCommandExecutor {
 			case 'removeInteraction':
 				return this.removeInteraction(command);
 
+			case 'searchSketchfab':
+				return this.searchSketchfab(command);
+
+			case 'importSketchfabModel':
+				return this.importSketchfabModel(command);
+
 			default:
 				throw new Error(`Unknown command action: ${command.action}`);
 		}
@@ -1565,6 +1571,87 @@ class SceneCommandExecutor {
 		}
 
 		return nodeType.includes(targetType);
+	}
+
+	/**
+	 * Search Sketchfab for 3D models
+	 * @param {Object} command - Search command with query
+	 * @returns {Promise<Object>} Search results with models
+	 */
+	async searchSketchfab(command) {
+		const { query, count = 3 } = command;
+
+		try {
+			const response = await fetch('http://localhost:3001/api/v1/sketchfab/search', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ query, count })
+			});
+
+			if (!response.ok) {
+				throw new Error(`Sketchfab search failed: ${response.status}`);
+			}
+
+			const data = await response.json();
+
+			if (!data.success) {
+				throw new Error(data.error || 'Search failed');
+			}
+
+			// Return models data - this will be used by the UI to render cards
+			return {
+				models: data.data.models,
+				query: data.data.query
+			};
+
+		} catch (error) {
+			console.error('Sketchfab search error:', error);
+			throw new Error(`Failed to search Sketchfab: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Import a Sketchfab model into the scene
+	 * @param {Object} command - Import command with model details
+	 * @returns {Promise<Object>} Imported model
+	 */
+	async importSketchfabModel(command) {
+		const { uid, name, viewerUrl } = command;
+
+		console.log('Importing Sketchfab model:', { uid, name, viewerUrl });
+
+		try {
+			// Lazy load Sketchfab modules
+			const { SketchfabAPI } = await import('../sketchfab/SketchfabAPI.js');
+			const { SketchfabLoader } = await import('../sketchfab/SketchfabLoader.js');
+
+			// Initialize API and loader
+			const api = new SketchfabAPI();
+			const loader = new SketchfabLoader(this.editor);
+
+			// Check if user is authenticated
+			if (!api.isAuthenticated) {
+				throw new Error('Please authenticate with Sketchfab first. Click the Sketchfab icon in the toolbar to login.');
+			}
+
+			// Get full model details and download link
+			const modelData = await api.getModel(uid);
+			const downloadData = await api.requestDownload(uid);
+
+			// Use the existing loader to download and import the model
+			await loader.loadModel(downloadData, modelData);
+
+			return {
+				success: true,
+				message: `Successfully imported "${name}" from Sketchfab`
+			};
+
+		} catch (error) {
+			console.error('Failed to import Sketchfab model:', error);
+			throw new Error(`Failed to import model: ${error.message}`);
+		}
 	}
 }
 

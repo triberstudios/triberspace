@@ -140,6 +140,14 @@ class MockProvider extends AIProvider {
 				response = `I've added a ${lightCommand.type} light to your scene!`;
 			}
 		}
+		else if (input.match(/\b(add|search|find)\b.*\bgallery\b/i) || input.match(/\bsearch\s+for\b/i)) {
+			const searchQuery = this.extractSearchQuery(input, 'art gallery');
+			commands.push({
+				action: 'searchSketchfab',
+				query: searchQuery
+			});
+			response = `Searching Sketchfab for "${searchQuery}"...`;
+		}
 		else if (input.includes('clear') || input.includes('delete all')) {
 			commands.push({ action: 'clearScene' });
 			response = "I've cleared the scene for you!";
@@ -811,6 +819,41 @@ class MockProvider extends AIProvider {
 		}
 
 		return common;
+	}
+
+	/**
+	 * Extract search query from user input
+	 * @param {string} input - User input string
+	 * @param {string} defaultQuery - Default query if none found
+	 * @returns {string} Extracted search query
+	 */
+	extractSearchQuery(input, defaultQuery = 'art gallery') {
+		// Pattern 1: "search for [query]"
+		let match = input.match(/search\s+for\s+(.+)/i);
+		if (match) {
+			return match[1].trim();
+		}
+
+		// Pattern 2: "find [query]"
+		match = input.match(/find\s+(?:a\s+)?(.+)/i);
+		if (match) {
+			return match[1].trim();
+		}
+
+		// Pattern 3: "add a [query]" or "add [query]"
+		match = input.match(/add\s+(?:a\s+)?(.+)/i);
+		if (match) {
+			return match[1].trim();
+		}
+
+		// Pattern 4: "search [query]"
+		match = input.match(/search\s+(.+)/i);
+		if (match) {
+			return match[1].trim();
+		}
+
+		// If no pattern matched, return default
+		return defaultQuery;
 	}
 
 	async simulateDelay(min = 100, max = 500) {

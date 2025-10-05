@@ -135,6 +135,7 @@ ACTIONS:
 - Object manipulation: moveObject, rotateObject, scaleObject, removeObject, clearScene
 - Material changes: changeMaterialColor, changeMaterialType, changeMaterialProperty
 - INTERACTIONS: createSpinning, createPulsing, modifySpinning, modifyPulsing, removeInteraction
+- SKETCHFAB SEARCH: searchSketchfab - search for 3D models on Sketchfab
 
 OBJECTS: cube, sphere, plane, cylinder, cone, torus, dodecahedron, icosahedron, octahedron, tetrahedron, capsule, circle, ring, torusknot.
 
@@ -182,6 +183,12 @@ Use modifySpinning/modifyPulsing when:
 1. [Interactions: ...] context shows existing animations for target object
 2. User uses modification keywords: counterclockwise, clockwise, faster, slower, reverse, change, adjust
 3. User specifies parameter changes without "make" or "create"
+
+SKETCHFAB SEARCH:
+- "search for art gallery" → {action:"searchSketchfab",query:"art gallery"}
+- "add a round art gallery" → {action:"searchSketchfab",query:"round art gallery"}
+- "find medieval castle" → {action:"searchSketchfab",query:"medieval castle"}
+- "search for sci-fi spaceship" → {action:"searchSketchfab",query:"sci-fi spaceship"}
 
 Examples:
 - "red cube" → {action:"addObject",type:"cube",name:"red_cube",color:"red"}
