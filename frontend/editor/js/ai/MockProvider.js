@@ -24,8 +24,8 @@ class MockProvider extends AIProvider {
 		const commands = [];
 		let response = "I'm not sure how to do that yet.";
 
-		// Enhanced target object extraction
-		let targetObject = this.extractTargetObject(input);
+		// Enhanced target object extraction with scene context
+		let targetObject = this.extractTargetObject(input, context);
 
 		// INTERACTION COMMANDS - Check these FIRST to avoid conflicts with shape names
 		// Check for modification keywords first
@@ -576,19 +576,97 @@ class MockProvider extends AIProvider {
 	}
 
 	/**
-	 * Extract target object from user input
+	 * Extract target object from user input with enhanced support for any object name
 	 * @param {string} input - User input string
+	 * @param {Object} context - Scene context with object information
 	 * @returns {string} Target object identifier
 	 */
-	extractTargetObject(input) {
+	extractTargetObject(input, context = {}) {
+		console.log('Extracting target object from:', input);
+		console.log('Scene context:', context);
+
 		// Check for object ID references (e.g., "obj12")
 		const objIdMatch = input.match(/obj(\d+)/);
 		if (objIdMatch) {
+			console.log(`Found object ID reference: obj${objIdMatch[1]}`);
 			return `obj${objIdMatch[1]}`;
 		}
 
-		// Check for object types in interaction commands
-		// Pattern: "make the [object] [action]" or "[action] the [object]"
+		// Check for quoted object names (e.g., "scale 'VR Round Art Gallery' to 2")
+		const quotedMatch = input.match(/["']([^"']+)["']/);
+		if (quotedMatch) {
+			const quotedName = quotedMatch[1];
+			console.log(`Found quoted object name: ${quotedName}`);
+			// Check if this matches any object in the scene
+			if (context.sceneObjects) {
+				const matchingObject = context.sceneObjects.find(obj =>
+					obj.name && obj.name.toLowerCase().includes(quotedName.toLowerCase())
+				);
+				if (matchingObject) {
+					console.log(`Matched quoted name to scene object: ${matchingObject.name}`);
+					return matchingObject.name;
+				}
+			}
+			return quotedName;
+		}
+
+		// Enhanced "the [object phrase]" pattern extraction
+		// Look for everything between "the " and action words, capturing multi-word object names
+		const actionWords = ['to', 'by', 'with', 'scale', 'rotate', 'move', 'spin', 'pulse', 'make', 'set'];
+		const thePattern = new RegExp(`the\\s+([^\\s]+(?:\\s+[^\\s]+)*?)\\s+(?:${actionWords.join('|')})`, 'i');
+		const theObjectMatch = input.match(thePattern);
+
+		if (theObjectMatch) {
+			const extractedPhrase = theObjectMatch[1].toLowerCase().trim();
+			console.log(`Extracted phrase after 'the': "${extractedPhrase}"`);
+
+			// Try to match against scene objects first
+			if (context.sceneObjects) {
+				const bestMatch = this.findBestObjectMatch(extractedPhrase, context.sceneObjects);
+				if (bestMatch) {
+					console.log(`Matched phrase to scene object: ${bestMatch.name}`);
+					return bestMatch.name;
+				}
+			}
+
+			// Return the extracted phrase as-is for the SceneCommandExecutor to handle
+			return extractedPhrase;
+		}
+
+		// Fallback: Look for "the [word]" pattern (original logic)
+		const simpleTheMatch = input.match(/the\s+(\w+)/);
+		if (simpleTheMatch) {
+			const singleWord = simpleTheMatch[1].toLowerCase();
+			console.log(`Found simple 'the' pattern: ${singleWord}`);
+
+			// Check against scene objects first
+			if (context.sceneObjects) {
+				const matchingObject = context.sceneObjects.find(obj =>
+					obj.name && obj.name.toLowerCase().includes(singleWord)
+				);
+				if (matchingObject) {
+					console.log(`Matched single word to scene object: ${matchingObject.name}`);
+					return matchingObject.name;
+				}
+			}
+
+			// Check against primitive types (keep existing logic as fallback)
+			const objectTypes = [
+				'cube', 'box', 'sphere', 'ball', 'plane', 'ground',
+				'cylinder', 'cone', 'torus', 'donut', 'dodecahedron',
+				'icosahedron', 'octahedron', 'tetrahedron', 'capsule',
+				'pill', 'circle', 'ring', 'torusknot'
+			];
+
+			if (objectTypes.includes(singleWord)) {
+				console.log(`Matched to primitive type: ${singleWord}`);
+				return singleWord;
+			}
+
+			return singleWord;
+		}
+
+		// Look for primitive object types in the input (existing logic)
 		const objectTypes = [
 			'cube', 'box', 'sphere', 'ball', 'plane', 'ground',
 			'cylinder', 'cone', 'torus', 'donut', 'dodecahedron',
@@ -596,25 +674,14 @@ class MockProvider extends AIProvider {
 			'pill', 'circle', 'ring', 'torusknot'
 		];
 
-		// Look for "the [object]" pattern
-		const theObjectMatch = input.match(/the\s+(\w+)/);
-		if (theObjectMatch) {
-			const potentialObject = theObjectMatch[1].toLowerCase();
-			if (objectTypes.includes(potentialObject)) {
-				console.log(`Extracted target object from "the ${potentialObject}": ${potentialObject}`);
-				return potentialObject;
-			}
-		}
-
-		// Look for "[object] [action]" pattern (e.g., "cube spin", "sphere pulse")
 		for (const objectType of objectTypes) {
 			if (input.includes(objectType)) {
-				console.log(`Found object type in input: ${objectType}`);
+				console.log(`Found primitive object type in input: ${objectType}`);
 				return objectType;
 			}
 		}
 
-		// Check for color + object combinations (e.g., "red cube", "blue sphere")
+		// Check for color + object combinations (existing logic)
 		const colors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'white', 'black', 'gray', 'brown'];
 		for (const color of colors) {
 			for (const objectType of objectTypes) {
@@ -628,6 +695,122 @@ class MockProvider extends AIProvider {
 		// Default to selected if no specific object found
 		console.log('No specific object found, defaulting to selected');
 		return 'selected';
+	}
+
+	/**
+	 * Find the best matching object from scene objects using fuzzy matching
+	 * @param {string} searchPhrase - The phrase to search for
+	 * @param {Array} sceneObjects - Array of scene objects
+	 * @returns {Object|null} Best matching object or null
+	 */
+	findBestObjectMatch(searchPhrase, sceneObjects) {
+		if (!sceneObjects || !Array.isArray(sceneObjects)) {
+			return null;
+		}
+
+		let bestMatch = null;
+		let bestScore = 0;
+
+		for (const obj of sceneObjects) {
+			if (!obj.name) continue;
+
+			const objectName = obj.name.toLowerCase();
+			const score = this.calculateNameSimilarity(searchPhrase, objectName);
+
+			if (score > bestScore && score > 0.3) { // Only consider matches above 30% similarity
+				bestScore = score;
+				bestMatch = obj;
+			}
+		}
+
+		if (bestMatch) {
+			console.log(`Best match for "${searchPhrase}": "${bestMatch.name}" (score: ${bestScore.toFixed(2)})`);
+		}
+
+		return bestMatch;
+	}
+
+	/**
+	 * Calculate similarity between search phrase and object name
+	 * @param {string} searchPhrase - The phrase being searched for
+	 * @param {string} objectName - The object name to compare against
+	 * @returns {number} Similarity score between 0 and 1
+	 */
+	calculateNameSimilarity(searchPhrase, objectName) {
+		// Normalize both strings
+		const search = searchPhrase.toLowerCase().trim();
+		const name = objectName.toLowerCase().trim();
+
+		// Exact match
+		if (search === name) {
+			return 1.0;
+		}
+
+		// Check if search phrase is contained in object name
+		if (name.includes(search)) {
+			return 0.8;
+		}
+
+		// Check if object name is contained in search phrase
+		if (search.includes(name)) {
+			return 0.7;
+		}
+
+		// Word-based matching - count matching words
+		const searchWords = search.split(/\s+/);
+		const nameWords = name.split(/\s+/);
+		let matchingWords = 0;
+
+		for (const searchWord of searchWords) {
+			for (const nameWord of nameWords) {
+				if (searchWord === nameWord ||
+					searchWord.includes(nameWord) ||
+					nameWord.includes(searchWord)) {
+					matchingWords++;
+					break;
+				}
+			}
+		}
+
+		// Calculate word match ratio
+		const wordScore = matchingWords / Math.max(searchWords.length, nameWords.length);
+
+		// Bonus for partial word matches
+		let partialScore = 0;
+		for (const searchWord of searchWords) {
+			for (const nameWord of nameWords) {
+				if (searchWord.length > 2 && nameWord.length > 2) {
+					const commonChars = this.getCommonCharacters(searchWord, nameWord);
+					if (commonChars > Math.min(searchWord.length, nameWord.length) * 0.6) {
+						partialScore += 0.1;
+					}
+				}
+			}
+		}
+
+		return Math.min(wordScore + partialScore, 1.0);
+	}
+
+	/**
+	 * Count common characters between two strings
+	 * @param {string} str1 - First string
+	 * @param {string} str2 - Second string
+	 * @returns {number} Number of common characters
+	 */
+	getCommonCharacters(str1, str2) {
+		let common = 0;
+		const chars1 = str1.split('');
+		const chars2 = str2.split('');
+
+		for (const char of chars1) {
+			const index = chars2.indexOf(char);
+			if (index !== -1) {
+				common++;
+				chars2.splice(index, 1); // Remove to avoid double counting
+			}
+		}
+
+		return common;
 	}
 
 	async simulateDelay(min = 100, max = 500) {
