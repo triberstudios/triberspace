@@ -30,6 +30,9 @@ function SidebarAI( editor ) {
 	document.head.appendChild(style);
 
 
+	// Check if preview mode (disable AI chat for preview users)
+	const isPreviewMode = window.location.hostname === 'engine.triber.space';
+
 	// Initialize AI system
 	const aiManager = AIManager.createDefault();
 	const commandExecutor = new SceneCommandExecutor(editor);
@@ -77,6 +80,8 @@ function SidebarAI( editor ) {
 	const messageInput = document.createElement('input');
 	messageInput.type = 'text';
 	messageInput.placeholder = 'Ask AI to add objects, move things around...';
+	messageInput.title = isPreviewMode ? 'Chat is not available to preview users' : '';
+	messageInput.disabled = isPreviewMode;
 	messageInput.style.cssText = `
 		width: 100%;
 		border: none;
@@ -85,10 +90,14 @@ function SidebarAI( editor ) {
 		font-size: 14px;
 		outline: none;
 		padding: 0 60px 0 16px;
+		cursor: ${isPreviewMode ? 'not-allowed' : 'text'};
+		opacity: ${isPreviewMode ? '0.5' : '1'};
 	`;
 	
 	const sendButton = document.createElement('button');
 	sendButton.innerHTML = '<i class="ph ph-paper-plane-tilt"></i>';
+	sendButton.title = isPreviewMode ? 'Chat is not available to preview users' : '';
+	sendButton.disabled = isPreviewMode;
 	sendButton.style.cssText = `
 		position: absolute;
 		right: 8px;
@@ -100,20 +109,23 @@ function SidebarAI( editor ) {
 		background: transparent;
 		color: #f8f8f2;
 		border-radius: 50%;
-		cursor: pointer;
+		cursor: ${isPreviewMode ? 'not-allowed' : 'pointer'};
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 16px;
 		transition: all 0.2s ease;
+		opacity: ${isPreviewMode ? '0.5' : '1'};
 	`;
-	
-	sendButton.addEventListener('mouseenter', () => {
-		sendButton.style.background = 'rgba(255, 255, 255, 0.1)';
-	});
-	sendButton.addEventListener('mouseleave', () => {
-		sendButton.style.background = 'transparent';
-	});
+
+	if (!isPreviewMode) {
+		sendButton.addEventListener('mouseenter', () => {
+			sendButton.style.background = 'rgba(255, 255, 255, 0.1)';
+		});
+		sendButton.addEventListener('mouseleave', () => {
+			sendButton.style.background = 'transparent';
+		});
+	}
 	
 	inputWrapper.appendChild(messageInput);
 	inputWrapper.appendChild(sendButton);
@@ -179,33 +191,37 @@ function SidebarAI( editor ) {
 	
 	prompts.forEach(prompt => {
 		const promptButton = document.createElement('div');
+		promptButton.title = isPreviewMode ? 'Chat is not available to preview users' : '';
 		promptButton.style.cssText = `
 			padding: 12px 20px;
 			background: rgba(255, 255, 255, 0.08);
 			border: 1px solid rgba(255, 255, 255, 0.15);
 			border-radius: 12px;
-			cursor: pointer;
+			cursor: ${isPreviewMode ? 'not-allowed' : 'pointer'};
 			transition: all 0.2s ease;
 			color: #e2e8f0;
 			font-size: 14px;
 			text-align: center;
 			font-weight: 500;
+			opacity: ${isPreviewMode ? '0.5' : '1'};
 		`;
 		promptButton.textContent = prompt;
-		
-		promptButton.addEventListener('mouseenter', () => {
-			promptButton.style.background = 'rgba(255, 255, 255, 0.15)';
-			promptButton.style.transform = 'translateY(-1px)';
-		});
-		promptButton.addEventListener('mouseleave', () => {
-			promptButton.style.background = 'rgba(255, 255, 255, 0.08)';
-			promptButton.style.transform = 'translateY(0)';
-		});
-		promptButton.addEventListener('click', () => {
-			messageInput.value = prompt;
-			processMessage(prompt);
-		});
-		
+
+		if (!isPreviewMode) {
+			promptButton.addEventListener('mouseenter', () => {
+				promptButton.style.background = 'rgba(255, 255, 255, 0.15)';
+				promptButton.style.transform = 'translateY(-1px)';
+			});
+			promptButton.addEventListener('mouseleave', () => {
+				promptButton.style.background = 'rgba(255, 255, 255, 0.08)';
+				promptButton.style.transform = 'translateY(0)';
+			});
+			promptButton.addEventListener('click', () => {
+				messageInput.value = prompt;
+				processMessage(prompt);
+			});
+		}
+
 		promptsContainer.appendChild(promptButton);
 	});
 	
