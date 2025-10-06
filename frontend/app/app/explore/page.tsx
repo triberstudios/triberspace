@@ -45,20 +45,26 @@ const categories = [
     experiences: [
       { id: 5, title: "Ajaar Live Sessions", brand: "Ajaar", type: "concert" },
       { id: 6, title: "V2 Listening Party", brand: "V2", type: "studio" },
+      { id: 7, title: "Kendrick Lamar Album Listening", brand: "pgLang", type: "concert" },
+      { id: 8, title: "Smino Virtual Concert", brand: "V2", type: "studio" },
     ]
   },
   {
     title: "Film",
     experiences: [
-      { id: 7, title: "Beloved Film Premiere", brand: "Beloved.", type: "cinema" },
-      { id: 8, title: "Triber Documentary", brand: "Triber Studios", type: "production" },
+      { id: 9, title: "Beloved Film Premiere", brand: "Beloved.", type: "cinema" },
+      { id: 10, title: "Triber Documentary", brand: "Triber Studios", type: "production" },
+      { id: 11, title: "Nope Screening", brand: "Monkeypaw Studios", type: "movie" },
+      { id: 12, title: "V2 Stream Party", brand: "V2", type: "studio" },
     ]
   },
   {
     title: "Fashion",
     experiences: [
-      { id: 9, title: "V2 Fashion Week", brand: "V2", type: "runway" },
-      { id: 10, title: "Ajaar Atelier", brand: "Ajaar", type: "studio" },
+      { id: 13, title: "V2 Fashion Week", brand: "V2", type: "runway" },
+      { id: 14, title: "Ajaar Atelier", brand: "Ajaar", type: "studio" },
+      { id: 15, title: "LV Showroom", brand: "Louis Vuitton", type: "concert" },
+      { id: 16, title: "LV Fashion Show Live", brand: "Louis Vuitton", type: "studio" },
     ]
   }
 ]
