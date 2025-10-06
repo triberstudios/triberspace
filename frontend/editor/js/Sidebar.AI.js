@@ -30,14 +30,18 @@ function SidebarAI( editor ) {
 	document.head.appendChild(style);
 
 
-	// Check if preview mode (disable AI chat for preview users)
-	const isPreviewMode = window.location.hostname === 'engine.triber.space';
+	// PREVIEW MODE: Hardcoded to true (disable AI chat for preview users)
+	// To re-enable: change to false or use hostname check
+	// const isPreviewMode = window.location.hostname === 'engine.triber.space';
+	const isPreviewMode = true;
 
-	// Initialize AI system
-	const aiManager = AIManager.createDefault();
-	const commandExecutor = new SceneCommandExecutor(editor);
-	let isInitializing = false;
-	let currentProvider = 'mock';
+	// Initialize AI system (disabled in preview mode)
+	// const aiManager = AIManager.createDefault();
+	// const commandExecutor = new SceneCommandExecutor(editor);
+	// let isInitializing = false;
+	// let currentProvider = 'mock';
+	const aiManager = null;
+	const commandExecutor = null;
 
 	// Messages area - use viewport height for reliable calculation
 	const messagesArea = document.createElement('div');
@@ -134,18 +138,18 @@ function SidebarAI( editor ) {
 	container.dom.appendChild(messagesArea);
 	container.dom.appendChild(inputContainer);
 	
-	// Focus effects on input wrapper
-	messageInput.addEventListener('focus', () => {
-		inputWrapper.style.background = 'rgba(0, 0, 0, 0.7)';
-		inputWrapper.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-		inputWrapper.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.1)';
-	});
-	
-	messageInput.addEventListener('blur', () => {
-		inputWrapper.style.background = 'rgba(0, 0, 0, 0.5)';
-		inputWrapper.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-		inputWrapper.style.boxShadow = 'none';
-	});
+	// Focus effects on input wrapper (disabled in preview mode)
+	// messageInput.addEventListener('focus', () => {
+	// 	inputWrapper.style.background = 'rgba(0, 0, 0, 0.7)';
+	// 	inputWrapper.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+	// 	inputWrapper.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.1)';
+	// });
+
+	// messageInput.addEventListener('blur', () => {
+	// 	inputWrapper.style.background = 'rgba(0, 0, 0, 0.5)';
+	// 	inputWrapper.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+	// 	inputWrapper.style.boxShadow = 'none';
+	// });
 
 	// Empty state with suggested prompts
 	const emptyState = document.createElement('div');
@@ -165,10 +169,21 @@ function SidebarAI( editor ) {
 		font-size: 20px;
 		font-weight: 600;
 		color: #ffffff;
-		margin-bottom: 8px;
+		margin-bottom: 4px;
 		text-align: center;
 	`;
 	emptyState.appendChild(welcomeText);
+
+	const previewNotice = document.createElement('div');
+	previewNotice.textContent = '(disabled in preview)';
+	previewNotice.style.cssText = `
+		font-size: 12px;
+		color: #a0aec0;
+		margin-bottom: 8px;
+		text-align: center;
+		font-style: italic;
+	`;
+	emptyState.appendChild(previewNotice);
 	
 	// Container for prompts
 	const promptsContainer = document.createElement('div');
@@ -320,73 +335,80 @@ function SidebarAI( editor ) {
 		}
 	}
 
+	// PREVIEW MODE: Message processing disabled
 	async function processMessage(userInput) {
-		if (!userInput.trim()) return;
-
-		// Add user message
-		addMessage(userInput, true);
-
-		// Show typing indicator
-		const typingIndicator = showTypingIndicator();
-
-		try {
-			// Get scene context
-			const context = commandExecutor.getSceneContext();
-
-			// Parse command with AI
-			const result = await aiManager.parseSceneCommand(userInput, context);
-
-			// Remove typing indicator
-			removeTypingIndicator(typingIndicator);
-
-			if (result.commands && result.commands.length > 0) {
-				// Execute commands
-				const executionResults = await commandExecutor.executeCommands(result.commands);
-				
-				// Check for failures
-				const failures = executionResults.filter(r => !r.success);
-				if (failures.length > 0) {
-					const errorMsg = `Failed to execute ${failures.length} command(s): ${failures.map(f => f.error).join(', ')}`;
-					addMessage(errorMsg, false, true);
-				}
-
-				// Show success message
-				if (result.response) {
-					addMessage(result.response);
-				} else {
-					addMessage(`Executed ${result.commands.length} command(s) successfully!`);
-				}
-			} else {
-				// No commands, just conversational response
-				if (result.response) {
-					addMessage(result.response);
-				} else {
-					addMessage("I understood your message but couldn't create any scene commands from it. Try asking me to add objects or modify the scene!");
-				}
-			}
-
-		} catch (error) {
-			console.error('Error processing AI message:', error);
-			removeTypingIndicator(typingIndicator);
-			addMessage(`Error: ${error.message}`, false, true);
-		}
+		// Disabled in preview mode
+		return;
 	}
 
-	// Event handlers
-	sendButton.addEventListener('click', async function() {
-		const input = messageInput.value.trim();
-		if (input) {
-			messageInput.value = '';
-			await processMessage(input);
-		}
-	});
+	// Original message processing (commented out for preview mode)
+	// async function processMessage(userInput) {
+	// 	if (!userInput.trim()) return;
 
-	messageInput.addEventListener('keydown', function(event) {
-		if (event.key === 'Enter' && !event.shiftKey) {
-			event.preventDefault();
-			sendButton.click();
-		}
-	});
+	// 	// Add user message
+	// 	addMessage(userInput, true);
+
+	// 	// Show typing indicator
+	// 	const typingIndicator = showTypingIndicator();
+
+	// 	try {
+	// 		// Get scene context
+	// 		const context = commandExecutor.getSceneContext();
+
+	// 		// Parse command with AI
+	// 		const result = await aiManager.parseSceneCommand(userInput, context);
+
+	// 		// Remove typing indicator
+	// 		removeTypingIndicator(typingIndicator);
+
+	// 		if (result.commands && result.commands.length > 0) {
+	// 			// Execute commands
+	// 			const executionResults = await commandExecutor.executeCommands(result.commands);
+	//
+	// 			// Check for failures
+	// 			const failures = executionResults.filter(r => !r.success);
+	// 			if (failures.length > 0) {
+	// 				const errorMsg = `Failed to execute ${failures.length} command(s): ${failures.map(f => f.error).join(', ')}`;
+	// 				addMessage(errorMsg, false, true);
+	// 			}
+
+	// 			// Show success message
+	// 			if (result.response) {
+	// 				addMessage(result.response);
+	// 			} else {
+	// 				addMessage(`Executed ${result.commands.length} command(s) successfully!`);
+	// 			}
+	// 		} else {
+	// 			// No commands, just conversational response
+	// 			if (result.response) {
+	// 				addMessage(result.response);
+	// 			} else {
+	// 				addMessage("I understood your message but couldn't create any scene commands from it. Try asking me to add objects or modify the scene!");
+	// 			}
+	// 		}
+
+	// 	} catch (error) {
+	// 		console.error('Error processing AI message:', error);
+	// 		removeTypingIndicator(typingIndicator);
+	// 		addMessage(`Error: ${error.message}`, false, true);
+	// 	}
+	// }
+
+	// Event handlers (disabled in preview mode - uncomment to re-enable)
+	// sendButton.addEventListener('click', async function() {
+	// 	const input = messageInput.value.trim();
+	// 	if (input) {
+	// 		messageInput.value = '';
+	// 		await processMessage(input);
+	// 	}
+	// });
+
+	// messageInput.addEventListener('keydown', function(event) {
+	// 	if (event.key === 'Enter' && !event.shiftKey) {
+	// 		event.preventDefault();
+	// 		sendButton.click();
+	// 	}
+	// });
 
 	// Initialize AI system
 	async function initializeAI() {
