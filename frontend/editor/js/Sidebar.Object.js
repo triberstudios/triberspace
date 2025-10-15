@@ -606,7 +606,7 @@ function SidebarObject( editor ) {
 	}
 
 	// Store references to buttons for state updates
-	let positionArrow, rotationArrow, scaleArrow;
+	let positionArrow, rotationArrow, scaleArrow, materialArrow;
 
 	function updateAllPropertyButtonStates() {
 		const object = editor.selected;
@@ -615,6 +615,7 @@ function SidebarObject( editor ) {
 		if ( positionArrow ) updatePropertyButtonState( positionArrow, object, 'position' );
 		if ( rotationArrow ) updatePropertyButtonState( rotationArrow, object, 'rotation' );
 		if ( scaleArrow ) updatePropertyButtonState( scaleArrow, object, 'scale' );
+		if ( materialArrow ) updatePropertyButtonState( materialArrow, object, 'material' );
 	}
 
 	// Helper function to normalize angles to 0-360 degree range
@@ -1331,7 +1332,11 @@ function SidebarObject( editor ) {
 	const objectColorRow = new UIRow();
 	const objectColor = new UIColor().onInput( update );
 
+	// Property patch button for material
+	materialArrow = createPropertyPatchButton( 'material' );
+
 	objectColorRow.add( new UIText( strings.getKey( 'sidebar/object/color' ) ).setClass( 'Label' ) );
+	objectColorRow.add( materialArrow );
 	objectColorRow.add( objectColor );
 
 	container.add( objectColorRow );

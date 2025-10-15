@@ -490,6 +490,14 @@ export class InteractionGraph {
                     return node;
                 });
                 break;
+            case 'material':
+                nodePromise = import('./nodes/MaterialNode.js').then(({ MaterialNode }) => {
+                    const node = new MaterialNode(object, position.x, position.y);
+                    node.type = 'ObjectProperty';
+                    node.propertyType = 'material';
+                    return node;
+                });
+                break;
             default:
                 console.warn(`Unsupported property type: ${propertyType}`);
                 return;
