@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import lamejs from '@breezystack/lamejs';
 
-import { UIPanel, UIRow, UIInput, UIButton, UIColor, UICheckbox, UIInteger, UITextArea, UIText, UINumber, UISelect, UIDiv } from './libs/ui.js';
+import { UIPanel, UIRow, UIInput, UIButton, UIColor, UICheckbox, UIInteger, UITextArea, UIText, UINumber, UISelect, UIDiv, UIHorizontalRule } from './libs/ui.js';
 import { UIBoolean } from './libs/ui.three.js';
 
 import { SetUuidCommand } from './commands/SetUuidCommand.js';
@@ -869,6 +869,7 @@ function SidebarObject( editor ) {
 
 	// Media Shape Selection (only for media objects)
 	const mediaShapeRow = new UIRow();
+	mediaShapeRow.setMarginTop( '10px' );
 	const mediaShape = new UISelect().setOptions( {
 		'plane': 'Plane',
 		'sphere': 'Sphere',
@@ -1048,6 +1049,97 @@ function SidebarObject( editor ) {
 	lockRatioRow.add( new UIText( 'Lock Ratio' ).setClass( 'Label' ) );
 	lockRatioRow.add( lockRatio );
 	mediaSection.add( lockRatioRow );
+
+	// Media Labels Section
+	const metadataHeaderRow = new UIRow();
+	metadataHeaderRow.add( new UIText( 'Media Labels' ).setClass( 'Label' ) );
+	mediaSection.add( metadataHeaderRow );
+
+	// Artist Name
+	const artistNameRow = new UIRow();
+	const artistName = new UIInput().setWidth( '150px' ).onChange( onArtistNameChange );
+	artistNameRow.add( new UIText( 'Artist name' ).setClass( 'Label' ) );
+	artistNameRow.add( artistName );
+	mediaSection.add( artistNameRow );
+
+	// Artwork Title
+	const artworkTitleRow = new UIRow();
+	const artworkTitle = new UIInput().setWidth( '150px' ).onChange( onArtworkTitleChange );
+	artworkTitleRow.add( new UIText( 'Artwork title' ).setClass( 'Label' ) );
+	artworkTitleRow.add( artworkTitle );
+	mediaSection.add( artworkTitleRow );
+
+	// Year
+	const yearRow = new UIRow();
+	const year = new UIInput().setWidth( '150px' ).onChange( onYearChange );
+	yearRow.add( new UIText( 'Year' ).setClass( 'Label' ) );
+	yearRow.add( year );
+	mediaSection.add( yearRow );
+
+	// Type of Art
+	const artTypeRow = new UIRow();
+	const artType = new UIInput().setWidth( '150px' ).onChange( onArtTypeChange );
+	artTypeRow.add( new UIText( 'Type of art' ).setClass( 'Label' ) );
+	artTypeRow.add( artType );
+	mediaSection.add( artTypeRow );
+
+	// Description
+	const descriptionRow = new UIRow();
+	const description = new UITextArea().setWidth( '100%' ).setHeight( '60px' ).onChange( onDescriptionChange );
+	descriptionRow.add( new UIText( 'Description' ).setClass( 'Label' ) );
+	descriptionRow.add( description );
+	mediaSection.add( descriptionRow );
+
+	// Earn Points Checkbox
+	const earnPointsRow = new UIRow();
+	const earnPoints = new UICheckbox( false ).onChange( onEarnPointsChange );
+	earnPointsRow.add( new UIText( 'Earn points on completion' ).setClass( 'Label' ) );
+	earnPointsRow.add( earnPoints );
+	mediaSection.add( earnPointsRow );
+
+	// Add subtle divider after metadata section
+	const metadataBottomDivider = new UIDiv();
+	metadataBottomDivider.setHeight( '1px' );
+	metadataBottomDivider.setBackgroundColor( '#444' );
+	metadataBottomDivider.setMarginTop( '10px' );
+	metadataBottomDivider.setMarginBottom( '10px' );
+	mediaSection.add( metadataBottomDivider );
+
+	// Helper function to update metadata in userData
+	function updateMetadata( field, value ) {
+		const object = editor.selected;
+		if ( !object ) return;
+
+		const currentMetadata = object.userData.metadata || {};
+		const newMetadata = Object.assign( {}, currentMetadata, { [field]: value } );
+		const newUserData = Object.assign( {}, object.userData, { metadata: newMetadata } );
+		editor.execute( new SetValueCommand( editor, object, 'userData', newUserData ) );
+	}
+
+	// onChange handlers for metadata fields
+	function onArtistNameChange() {
+		updateMetadata( 'artistName', artistName.getValue() );
+	}
+
+	function onArtworkTitleChange() {
+		updateMetadata( 'artworkTitle', artworkTitle.getValue() );
+	}
+
+	function onYearChange() {
+		updateMetadata( 'year', year.getValue() );
+	}
+
+	function onArtTypeChange() {
+		updateMetadata( 'artType', artType.getValue() );
+	}
+
+	function onDescriptionChange() {
+		updateMetadata( 'description', description.getValue() );
+	}
+
+	function onEarnPointsChange() {
+		updateMetadata( 'earnPoints', earnPoints.getValue() );
+	}
 
 	// Add the media section to the container
 	container.add( mediaSection );
@@ -2765,6 +2857,15 @@ function SidebarObject( editor ) {
 			if ( object.userData && object.userData.isMediaPlane ) {
 				mediaShape.setValue( object.userData.mediaShape || 'plane' );
 				doubleSided.setValue( object.userData.doubleSided !== false );
+
+				// Update metadata fields
+				const metadata = object.userData.metadata || {};
+				artistName.setValue( metadata.artistName || '' );
+				artworkTitle.setValue( metadata.artworkTitle || '' );
+				year.setValue( metadata.year || '' );
+				artType.setValue( metadata.artType || '' );
+				description.setValue( metadata.description || '' );
+				earnPoints.setValue( metadata.earnPoints || false );
 
 				// Ensure media section visibility is updated for new media objects
 				updateMediaSectionVisibility();
