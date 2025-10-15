@@ -166,11 +166,11 @@ class SketchfabLoader {
 			// Load the model using GLTFLoader
 			const model = await this.loadGLTF( updatedSceneData, fileUrls );
 
-			// Process and add to scene
-			this.processModel( model, modelData );
+			// Process and add to scene (stores blob URLs in userData to keep them alive)
+			this.processModel( model, modelData, fileUrls );
 
-			// Clean up blob URLs
-			this.cleanupBlobUrls( fileUrls );
+			// NOTE: We don't clean up blob URLs here anymore - they're stored in userData
+			// and will be cleaned up when the object is removed from the scene
 
 			this.hideLoadingIndicator();
 
@@ -483,7 +483,7 @@ class SketchfabLoader {
 	/**
 	 * Process loaded model and add to scene
 	 */
-	processModel( gltf, modelData ) {
+	processModel( gltf, modelData, fileUrls ) {
 
 		const model = gltf.scene;
 
@@ -498,7 +498,9 @@ class SketchfabLoader {
 			user: modelData.user,
 			license: modelData.license,
 			attributionText: this.generateAttributionText( modelData ),
-			importedAt: new Date().toISOString()
+			importedAt: new Date().toISOString(),
+			// Store blob URLs to prevent them from being revoked
+			blobUrls: fileUrls
 		};
 
 		// Scale model if needed (Sketchfab models can be very large or small)

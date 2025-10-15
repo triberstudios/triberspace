@@ -139,6 +139,76 @@ class SurfacePlacementMode {
 
 	}
 
+	detectSurfaceCurvature( intersect ) {
+
+		const geometry = intersect.object.geometry;
+
+		// Default to flat if no geometry data available
+		if ( ! geometry || ! geometry.index ) return 'flat';
+
+		const faceNormal = intersect.face.normal.clone();
+		const faceIndex = intersect.faceIndex;
+		const index = geometry.index;
+		const position = geometry.attributes.position;
+		const normalAttribute = geometry.attributes.normal;
+
+		// Get the three vertex indices of the hit face
+		const a = index.getX( faceIndex * 3 );
+		const b = index.getX( faceIndex * 3 + 1 );
+		const c = index.getX( faceIndex * 3 + 2 );
+		const hitVertices = [ a, b, c ];
+
+		// Find faces that share at least one vertex with the hit face
+		const adjacentNormals = [];
+		const faceCount = index.count / 3;
+
+		for ( let i = 0; i < faceCount; i ++ ) {
+
+			if ( i === faceIndex ) continue; // Skip the hit face itself
+
+			const va = index.getX( i * 3 );
+			const vb = index.getX( i * 3 + 1 );
+			const vc = index.getX( i * 3 + 2 );
+
+			// Check if this face shares a vertex with the hit face
+			if ( hitVertices.includes( va ) || hitVertices.includes( vb ) || hitVertices.includes( vc ) ) {
+
+				// Get this face's normal
+				const normal = new THREE.Vector3();
+				normal.fromBufferAttribute( normalAttribute, va );
+				adjacentNormals.push( normal );
+
+				// Limit sampling to avoid performance issues
+				if ( adjacentNormals.length >= 6 ) break;
+
+			}
+
+		}
+
+		// If we found adjacent faces, compare their normals
+		if ( adjacentNormals.length > 0 ) {
+
+			const threshold = Math.cos( THREE.MathUtils.degToRad( 10 ) ); // 10 degree threshold
+
+			for ( const adjacentNormal of adjacentNormals ) {
+
+				const dot = faceNormal.dot( adjacentNormal );
+
+				// If any adjacent normal differs significantly, surface is curved
+				if ( dot < threshold ) {
+
+					return 'curved';
+
+				}
+
+			}
+
+		}
+
+		return 'flat';
+
+	}
+
 	updateGhostPosition( intersect ) {
 
 		if ( ! this.ghostHelper ) return;
@@ -147,9 +217,29 @@ class SurfacePlacementMode {
 		const normal = intersect.face.normal.clone();
 		normal.transformDirection( intersect.object.matrixWorld );
 
-		// Position at intersection point with slight offset along normal
+		// Detect surface curvature to adjust offset appropriately
+		const curvature = this.detectSurfaceCurvature( intersect );
+
+		// Calculate offset based on surface type
+		let offset;
+		if ( curvature === 'curved' ) {
+
+			// Curved surface: use larger offset based on object size
+			const bbox = new THREE.Box3().setFromObject( this.ghostHelper );
+			const size = bbox.getSize( new THREE.Vector3() );
+			const maxDimension = Math.max( size.x, size.y );
+			offset = Math.max( 0.02, maxDimension * 0.1 );
+
+		} else {
+
+			// Flat surface: use minimal offset to prevent z-fighting
+			offset = 0.01;
+
+		}
+
+		// Position at intersection point with calculated offset along normal
 		this.ghostHelper.position.copy( intersect.point );
-		this.ghostHelper.position.add( normal.multiplyScalar( 0.01 ) ); // Prevent z-fighting
+		this.ghostHelper.position.add( normal.multiplyScalar( offset ) );
 
 		// Reset rotation to identity before applying lookAt
 		// Otherwise rotation accumulates on each mouse move
@@ -161,9 +251,6 @@ class SurfacePlacementMode {
 		const worldUp = new THREE.Vector3( 0, 1, 0 );
 		this.ghostHelper.up.copy( worldUp );
 		this.ghostHelper.lookAt( lookAtPoint );
-
-		// Rotate 180° around X-axis to flip object so back face is against surface
-		this.ghostHelper.rotateX( Math.PI );
 
 	}
 
