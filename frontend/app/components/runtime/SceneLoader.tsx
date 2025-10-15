@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { BehaviorExecutor } from './BehaviorExecutor';
@@ -1079,12 +1079,21 @@ function setupMetadataClickHandling(
 
             // Trigger metadata display with media info
             if (clickedObject.userData.metadata) {
-                // Get media URL from mediaRestoreInfo
-                const mediaUrl = clickedObject.userData.mediaRestoreInfo?.videoSrc ||
-                                clickedObject.userData.mediaRestoreInfo?.imageSrc;
+                // For videos, pass the actual video element for perfect sync
+                // For images, pass the URL
+                let videoElement: HTMLVideoElement | undefined;
+                let mediaUrl: string | undefined;
+
+                if (clickedObject.userData.mediaType === 'video' && clickedObject.userData.mediaSource) {
+                    const texture = clickedObject.userData.mediaSource as THREE.VideoTexture;
+                    videoElement = texture.image as HTMLVideoElement;
+                } else {
+                    mediaUrl = clickedObject.userData.mediaRestoreInfo?.imageSrc;
+                }
 
                 const enrichedMetadata = {
                     ...clickedObject.userData.metadata,
+                    videoElement,
                     mediaUrl,
                     mediaType: clickedObject.userData.mediaType
                 };
@@ -1337,52 +1346,8 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
         loadSceneData();
     }, [sceneId]);
 
-    // Initialize behaviors when scene objects are actually loaded
-    const handleSceneLoaded = () => {
-        if (sceneData?.compiledBehaviors && groupRef.current) {
-            // console.log('🎬 SceneLoader: Scene objects loaded, initializing behaviors');
-            initializeBehaviors();
-        }
-    };
-
-    async function loadSceneData() {
-        try {
-            setLoading(true);
-            setError(null);
-            onLoadingChange?.(true);
-            onError?.(null);
-
-            // console.log('SceneLoader: Loading scene', sceneId);
-
-            // Fetch scene data from backend API
-            const response = await fetch(`http://localhost:3001/api/v1/runtime/scenes/${sceneId}`);
-
-            if (!response.ok) {
-                throw new Error(`Failed to load scene: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            // console.log('SceneLoader: Received data', {
-            //     hasScene: !!data.scene,
-            //     hasCamera: !!data.camera,
-            //     hasCompiledBehaviors: !!data.compiledBehaviors,
-            //     behaviorCount: data.compiledBehaviors?.behaviors?.length || 0,
-            //     sceneChildrenCount: data.scene?.children?.length || 0
-            // });
-            setSceneData(data);
-            onSceneDataChange?.(data);
-        } catch (err) {
-            console.error('Failed to load scene:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Failed to load scene';
-            setError(errorMessage);
-            onError?.(errorMessage);
-        } finally {
-            setLoading(false);
-            onLoadingChange?.(false);
-        }
-    }
-
-    function initializeBehaviors() {
+    // Initialize behaviors - defined before handleSceneLoaded
+    const initializeBehaviors = useCallback(() => {
         if (!sceneData?.compiledBehaviors || !groupRef.current) {
             // console.log('🎬 SceneLoader: Cannot initialize behaviors', {
             //     hasSceneData: !!sceneData,
@@ -1435,6 +1400,51 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
         //     behaviorsWithObjects: sceneData.compiledBehaviors.behaviors?.filter(b => objectMap.has(b.objectUuid)).length || 0,
         //     behaviorsWithoutObjects: sceneData.compiledBehaviors.behaviors?.filter(b => !objectMap.has(b.objectUuid)).length || 0
         // });
+    }, [sceneData?.compiledBehaviors]);
+
+    // Initialize behaviors when scene objects are actually loaded
+    const handleSceneLoaded = useCallback(() => {
+        if (sceneData?.compiledBehaviors && groupRef.current) {
+            // console.log('🎬 SceneLoader: Scene objects loaded, initializing behaviors');
+            initializeBehaviors();
+        }
+    }, [sceneData?.compiledBehaviors, initializeBehaviors]);
+
+    async function loadSceneData() {
+        try {
+            setLoading(true);
+            setError(null);
+            onLoadingChange?.(true);
+            onError?.(null);
+
+            // console.log('SceneLoader: Loading scene', sceneId);
+
+            // Fetch scene data from backend API
+            const response = await fetch(`http://localhost:3001/api/v1/runtime/scenes/${sceneId}`);
+
+            if (!response.ok) {
+                throw new Error(`Failed to load scene: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            // console.log('SceneLoader: Received data', {
+            //     hasScene: !!data.scene,
+            //     hasCamera: !!data.camera,
+            //     hasCompiledBehaviors: !!data.compiledBehaviors,
+            //     behaviorCount: data.compiledBehaviors?.behaviors?.length || 0,
+            //     sceneChildrenCount: data.scene?.children?.length || 0
+            // });
+            setSceneData(data);
+            onSceneDataChange?.(data);
+        } catch (err) {
+            console.error('Failed to load scene:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to load scene';
+            setError(errorMessage);
+            onError?.(errorMessage);
+        } finally {
+            setLoading(false);
+            onLoadingChange?.(false);
+        }
     }
 
     // Animation loop

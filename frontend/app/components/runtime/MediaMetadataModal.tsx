@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface MediaMetadata {
     artistName?: string;
@@ -9,7 +9,8 @@ interface MediaMetadata {
     artType?: string;
     description?: string;
     earnPoints?: boolean;
-    mediaUrl?: string;
+    videoElement?: HTMLVideoElement; // For videos - use the actual element for sync
+    mediaUrl?: string; // For images
     mediaType?: 'video' | 'image';
 }
 
@@ -19,6 +20,8 @@ interface MediaMetadataModalProps {
 }
 
 export function MediaMetadataModal({ metadata, onClose }: MediaMetadataModalProps) {
+    const syncedVideoRef = useRef<HTMLVideoElement>(null);
+
     // Close on Escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
@@ -30,6 +33,57 @@ export function MediaMetadataModal({ metadata, onClose }: MediaMetadataModalProp
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
     }, [onClose]);
+
+    // Create and sync a video element for modal display
+    useEffect(() => {
+        if (metadata.videoElement && syncedVideoRef.current) {
+            const originalVideo = metadata.videoElement;
+            const modalVideo = syncedVideoRef.current;
+
+            // Set source from original video
+            modalVideo.src = originalVideo.src || originalVideo.currentSrc;
+            modalVideo.muted = true;
+
+            // Initial sync
+            modalVideo.currentTime = originalVideo.currentTime;
+
+            // Start playing if original is playing
+            if (!originalVideo.paused) {
+                modalVideo.play().catch(err => console.log('Modal video autoplay prevented:', err));
+            }
+
+            // Keep videos synced
+            let syncInterval: number;
+            const syncVideos = () => {
+                if (modalVideo && originalVideo) {
+                    // Sync currentTime
+                    const timeDiff = Math.abs(modalVideo.currentTime - originalVideo.currentTime);
+                    if (timeDiff > 0.3) { // If more than 300ms out of sync
+                        modalVideo.currentTime = originalVideo.currentTime;
+                    }
+
+                    // Sync play/pause state
+                    if (originalVideo.paused && !modalVideo.paused) {
+                        modalVideo.pause();
+                    } else if (!originalVideo.paused && modalVideo.paused) {
+                        modalVideo.play().catch(() => {});
+                    }
+                }
+            };
+
+            // Sync every 100ms for smooth playback
+            syncInterval = setInterval(syncVideos, 100) as unknown as number;
+
+            // Cleanup
+            return () => {
+                clearInterval(syncInterval);
+                if (modalVideo) {
+                    modalVideo.pause();
+                    modalVideo.src = '';
+                }
+            };
+        }
+    }, [metadata.videoElement]);
 
     // Check if we have any metadata to display
     const hasMetadata = metadata.artistName || metadata.artworkTitle ||
@@ -61,17 +115,26 @@ export function MediaMetadataModal({ metadata, onClose }: MediaMetadataModalProp
             <div className="bg-neutral-900 rounded-lg max-w-3xl w-full shadow-xl max-h-[90vh] overflow-y-auto flex"
                  onClick={(e) => e.stopPropagation()}>
                 {/* Media Preview - Left Side */}
-                {metadata.mediaUrl && (
-                    <div className="flex-shrink-0 w-1/2 bg-black flex items-center justify-center">
+                {(metadata.videoElement || metadata.mediaUrl) && (
+                    <div className="flex-shrink-0 w-1/2 bg-black flex items-center justify-center relative">
                         {metadata.mediaType === 'video' ? (
-                            <video
-                                src={metadata.mediaUrl}
-                                controls
-                                muted
-                                className="w-full h-full object-contain"
-                            >
-                                Your browser does not support the video tag.
-                            </video>
+                            <>
+                                <video
+                                    ref={syncedVideoRef}
+                                    muted
+                                    className="w-full h-full object-contain"
+                                />
+                                {/* Fullscreen button */}
+                                <button
+                                    onClick={() => syncedVideoRef.current?.requestFullscreen()}
+                                    className="absolute bottom-4 right-4 bg-black/70 hover:bg-black/90 p-3 rounded-lg transition-colors cursor-pointer"
+                                    aria-label="Fullscreen"
+                                >
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                    </svg>
+                                </button>
+                            </>
                         ) : (
                             <img
                                 src={metadata.mediaUrl}
