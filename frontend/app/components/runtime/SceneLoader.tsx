@@ -35,6 +35,7 @@ interface SceneLoaderProps {
     onLoadingChange?: (loading: boolean) => void;
     onError?: (error: string) => void;
     onSceneDataChange?: (sceneData: SceneData | null) => void;
+    onMetadataClick?: (metadata: any) => void;
 }
 
 /**
@@ -428,8 +429,19 @@ class AudioUtils {
 
         console.log('🔊 Creating PositionalAudio with V2World-inspired settings:', settings);
 
+        // Check if video element is already connected to an audio context
+        // We track this with a custom flag to prevent multiple connections
+        if ((video as any).__spatialAudioConnected) {
+            console.error('🔊 Video element already connected to spatial audio, cannot create another connection');
+            throw new Error('Video element already has spatial audio connection');
+        }
+
         // Set audio properties using V2World configuration
         audio.setMediaElementSource(video);
+
+        // Mark video as connected to prevent duplicate connections
+        (video as any).__spatialAudioConnected = true;
+
         audio.setRefDistance(settings.refDistance);
         audio.setMaxDistance(settings.maxDistance);
         audio.setRolloffFactor(settings.rolloffFactor);
@@ -528,6 +540,13 @@ class AudioUtils {
                 console.log('🔊 Cleaned up audio/video synchronization');
             }
 
+            // Clear the video connection flag if this audio has a source
+            if ((audio as any).source && (audio as any).source.mediaElement) {
+                const videoElement = (audio as any).source.mediaElement;
+                delete videoElement.__spatialAudioConnected;
+                console.log('🔊 Cleared spatial audio connection flag from video element');
+            }
+
             audio.disconnect();
             object.remove(audio);
             console.log('🔊 Removed PositionalAudio from object:', object.name || 'unnamed');
@@ -578,7 +597,6 @@ class AudioUtils {
 
         // Video event handlers
         const onVideoPlay = () => {
-            console.log('🎵 Video play event - starting audio');
             if (!audio.isPlaying) {
                 (audio as any).startTime = audio.context.currentTime - video.currentTime;
                 audio.play();
@@ -590,7 +608,6 @@ class AudioUtils {
         };
 
         const onVideoPause = () => {
-            console.log('🎵 Video pause event - pausing audio');
             if (audio.isPlaying) {
                 audio.pause();
             }
@@ -603,7 +620,6 @@ class AudioUtils {
         };
 
         const onVideoSeeked = () => {
-            console.log('🎵 Video seek event - syncing audio to position:', video.currentTime);
             isManualSeek = true;
 
             if (audio.isPlaying) {
@@ -621,7 +637,6 @@ class AudioUtils {
         };
 
         const onVideoEnded = () => {
-            console.log('🎵 Video ended - stopping audio');
             if (audio.isPlaying) {
                 audio.stop();
             }
@@ -651,7 +666,6 @@ class AudioUtils {
             }
         };
 
-        console.log('🎵 Audio/video synchronization setup complete');
     }
 
     /**
@@ -667,7 +681,8 @@ class AudioUtils {
             hasMediaSource: !!userData.mediaSource,
             spatialAudio: userData.spatialAudio,
             spatialAudioEnabled: userData.spatialAudio !== false,
-            hasExtractedAudio: !!(userData.spatialAudio && userData.spatialAudio.audioUrl)
+            hasExtractedAudio: !!(userData.spatialAudio && userData.spatialAudio.audioUrl),
+            alreadyHasSpatialAudio: !!AudioUtils.getPositionalAudio(object)
         });
 
         if (userData.mediaType !== 'video' || !userData.mediaSource) {
@@ -680,11 +695,14 @@ class AudioUtils {
             return;
         }
 
+        // Guard: Skip if spatial audio is already setup for this object
+        if (AudioUtils.getPositionalAudio(object)) {
+            console.log('🔇 Skipping spatial audio: already setup for this object');
+            return;
+        }
+
         // Create audio listener if needed
         const listener = AudioUtils.createAudioListener(camera);
-
-        // Remove existing audio
-        AudioUtils.removeAudio(object);
 
         // Audio settings
         const audioSettings = {
@@ -1010,6 +1028,153 @@ function setupScreenshareClickHandling(sceneRoot: THREE.Object3D, camera: THREE.
 }
 
 /**
+ * Set up click handling for media objects with metadata
+ * @param sceneRoot - The root object to traverse
+ * @param camera - The Three.js camera for raycasting
+ * @param domElement - The canvas DOM element for mouse events
+ * @param onMetadataClick - Callback when metadata object is clicked
+ */
+function setupMetadataClickHandling(
+    sceneRoot: THREE.Object3D,
+    camera: THREE.Camera,
+    domElement: HTMLElement,
+    onMetadataClick: (metadata: any) => void
+) {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let currentlyHovered: THREE.Object3D | null = null;
+
+    function updateMousePosition(event: MouseEvent) {
+        // Calculate mouse position in normalized device coordinates (-1 to +1)
+        const rect = domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    function getMetadataObjects(): THREE.Object3D[] {
+        const metadataObjects: THREE.Object3D[] = [];
+        sceneRoot.traverse((object) => {
+            // Check if object is a media plane with metadata
+            if (object.userData?.isMediaPlane &&
+                object.userData?.metadata &&
+                Object.keys(object.userData.metadata).length > 0) {
+                metadataObjects.push(object);
+            }
+        });
+        return metadataObjects;
+    }
+
+    function onMouseClick(event: MouseEvent) {
+        updateMousePosition(event);
+
+        // Update the raycaster with the camera and mouse position
+        raycaster.setFromCamera(mouse, camera);
+
+        // Calculate objects intersecting the ray
+        const intersects = raycaster.intersectObjects(getMetadataObjects(), false);
+
+        if (intersects.length > 0) {
+            const clickedObject = intersects[0].object;
+            console.log('🖼️ Clicked media object with metadata:', clickedObject.name, clickedObject.userData.metadata);
+
+            // Trigger metadata display with media info
+            if (clickedObject.userData.metadata) {
+                // Get media URL from mediaRestoreInfo
+                const mediaUrl = clickedObject.userData.mediaRestoreInfo?.videoSrc ||
+                                clickedObject.userData.mediaRestoreInfo?.imageSrc;
+
+                const enrichedMetadata = {
+                    ...clickedObject.userData.metadata,
+                    mediaUrl,
+                    mediaType: clickedObject.userData.mediaType
+                };
+
+                onMetadataClick(enrichedMetadata);
+            }
+        }
+    }
+
+    function onMouseMove(event: MouseEvent) {
+        updateMousePosition(event);
+
+        // Update the raycaster with the camera and mouse position
+        raycaster.setFromCamera(mouse, camera);
+
+        // Calculate objects intersecting the ray
+        const intersects = raycaster.intersectObjects(getMetadataObjects(), false);
+
+        if (intersects.length > 0) {
+            const hoveredObject = intersects[0].object;
+
+            // Change cursor to pointer to indicate clickable
+            domElement.style.cursor = 'pointer';
+
+            // Add hover effect if not already hovering this object
+            if (currentlyHovered !== hoveredObject) {
+                // Remove hover effect from previously hovered object
+                if (currentlyHovered) {
+                    removeHoverEffect(currentlyHovered);
+                }
+
+                // Add hover effect to new object
+                addHoverEffect(hoveredObject);
+                currentlyHovered = hoveredObject;
+            }
+        } else {
+            // Reset cursor
+            domElement.style.cursor = 'default';
+
+            // Remove hover effect if there was one
+            if (currentlyHovered) {
+                removeHoverEffect(currentlyHovered);
+                currentlyHovered = null;
+            }
+        }
+    }
+
+    function addHoverEffect(object: THREE.Object3D) {
+        const materialObject = object as any;
+        if (materialObject.material) {
+            // Store original emissive value if not already stored
+            if (!materialObject.userData.originalEmissive) {
+                materialObject.userData.originalEmissive = materialObject.material.emissive ?
+                    materialObject.material.emissive.clone() :
+                    new THREE.Color(0x000000);
+            }
+
+            // Add subtle glow to indicate clickable
+            materialObject.material.emissive = new THREE.Color(0x4080ff);
+            materialObject.material.needsUpdate = true;
+        }
+    }
+
+    function removeHoverEffect(object: THREE.Object3D) {
+        const materialObject = object as any;
+        if (materialObject.material && materialObject.userData.originalEmissive) {
+            // Restore original emissive value
+            materialObject.material.emissive = materialObject.userData.originalEmissive;
+            materialObject.material.needsUpdate = true;
+        }
+    }
+
+    // Add event listeners
+    domElement.addEventListener('click', onMouseClick);
+    domElement.addEventListener('mousemove', onMouseMove);
+
+    // Return cleanup function
+    return () => {
+        domElement.removeEventListener('click', onMouseClick);
+        domElement.removeEventListener('mousemove', onMouseMove);
+        domElement.style.cursor = 'default';
+
+        // Clean up any remaining hover effects
+        if (currentlyHovered) {
+            removeHoverEffect(currentlyHovered);
+        }
+    };
+}
+
+/**
  * Restore media textures for media planes in a Three.js scene
  * @param sceneRoot - The root object to traverse
  * @param camera - The camera for spatial audio setup
@@ -1105,17 +1270,18 @@ function restoreVideoTexture(object: THREE.Object3D, videoSrc: string, stats: an
         // Handle autoplay with delay for texture readiness
         setTimeout(() => {
             MediaRestoreUtils.handleVideoAutoplay(video, object.userData.autoplay !== false);
-
-            // Setup spatial audio if enabled
-            console.log('🔊 Attempting to setup spatial audio for restored video:', {
-                objectName: object.name,
-                userData: object.userData,
-                hasMediaSource: !!object.userData.mediaSource,
-                mediaType: object.userData.mediaType,
-                spatialAudio: object.userData.spatialAudio
-            });
-            AudioUtils.setupSpatialAudio(object, camera);
+            // Note: Spatial audio is setup immediately after texture application, not here
         }, 100);
+
+        // Setup spatial audio if enabled (do this immediately, not in setTimeout)
+        console.log('🔊 Attempting to setup spatial audio for restored video:', {
+            objectName: object.name,
+            userData: object.userData,
+            hasMediaSource: !!object.userData.mediaSource,
+            mediaType: object.userData.mediaType,
+            spatialAudio: object.userData.spatialAudio
+        });
+        AudioUtils.setupSpatialAudio(object, camera);
     };
 
     video.onerror = () => {
@@ -1158,7 +1324,7 @@ function restoreImageTexture(object: THREE.Object3D, imageSrc: string, stats: an
     image.src = imageSrc;
 }
 
-export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChange }: SceneLoaderProps) {
+export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChange, onMetadataClick }: SceneLoaderProps) {
     const [sceneData, setSceneData] = useState<SceneData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -1308,13 +1474,13 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
 
     return (
         <group ref={groupRef}>
-            <SceneContent sceneData={sceneData} onSceneLoaded={handleSceneLoaded} />
+            <SceneContent sceneData={sceneData} onSceneLoaded={handleSceneLoaded} onMetadataClick={onMetadataClick} />
         </group>
     );
 }
 
 // Component to render the actual Three.js scene content
-function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSceneLoaded?: () => void }) {
+function SceneContent({ sceneData, onSceneLoaded, onMetadataClick }: { sceneData: SceneData, onSceneLoaded?: () => void, onMetadataClick?: (metadata: any) => void }) {
     const groupRef = useRef<THREE.Group>(null);
     const { camera, gl, scene } = useThree();
 
@@ -1378,7 +1544,12 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
             restoreMediaTextures(groupRef.current, camera);
 
             // Set up click handling for screenshare-enabled media planes
-            const cleanupClickHandling = setupScreenshareClickHandling(groupRef.current, camera, gl.domElement);
+            const cleanupScreenshareHandling = setupScreenshareClickHandling(groupRef.current, camera, gl.domElement);
+
+            // Set up click handling for media objects with metadata
+            const cleanupMetadataHandling = onMetadataClick ?
+                setupMetadataClickHandling(groupRef.current, camera, gl.domElement, onMetadataClick) :
+                () => {};
 
             // Notify that scene objects are loaded and ready for behavior initialization
             if (onSceneLoaded) {
@@ -1386,7 +1557,10 @@ function SceneContent({ sceneData, onSceneLoaded }: { sceneData: SceneData, onSc
             }
 
             // Return cleanup function
-            return cleanupClickHandling;
+            return () => {
+                cleanupScreenshareHandling();
+                cleanupMetadataHandling();
+            };
 
         } catch (error) {
             console.error('SceneContent: Failed to parse scene:', error);

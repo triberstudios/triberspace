@@ -6,6 +6,7 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody } from '@react-three/rapier';
 import { SceneLoader, SceneDebugInfo } from '@/components/runtime/SceneLoader';
 import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
+import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
 
 interface PreviewPageProps {
     params: Promise<{
@@ -18,6 +19,7 @@ export default function PreviewPage({ params }: PreviewPageProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [sceneData, setSceneData] = useState<any>(null);
+    const [metadataModal, setMetadataModal] = useState<any>(null);
 
     return (
         <div className="w-full h-screen bg-black">
@@ -87,6 +89,7 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                             onLoadingChange={setIsLoading}
                             onError={setError}
                             onSceneDataChange={setSceneData}
+                            onMetadataClick={setMetadataModal}
                         />
                     </Suspense>
 
@@ -115,6 +118,14 @@ export default function PreviewPage({ params }: PreviewPageProps) {
 
             {/* Debug info */}
             <SceneDebugInfo sceneData={sceneData} />
+
+            {/* Metadata Modal */}
+            {metadataModal && (
+                <MediaMetadataModal
+                    metadata={metadataModal}
+                    onClose={() => setMetadataModal(null)}
+                />
+            )}
         </div>
     );
 }
