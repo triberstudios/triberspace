@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * SurfacePlacementMode - Allows placing objects on surfaces with visual preview
- * Simple wireframe box shows where object will be placed
+ * Clones the object and shows a wireframe preview of placement
  */
 class SurfacePlacementMode {
 
@@ -22,10 +22,7 @@ class SurfacePlacementMode {
 
 	activate( object ) {
 
-		if ( ! object ) {
-			console.warn( 'SurfacePlacementMode: No object provided to activate' );
-			return;
-		}
+		if ( ! object ) return;
 
 		this.isActive = true;
 		this.selectedObject = object;
@@ -46,8 +43,15 @@ class SurfacePlacementMode {
 		if ( this.ghostHelper ) {
 
 			this.editor.sceneHelpers.remove( this.ghostHelper );
-			this.ghostHelper.geometry.dispose();
-			this.ghostHelper.material.dispose();
+
+			// Dispose of all geometries and materials in the cloned object
+			this.ghostHelper.traverse( function ( child ) {
+
+				if ( child.geometry ) child.geometry.dispose();
+				if ( child.material ) child.material.dispose();
+
+			} );
+
 			this.ghostHelper = null;
 
 		}
@@ -61,22 +65,29 @@ class SurfacePlacementMode {
 
 		if ( ! this.selectedObject ) return;
 
-		// Get bounding box of object
-		const bbox = new THREE.Box3().setFromObject( this.selectedObject );
-		const size = bbox.getSize( new THREE.Vector3() );
+		// Clone the actual object to create an accurate preview
+		this.ghostHelper = this.selectedObject.clone();
 
-		// Create wireframe box
-		const geometry = new THREE.BoxGeometry( size.x, size.y, size.z );
-		const material = new THREE.MeshBasicMaterial( {
-			color: 0x00ff00,
-			wireframe: true,
-			transparent: true,
-			opacity: 0.6,
-			depthTest: false // Always visible through other objects
+		// Apply wireframe material to all meshes in the cloned object
+		this.ghostHelper.traverse( function ( child ) {
+
+			if ( child.isMesh ) {
+
+				// Replace material with green wireframe
+				child.material = new THREE.MeshBasicMaterial( {
+					color: 0x00ff00,
+					wireframe: true,
+					transparent: true,
+					opacity: 0.6,
+					depthTest: false // Always visible through other objects
+				} );
+
+			}
+
 		} );
 
-		this.ghostHelper = new THREE.Mesh( geometry, material );
 		this.ghostHelper.visible = false; // Hidden until we find a surface
+
 		this.editor.sceneHelpers.add( this.ghostHelper );
 
 	}
@@ -132,19 +143,27 @@ class SurfacePlacementMode {
 
 		if ( ! this.ghostHelper ) return;
 
-		// Get surface normal
+		// Get surface normal (direction pointing away from surface)
 		const normal = intersect.face.normal.clone();
 		normal.transformDirection( intersect.object.matrixWorld );
 
-		// Position at intersection point with slight offset
+		// Position at intersection point with slight offset along normal
 		this.ghostHelper.position.copy( intersect.point );
 		this.ghostHelper.position.add( normal.multiplyScalar( 0.01 ) ); // Prevent z-fighting
 
-		// Align ghost to surface normal
-		const up = new THREE.Vector3( 0, 0, 1 ); // Object's forward direction
-		const quaternion = new THREE.Quaternion();
-		quaternion.setFromUnitVectors( up, normal );
-		this.ghostHelper.quaternion.copy( quaternion );
+		// Reset rotation to identity before applying lookAt
+		// Otherwise rotation accumulates on each mouse move
+		this.ghostHelper.rotation.set( 0, 0, 0 );
+		this.ghostHelper.quaternion.set( 0, 0, 0, 1 );
+
+		// Use lookAt to align object with surface normal
+		const lookAtPoint = new THREE.Vector3().addVectors( this.ghostHelper.position, normal );
+		const worldUp = new THREE.Vector3( 0, 1, 0 );
+		this.ghostHelper.up.copy( worldUp );
+		this.ghostHelper.lookAt( lookAtPoint );
+
+		// Rotate 180° around X-axis to flip object so back face is against surface
+		this.ghostHelper.rotateX( Math.PI );
 
 	}
 
