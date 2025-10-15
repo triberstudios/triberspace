@@ -28,6 +28,7 @@ function Config() {
 		'settings/shortcuts/scale': 's',
 		'settings/shortcuts/undo': 'z',
 		'settings/shortcuts/focus': 'f',
+		'settings/shortcuts/placeOnSurface': 'p',
 
 		'layout/sidebarWidth': 350,
 		'layout/viewportHeight': null,

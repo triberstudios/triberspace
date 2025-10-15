@@ -46,6 +46,7 @@ function Editor() {
 		transformModeChanged: new Signal(),
 		snapChanged: new Signal(),
 		spaceChanged: new Signal(),
+		placementModeChanged: new Signal(),
 		rendererCreated: new Signal(),
 		rendererUpdated: new Signal(),
 		rendererDetectKTX2Support: new Signal(),

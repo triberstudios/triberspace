@@ -863,6 +863,39 @@ function SidebarObject( editor ) {
 
 	container.add( objectScaleRow );
 
+	// Place on Surface button
+	const placeOnSurfaceRow = new UIRow();
+	const placeOnSurfaceButton = new UIButton( 'Place on Surface' ).setMarginLeft( '90px' );
+
+	placeOnSurfaceButton.onClick( function () {
+
+		if ( editor.selected && editor.placementMode ) {
+
+			const isActive = editor.placementMode.isActive;
+			editor.signals.placementModeChanged.dispatch( ! isActive );
+
+		}
+
+	} );
+
+	placeOnSurfaceRow.add( placeOnSurfaceButton );
+	container.add( placeOnSurfaceRow );
+
+	// Update button state when placement mode changes
+	signals.placementModeChanged.add( function ( isActive ) {
+
+		if ( isActive ) {
+
+			placeOnSurfaceButton.setClass( 'Button active' );
+
+		} else {
+
+			placeOnSurfaceButton.setClass( 'Button' );
+
+		}
+
+	} );
+
 	// Media Properties Section (only for PlaneGeometry objects)
 	const mediaSection = new UIPanel();
 	mediaSection.setPadding( '0px' );

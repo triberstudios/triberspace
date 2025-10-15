@@ -16,6 +16,9 @@ import { InfiniteGridHelper } from './InfiniteGridHelper.js';
 import { SetPositionCommand } from './commands/SetPositionCommand.js';
 import { SetRotationCommand } from './commands/SetRotationCommand.js';
 import { SetScaleCommand } from './commands/SetScaleCommand.js';
+import { PlaceOnSurfaceCommand } from './commands/PlaceOnSurfaceCommand.js';
+
+import { SurfacePlacementMode } from './SurfacePlacementMode.js';
 
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ViewportPathtracer } from './Viewport.Pathtracer.js';
@@ -118,6 +121,23 @@ function Viewport( editor ) {
 
 		if ( onDownPosition.distanceTo( onUpPosition ) === 0 ) {
 
+			// Check if placement mode is active
+			if ( editor.placementMode && editor.placementMode.isActive ) {
+
+				const placed = editor.placementMode.onClick();
+
+				if ( placed ) {
+
+					// Exit placement mode after successful placement
+					signals.placementModeChanged.dispatch( false );
+
+				}
+
+				render();
+				return;
+
+			}
+
 			const intersects = selector.getPointerIntersects( onUpPosition, camera );
 			signals.intersectionsDetected.dispatch( intersects );
 
@@ -192,9 +212,34 @@ function Viewport( editor ) {
 
 	}
 
+	function onMouseMove( event ) {
+
+		// Only handle mousemove when in placement mode
+		if ( ! editor.placementMode || ! editor.placementMode.isActive ) return;
+
+		const array = getMousePosition( container.dom, event.clientX, event.clientY );
+		const mousePos = new THREE.Vector2().fromArray( array );
+
+		editor.placementMode.onMouseMove( mousePos, camera );
+		render();
+
+	}
+
 	container.dom.addEventListener( 'mousedown', onMouseDown );
+	container.dom.addEventListener( 'mousemove', onMouseMove );
 	container.dom.addEventListener( 'touchstart', onTouchStart, { passive: false } );
 	container.dom.addEventListener( 'dblclick', onDoubleClick );
+
+	// Escape key to exit placement mode
+	document.addEventListener( 'keydown', function ( event ) {
+
+		if ( event.key === 'Escape' && editor.placementMode && editor.placementMode.isActive ) {
+
+			signals.placementModeChanged.dispatch( false );
+
+		}
+
+	} );
 
 	// controls need to be added *after* main logic,
 	// otherwise controls.enabled doesn't work.
@@ -237,6 +282,43 @@ function Viewport( editor ) {
 	signals.spaceChanged.add( function ( space ) {
 
 		transformControls.setSpace( space );
+
+		render();
+
+	} );
+
+	signals.placementModeChanged.add( function ( isActive ) {
+
+		if ( isActive ) {
+
+			// Enter placement mode
+			if ( editor.selected && editor.placementMode ) {
+
+				editor.placementMode.activate( editor.selected );
+				transformControls.detach(); // Hide transform controls
+				controls.enabled = false; // Disable camera controls
+
+			}
+
+		} else {
+
+			// Exit placement mode
+			if ( editor.placementMode ) {
+
+				editor.placementMode.deactivate();
+
+			}
+
+			// Re-enable controls
+			if ( editor.selected ) {
+
+				transformControls.attach( editor.selected );
+
+			}
+
+			controls.enabled = true;
+
+		}
 
 		render();
 
@@ -317,7 +399,12 @@ function Viewport( editor ) {
 			} );
 			
 			sceneHelpers.add( transformControls );
-			
+
+			// Initialize surface placement mode
+			const placementMode = new SurfacePlacementMode( editor );
+			editor.placementMode = placementMode;
+			editor.PlaceOnSurfaceCommand = PlaceOnSurfaceCommand;
+
 			// Initialize XR now that transformControls exists
 			xr = new XR( editor, transformControls ); // eslint-disable-line no-unused-vars
 		}

@@ -792,6 +792,7 @@ function Strings( config ) {
 			'sidebar/settings/shortcuts/scale': 'Scale',
 			'sidebar/settings/shortcuts/undo': 'Undo',
 			'sidebar/settings/shortcuts/focus': 'Focus',
+			'sidebar/settings/shortcuts/placeOnSurface': 'Place on Surface',
 
 			'sidebar/history': 'History',
 			'sidebar/history/clear': 'Clear',
