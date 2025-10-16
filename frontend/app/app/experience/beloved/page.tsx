@@ -1,18 +1,35 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody } from '@react-three/rapier';
 import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
 import { StaticSceneLoader } from '@/components/runtime/StaticSceneLoader';
 import { NavMeshCollider } from '@/components/runtime/NavMeshCollider';
 import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
+import { PreviewWelcomeModal } from '@/components/runtime/PreviewWelcomeModal';
+import { PreviewBanner } from '@/components/runtime/PreviewBanner';
+import MobileJoystick from '@/components/runtime/MobileJoystick';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
 
 export default function BelovedExperience() {
     const [metadataModal, setMetadataModal] = useState<any>(null);
     const [clickedObjects, setClickedObjects] = useState<Set<string>>(new Set());
+    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+    // Check if user has seen the welcome modal before
+    useEffect(() => {
+        const hasSeenWelcome = localStorage.getItem('beloved-preview-seen');
+        if (!hasSeenWelcome) {
+            setShowWelcomeModal(true);
+        }
+    }, []);
+
+    const handleCloseWelcomeModal = () => {
+        setShowWelcomeModal(false);
+        localStorage.setItem('beloved-preview-seen', 'true');
+    };
 
     const handleMetadataClick = (metadata: any) => {
         // Generate a unique key for this object (using title or a combination of fields)
@@ -64,6 +81,7 @@ export default function BelovedExperience() {
                     <ThirdPersonCamera
                         initialPosition={[-10.677, 1, -0.324]}
                         characterColor="#4080ff"
+                        initialCameraAngle={1.5215926535898001}
                     />
 
                     {/* Load Scene from Static JSON */}
@@ -76,6 +94,14 @@ export default function BelovedExperience() {
                 </Physics>
             </Canvas>
 
+            {/* Preview Banner */}
+            <PreviewBanner onLearnMoreClick={() => setShowWelcomeModal(true)} />
+
+            {/* Welcome Modal */}
+            {showWelcomeModal && (
+                <PreviewWelcomeModal onClose={handleCloseWelcomeModal} />
+            )}
+
             {/* Metadata Modal */}
             {metadataModal && (
                 <MediaMetadataModal
@@ -83,6 +109,9 @@ export default function BelovedExperience() {
                     onClose={() => setMetadataModal(null)}
                 />
             )}
+
+            {/* Mobile Joystick */}
+            <MobileJoystick />
         </div>
     );
 }

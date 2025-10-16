@@ -68,7 +68,7 @@ export function NavMeshCollider({ modelPath }: NavMeshColliderProps) {
                         rotation={[mesh.rotation.x, mesh.rotation.y, mesh.rotation.z]}
                         scale={[mesh.scale.x, mesh.scale.y, mesh.scale.z]}
                     >
-                        <mesh geometry={geometry} visible={false}>
+                        <mesh geometry={geometry} visible={true}>
                             <meshBasicMaterial transparent opacity={0} />
                         </mesh>
                     </RigidBody>

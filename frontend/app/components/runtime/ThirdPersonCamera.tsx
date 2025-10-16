@@ -10,11 +10,13 @@ import { useCharacterControls } from './useCharacterControls';
 interface ThirdPersonCameraProps {
     initialPosition?: [number, number, number];
     characterColor?: string;
+    initialCameraAngle?: number;
 }
 
 const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     initialPosition = [0, 2, 0],
-    characterColor = '#4080ff'
+    characterColor = '#4080ff',
+    initialCameraAngle = 0
 }) => {
     // console.log('ThirdPersonCamera initialized with:', { initialPosition, characterColor });
     const { setDefaultCamera, scene } = useThree();
@@ -29,18 +31,51 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     const smoothness = 0.5;
 
     // Camera control state
-    const [cameraAngle, setCameraAngle] = useState(0);
+    const [cameraAngle, setCameraAngle] = useState(initialCameraAngle);
     const [cameraVerticalAngle, setCameraVerticalAngle] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [lastClientX, setLastClientX] = useState(0);
     const [lastClientY, setLastClientY] = useState(0);
+    const [joystickData, setJoystickData] = useState<{ angle: number; force: number } | null>(null);
+
+    // Poll joystick data from localStorage for mobile controls
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const joystickDataStorage = localStorage.getItem('joystickData');
+            if (joystickDataStorage && joystickDataStorage !== 'null') {
+                try {
+                    setJoystickData(JSON.parse(joystickDataStorage));
+                } catch (e) {
+                    setJoystickData(null);
+                }
+            } else {
+                setJoystickData(null);
+            }
+        }, 100);
+
+        return () => clearInterval(intervalId);
+    }, []);
+
+    // Log camera angle on key press (P key)
+    useEffect(() => {
+        const handleKeyPress = (event: KeyboardEvent) => {
+            if (event.code === 'KeyP') {
+                console.log('📐 Current camera angle:', cameraAngle);
+                console.log('📐 Current camera angle (degrees):', (cameraAngle * 180 / Math.PI).toFixed(2) + '°');
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [cameraAngle]);
 
     // Character controls
     const { animation } = useCharacterControls({
         characterRef,
         rigidBodyRef,
         cameraAngle,
-        setCameraAngle
+        setCameraAngle,
+        joystickData
     });
 
     // Mouse/touch controls for camera
@@ -72,6 +107,11 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
             setIsDragging(false);
         };
 
+        const handleTouchMove = (event: TouchEvent) => {
+            // Prevent scrolling when touching the canvas
+            event.preventDefault();
+        };
+
         // Attach event listeners to canvas
         const canvas = document.querySelector('canvas');
         if (canvas) {
@@ -82,6 +122,12 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
 
             // Prevent context menu on right click
             canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // Prevent touch scrolling on canvas
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+            // Set touch-action CSS to prevent default touch behaviors
+            canvas.style.touchAction = 'none';
         }
 
         return () => {
@@ -90,6 +136,8 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
                 canvas.removeEventListener('pointermove', handlePointerMove);
                 canvas.removeEventListener('pointerup', handlePointerUp);
                 canvas.removeEventListener('pointercancel', handlePointerUp);
+                canvas.removeEventListener('touchmove', handleTouchMove);
+                canvas.style.touchAction = '';
             }
         };
     }, [isDragging, lastClientX, lastClientY]);
