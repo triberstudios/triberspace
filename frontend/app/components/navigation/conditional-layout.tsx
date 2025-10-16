@@ -14,9 +14,10 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname()
   const isCreatorDashboard = pathname.startsWith('/creator-dashboard')
   const isRuntimePreview = pathname.startsWith('/runtime/preview')
+  const isExperience = pathname.startsWith('/experience')
 
-  if (isRuntimePreview) {
-    // Runtime preview - no sidebar, no navigation, fullscreen experience
+  if (isRuntimePreview || isExperience) {
+    // Runtime preview or experience - no sidebar, no navigation, fullscreen experience
     return (
       <div className="flex h-full overflow-hidden">
         {children}
