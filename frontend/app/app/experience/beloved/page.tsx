@@ -17,6 +17,7 @@ export default function BelovedExperience() {
     const [metadataModal, setMetadataModal] = useState<any>(null);
     const [clickedObjects, setClickedObjects] = useState<Set<string>>(new Set());
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Check if user has seen the welcome modal before
     useEffect(() => {
@@ -29,6 +30,10 @@ export default function BelovedExperience() {
     const handleCloseWelcomeModal = () => {
         setShowWelcomeModal(false);
         localStorage.setItem('beloved-preview-seen', 'true');
+    };
+
+    const handleLoadingChange = (loading: boolean) => {
+        setIsLoading(loading);
     };
 
     const handleMetadataClick = (metadata: any) => {
@@ -89,10 +94,21 @@ export default function BelovedExperience() {
                         <StaticSceneLoader
                             sceneJsonPath="/scenes/beloved.json"
                             onMetadataClick={handleMetadataClick}
+                            onLoadingChange={handleLoadingChange}
                         />
                     </Suspense>
                 </Physics>
             </Canvas>
+
+            {/* Loading Screen */}
+            {isLoading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                        <p className="text-white text-sm">Loading experience...</p>
+                    </div>
+                </div>
+            )}
 
             {/* Preview Banner */}
             <PreviewBanner onLearnMoreClick={() => setShowWelcomeModal(true)} />

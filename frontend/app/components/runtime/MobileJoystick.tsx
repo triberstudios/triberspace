@@ -83,7 +83,7 @@ const MobileJoystick = () => {
                 bottom: '80px',
                 width: '150px',
                 height: '150px',
-                zIndex: 1000
+                zIndex: 30
             }}
         />
     );
