@@ -166,11 +166,11 @@ class SketchfabLoader {
 			// Load the model using GLTFLoader
 			const model = await this.loadGLTF( updatedSceneData, fileUrls );
 
-			// Process and add to scene (stores blob URLs in userData to keep them alive)
-			this.processModel( model, modelData, fileUrls );
+			// Process and add to scene (converts textures to data URLs for persistence)
+			await this.processModel( model, modelData, fileUrls );
 
-			// NOTE: We don't clean up blob URLs here anymore - they're stored in userData
-			// and will be cleaned up when the object is removed from the scene
+			// Clean up blob URLs now that textures are converted to data URLs
+			this.cleanupBlobUrls( fileUrls );
 
 			this.hideLoadingIndicator();
 
@@ -483,12 +483,15 @@ class SketchfabLoader {
 	/**
 	 * Process loaded model and add to scene
 	 */
-	processModel( gltf, modelData, fileUrls ) {
+	async processModel( gltf, modelData, fileUrls ) {
 
 		const model = gltf.scene;
 
 		// Set model name
 		model.name = modelData.name || 'Sketchfab Model';
+
+		// Convert blob URL textures to data URLs so they persist across reloads
+		await this.convertTexturesToDataUrls( model );
 
 		// Add Sketchfab metadata
 		model.userData.sketchfab = {
@@ -498,15 +501,10 @@ class SketchfabLoader {
 			user: modelData.user,
 			license: modelData.license,
 			attributionText: this.generateAttributionText( modelData ),
-			importedAt: new Date().toISOString(),
-			// Store blob URLs to prevent them from being revoked
-			blobUrls: fileUrls
+			importedAt: new Date().toISOString()
 		};
 
-		// Scale model if needed (Sketchfab models can be very large or small)
-		this.autoScaleModel( model );
-
-		// Position model at origin
+		// Position model at origin (no auto-scaling - import at original size)
 		model.position.set( 0, 0, 0 );
 
 		// Add to scene using editor command system
@@ -514,6 +512,87 @@ class SketchfabLoader {
 
 		// Select the imported model
 		this.editor.select( model );
+
+	}
+
+	/**
+	 * Convert blob URL textures to data URLs for persistence
+	 */
+	async convertTexturesToDataUrls( model ) {
+
+		const textures = [];
+
+		// Collect all textures from materials
+		model.traverse( ( child ) => {
+
+			if ( child.material ) {
+
+				const materials = Array.isArray( child.material ) ? child.material : [ child.material ];
+
+				materials.forEach( ( material ) => {
+
+					// Check common texture properties
+					const textureProps = [ 'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'bumpMap', 'displacementMap' ];
+
+					textureProps.forEach( ( prop ) => {
+
+						if ( material[ prop ] && material[ prop ].image ) {
+
+							textures.push( material[ prop ] );
+
+						}
+
+					} );
+
+				} );
+
+			}
+
+		} );
+
+		// Convert each texture to data URL
+		for ( const texture of textures ) {
+
+			if ( texture.image && texture.image.src && texture.image.src.startsWith( 'blob:' ) ) {
+
+				try {
+
+					// Create canvas and draw image
+					const canvas = document.createElement( 'canvas' );
+					canvas.width = texture.image.width;
+					canvas.height = texture.image.height;
+
+					const ctx = canvas.getContext( '2d' );
+					ctx.drawImage( texture.image, 0, 0 );
+
+					// Convert to data URL
+					const dataUrl = canvas.toDataURL( 'image/png' );
+
+					// Create new image with data URL
+					const img = new Image();
+					img.src = dataUrl;
+
+					await new Promise( ( resolve ) => {
+
+						img.onload = () => {
+
+							texture.image = img;
+							texture.needsUpdate = true;
+							resolve();
+
+						};
+
+					} );
+
+				} catch ( error ) {
+
+					console.warn( 'Failed to convert texture to data URL:', error );
+
+				}
+
+			}
+
+		}
 
 	}
 

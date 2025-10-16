@@ -743,6 +743,9 @@ Editor.prototype = {
 		// Restore video textures after scene loading
 		this.restoreVideoTextures();
 
+		// Restore data URL textures (for Sketchfab models and other imported assets)
+		this.restoreDataUrlTextures();
+
 		// Restore interaction graph if available
 		console.log('Editor.fromJSON: Checking interaction graph restore...', {
 			hasInteractionGraphData: !!json.interactionGraph,
@@ -796,7 +799,11 @@ Editor.prototype = {
 		 * @returns {Object} Safe JSON representation
 		 */
 		createSafeTextureJSON: function( texture ) {
-			return {
+			// Check if texture has a data URL image (from Sketchfab or other sources)
+			const hasDataUrl = texture.image && texture.image.src &&
+				(texture.image.src.startsWith('data:') || texture.image.src.startsWith('blob:'));
+
+			const textureJSON = {
 				metadata: {
 					version: 4.6,
 					type: 'Texture',
@@ -804,7 +811,7 @@ Editor.prototype = {
 				},
 				uuid: texture.uuid,
 				name: texture.name || '',
-				image: null, // Don't serialize the media element
+				image: hasDataUrl && texture.image.src.startsWith('data:') ? texture.image.src : null,
 				mapping: texture.mapping,
 				channel: texture.channel,
 				repeat: [ texture.repeat.x, texture.repeat.y ],
@@ -828,6 +835,8 @@ Editor.prototype = {
 				isVideoTexture: texture.isVideoTexture || false,
 				isImageTexture: (texture.image && texture.image instanceof HTMLImageElement) || false
 			};
+
+			return textureJSON;
 		},
 
 		/**
@@ -868,23 +877,51 @@ Editor.prototype = {
 		const originalUserData = [];
 		const mediaUtils = this.mediaSerializationUtils;
 
+		// All texture properties that can exist on a material
+		const textureProperties = [
+			'map', 'normalMap', 'roughnessMap', 'metalnessMap',
+			'emissiveMap', 'aoMap', 'bumpMap', 'displacementMap',
+			'alphaMap', 'lightMap', 'specularMap', 'envMap'
+		];
+
 		this.scene.traverse( function( object ) {
 
-			// Handle material textures that need custom serialization
-			if ( object.material?.map && mediaUtils.needsCustomSerialization( object.material.map ) ) {
+			// Handle all material textures (including Sketchfab PBR materials)
+			if ( object.material ) {
+				const materials = Array.isArray( object.material ) ? object.material : [ object.material ];
 
-				const texture = object.material.map;
+				materials.forEach( function( material ) {
+					textureProperties.forEach( function( prop ) {
+						const texture = material[ prop ];
 
-				// Store original toJSON method
-				originalToJSONMethods.push({
-					texture: texture,
-					originalToJSON: texture.toJSON
-				});
+						// Check if texture exists and has a data URL image
+						if ( texture && texture.image && texture.image.src &&
+							texture.image.src.startsWith( 'data:' ) ) {
 
-				// Override with safe serialization
-				texture.toJSON = function( meta ) {
-					return mediaUtils.createSafeTextureJSON( this );
-				};
+							// Store original toJSON method
+							originalToJSONMethods.push({
+								texture: texture,
+								originalToJSON: texture.toJSON
+							});
+
+							// Override with safe serialization that preserves data URLs
+							texture.toJSON = function( meta ) {
+								return mediaUtils.createSafeTextureJSON( this );
+							};
+						}
+						// Also handle video/image textures
+						else if ( texture && mediaUtils.needsCustomSerialization( texture ) ) {
+							originalToJSONMethods.push({
+								texture: texture,
+								originalToJSON: texture.toJSON
+							});
+
+							texture.toJSON = function( meta ) {
+								return mediaUtils.createSafeTextureJSON( this );
+							};
+						}
+					} );
+				} );
 			}
 
 			// Handle media plane objects with mediaSource
@@ -1033,6 +1070,62 @@ Editor.prototype = {
 		} );
 
 		console.log(`🎬 RestoreVideoTextures: Complete. Found ${foundMediaPlanes} media planes, restored ${restoredVideos} videos`);
+
+	},
+
+	restoreDataUrlTextures: function() {
+
+		console.log('🖼️ RestoreDataUrlTextures: Starting data URL texture restoration...');
+
+		let texturesRestored = 0;
+		const textureProperties = [
+			'map', 'normalMap', 'roughnessMap', 'metalnessMap',
+			'emissiveMap', 'aoMap', 'bumpMap', 'displacementMap',
+			'alphaMap', 'lightMap', 'specularMap'
+		];
+
+		this.scene.traverse( function( object ) {
+
+			if ( object.material ) {
+				const materials = Array.isArray( object.material ) ? object.material : [ object.material ];
+
+				materials.forEach( function( material ) {
+					textureProperties.forEach( function( prop ) {
+						const texture = material[ prop ];
+
+						// Check if texture has image data URL that needs restoration
+						if ( texture && texture.image && typeof texture.image === 'string' &&
+							texture.image.startsWith( 'data:' ) ) {
+
+							console.log(`🖼️ Restoring ${prop} texture for ${object.name || 'unnamed'}`);
+
+							// Create new image element
+							const img = new Image();
+							img.crossOrigin = 'anonymous';
+
+							img.onload = function() {
+								// Replace string with actual image element
+								texture.image = img;
+								texture.needsUpdate = true;
+								material.needsUpdate = true;
+								console.log(`🖼️ Texture ${prop} restored successfully`);
+							};
+
+							img.onerror = function() {
+								console.error(`🖼️ Failed to restore ${prop} texture`);
+							};
+
+							// Set source to trigger loading
+							img.src = texture.image;
+							texturesRestored++;
+						}
+					} );
+				} );
+			}
+
+		} );
+
+		console.log(`🖼️ RestoreDataUrlTextures: Complete. Restored ${texturesRestored} textures`);
 
 	},
 

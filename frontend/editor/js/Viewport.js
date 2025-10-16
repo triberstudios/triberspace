@@ -53,6 +53,7 @@ function Viewport( editor ) {
 
 	// Create infinite grid with fading
 	const grid = new InfiniteGridHelper(1, 5, GRID_COLORS_LIGHT[0], GRID_COLORS_LIGHT[1]);
+	grid.position.y = 0; // Ensure grid is at y=0
 
 	const viewHelper = new ViewHelper( camera, container );
 
@@ -363,7 +364,42 @@ function Viewport( editor ) {
 			} );
 			
 			transformControls.addEventListener( 'objectChange', function () {
-				signals.objectChanged.dispatch( transformControls.object );
+				const object = transformControls.object;
+
+				// Maintain aspect ratio during scale gizmo dragging
+				if ( transformControls.getMode() === 'scale' && editor.aspectRatioLocked && object ) {
+					const currentScale = object.scale;
+					const ratio = editor.lockedAspectRatio;
+
+					// Detect which axis was scaled and adjust others proportionally
+					const scaleChange = currentScale.clone().divide( objectScaleOnDown );
+
+					// Find the axis with the largest change
+					const maxChange = Math.max(
+						Math.abs( scaleChange.x - 1 ),
+						Math.abs( scaleChange.y - 1 ),
+						Math.abs( scaleChange.z - 1 )
+					);
+
+					let scaleFactor = 1;
+					if ( Math.abs( scaleChange.x - 1 ) === maxChange ) {
+						scaleFactor = scaleChange.x;
+					} else if ( Math.abs( scaleChange.y - 1 ) === maxChange ) {
+						scaleFactor = scaleChange.y;
+					} else {
+						scaleFactor = scaleChange.z;
+					}
+
+					// Apply uniform scale maintaining the locked aspect ratio
+					const baseScaleX = objectScaleOnDown.x;
+					const baseScaleY = objectScaleOnDown.y;
+
+					object.scale.x = baseScaleX * scaleFactor;
+					object.scale.y = baseScaleY * scaleFactor;
+					object.scale.z = objectScaleOnDown.z * scaleFactor;
+				}
+
+				signals.objectChanged.dispatch( object );
 			} );
 			
 			transformControls.addEventListener( 'mouseDown', function () {

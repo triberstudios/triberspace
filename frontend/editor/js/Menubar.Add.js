@@ -625,6 +625,34 @@ function MenubarAdd( editor ) {
 	} );
 	options.add( option );
 
+	// Import from Files
+
+	option = new UIRow();
+	option.setClass( 'option' );
+	option.setTextContent( 'Import from Files' );
+	option.onClick( function () {
+
+		const input = document.createElement( 'input' );
+		input.type = 'file';
+		input.multiple = true;
+		input.accept = '.gltf,.glb,.obj,.fbx,.dae,.stl,.ply,.3ds,.json';
+
+		input.addEventListener( 'change', function () {
+
+			const files = input.files;
+			if ( files.length > 0 ) {
+
+				editor.loader.loadFiles( Array.from( files ) );
+
+			}
+
+		} );
+
+		input.click();
+
+	} );
+	options.add( option );
+
 	return container;
 
 }

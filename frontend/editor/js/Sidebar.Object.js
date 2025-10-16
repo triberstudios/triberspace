@@ -852,7 +852,7 @@ function SidebarObject( editor ) {
 	const objectScaleRow = new UIRow();
 	const objectScaleX = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( updateWithAspectRatio );
 	const objectScaleY = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( updateWithAspectRatio );
-	const objectScaleZ = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( update );
+	const objectScaleZ = new UINumber( 1 ).setPrecision( 3 ).setWidth( '50px' ).onChange( updateWithAspectRatio );
 
 	// Property patch button for scale
 	scaleArrow = createPropertyPatchButton( 'scale' );
@@ -862,6 +862,35 @@ function SidebarObject( editor ) {
 	objectScaleRow.add( objectScaleX, objectScaleY, objectScaleZ );
 
 	container.add( objectScaleRow );
+
+	// Lock aspect ratio checkbox
+	const lockAspectRatioRow = new UIRow();
+	const lockAspectRatioCheckbox = new UICheckbox( false );
+
+	// Store on editor object so it's accessible from Viewport
+	editor.aspectRatioLocked = false;
+	editor.lockedAspectRatio = 1;
+
+	lockAspectRatioCheckbox.onChange( function () {
+
+		editor.aspectRatioLocked = lockAspectRatioCheckbox.getValue();
+
+		if ( editor.aspectRatioLocked && editor.selected ) {
+
+			// Store current ratio when locking
+			editor.lockedAspectRatio = editor.selected.scale.x / editor.selected.scale.y;
+
+		}
+
+	} );
+
+	// Add empty label div for alignment with other rows
+	const lockAspectRatioLabel = new UIText( '' ).setClass( 'Label' );
+	lockAspectRatioRow.add( lockAspectRatioLabel );
+	lockAspectRatioRow.add( lockAspectRatioCheckbox );
+	lockAspectRatioRow.add( new UIText( 'Lock Aspect Ratio' ) );
+
+	container.add( lockAspectRatioRow );
 
 	// Place on Surface button
 	const placeOnSurfaceRow = new UIRow();
@@ -879,6 +908,7 @@ function SidebarObject( editor ) {
 	} );
 
 	placeOnSurfaceRow.add( placeOnSurfaceButton );
+	placeOnSurfaceRow.setDisplay( 'none' ); // Hidden for now
 	container.add( placeOnSurfaceRow );
 
 	// Update button state when placement mode changes
@@ -2311,6 +2341,9 @@ function SidebarObject( editor ) {
 		const isMediaPlane = object.userData && object.userData.isMediaPlane;
 		const shouldMaintainRatio = isMediaPlane && lockRatio.getValue() && aspectRatio.getValue() !== 'custom';
 
+		// Also check the general lock aspect ratio checkbox for all objects
+		const generalLockEnabled = editor.aspectRatioLocked;
+
 		if ( shouldMaintainRatio ) {
 			const ratio = AspectRatioUtils.getRatioValue( aspectRatio.getValue() );
 			if ( ratio ) {
@@ -2333,6 +2366,36 @@ function SidebarObject( editor ) {
 					const adjustedScaleX = newScaleY * ratio;
 					objectScaleX.setValue( adjustedScaleX );
 				}
+			}
+		} else if ( generalLockEnabled ) {
+			// General aspect ratio lock for all objects - uniform scaling on X, Y, Z
+			const currentScaleX = object.scale.x;
+			const currentScaleY = object.scale.y;
+			const currentScaleZ = object.scale.z;
+			const newScaleX = objectScaleX.getValue();
+			const newScaleY = objectScaleY.getValue();
+			const newScaleZ = objectScaleZ.getValue();
+
+			// Check which value changed
+			const xChanged = Math.abs( currentScaleX - newScaleX ) > 0.001;
+			const yChanged = Math.abs( currentScaleY - newScaleY ) > 0.001;
+			const zChanged = Math.abs( currentScaleZ - newScaleZ ) > 0.001;
+
+			if ( xChanged && !yChanged && !zChanged ) {
+				// X scale changed, adjust Y and Z uniformly
+				const adjustedScaleY = newScaleX / editor.lockedAspectRatio;
+				objectScaleY.setValue( adjustedScaleY );
+				objectScaleZ.setValue( newScaleX ); // Z scales same as X
+			} else if ( yChanged && !xChanged && !zChanged ) {
+				// Y scale changed, adjust X and Z uniformly
+				const adjustedScaleX = newScaleY * editor.lockedAspectRatio;
+				objectScaleX.setValue( adjustedScaleX );
+				objectScaleZ.setValue( adjustedScaleX ); // Z scales same as adjusted X
+			} else if ( zChanged && !xChanged && !yChanged ) {
+				// Z scale changed, adjust X and Y uniformly
+				objectScaleX.setValue( newScaleZ );
+				const adjustedScaleY = newScaleZ / editor.lockedAspectRatio;
+				objectScaleY.setValue( adjustedScaleY );
 			}
 		}
 
@@ -2608,11 +2671,13 @@ function SidebarObject( editor ) {
 
 			objectRotationRow.setDisplay( 'none' );
 			objectScaleRow.setDisplay( 'none' );
+			lockAspectRatioRow.setDisplay( 'none' );
 
 		} else {
 
 			objectRotationRow.setDisplay( '' );
 			objectScaleRow.setDisplay( '' );
+			lockAspectRatioRow.setDisplay( '' );
 
 		}
 
