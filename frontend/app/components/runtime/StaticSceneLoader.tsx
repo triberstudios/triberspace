@@ -78,12 +78,19 @@ function restoreVideoTexture(object: THREE.Object3D, videoSrc: string, stats: an
         stats.restoredVideos++;
         console.log('🎬 Video texture applied:', object.name);
 
-        // Handle autoplay
+        // Handle autoplay - force muted for mobile compatibility
         if (object.userData.autoplay !== false) {
+            video.muted = true; // Always start muted for mobile
             video.play().catch(e => {
-                console.warn('🎬 Video autoplay failed, trying muted:', e);
-                video.muted = true;
-                video.play().catch(e2 => console.warn('🎬 Video play failed:', e2));
+                console.warn('🎬 Video autoplay failed:', e);
+                // Try again on user interaction
+                const playOnInteraction = () => {
+                    video.play().catch(e2 => console.warn('🎬 Video play on interaction failed:', e2));
+                    document.removeEventListener('touchstart', playOnInteraction);
+                    document.removeEventListener('click', playOnInteraction);
+                };
+                document.addEventListener('touchstart', playOnInteraction, { once: true });
+                document.addEventListener('click', playOnInteraction, { once: true });
             });
         }
     };
@@ -102,7 +109,6 @@ function restoreImageTexture(object: THREE.Object3D, imageSrc: string, stats: an
     console.log('🖼️ Restoring image from:', imageSrc);
 
     const image = document.createElement('img');
-    image.crossOrigin = 'anonymous';
 
     // Hide image element
     image.style.position = 'absolute';
@@ -135,6 +141,8 @@ function restoreImageTexture(object: THREE.Object3D, imageSrc: string, stats: an
         console.error('🖼️ Failed to load image:', imageSrc);
     };
 
+    // Set crossOrigin BEFORE setting src
+    image.crossOrigin = 'anonymous';
     image.src = imageSrc;
 }
 
