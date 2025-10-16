@@ -6,6 +6,7 @@ import { MenubarFile } from './Menubar.File.js';
 import { MenubarView } from './Menubar.View.js';
 import { MenubarHelp } from './Menubar.Help.js';
 import { MenubarStatus } from './Menubar.Status.js';
+import { PublishModal } from './modals/PublishModal.js';
 
 function Menubar( editor ) {
 
@@ -93,12 +94,16 @@ function Menubar( editor ) {
 
 	} );
 
-	// Publish button (primary style) - placeholder for future
+	// Publish button (primary style) with modal
 	const publishButton = document.createElement( 'button' );
 	publishButton.className = 'menubar-btn menubar-btn-primary';
 	publishButton.textContent = 'Publish';
+
+	// Create publish modal instance
+	const publishModal = new PublishModal( editor );
+
 	publishButton.addEventListener( 'click', function () {
-		alert( 'Publish functionality coming soon!' );
+		publishModal.open();
 	} );
 
 	actionButtons.dom.appendChild( previewButton );
