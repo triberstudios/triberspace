@@ -29,6 +29,7 @@ function Config() {
 		'settings/shortcuts/undo': 'z',
 		'settings/shortcuts/focus': 'f',
 		'settings/shortcuts/placeOnSurface': 'p',
+		'settings/shortcuts/clone': 'd',
 
 		'layout/sidebarWidth': 350,
 		'layout/viewportHeight': null,

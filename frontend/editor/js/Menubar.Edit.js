@@ -103,9 +103,33 @@ function MenubarEdit( editor ) {
 
 	// Clone
 
+	function deepCloneMaterials( object ) {
+
+		object.traverse( function ( child ) {
+
+			if ( child.isMesh && child.material ) {
+
+				// Clone material (handles both single materials and material arrays)
+				if ( Array.isArray( child.material ) ) {
+
+					child.material = child.material.map( mat => mat.clone() );
+
+				} else {
+
+					child.material = child.material.clone();
+
+				}
+
+			}
+
+		} );
+
+	}
+
 	option = new UIRow();
 	option.setClass( 'option' );
 	option.setTextContent( strings.getKey( 'menubar/edit/clone' ) );
+	option.add( new UIText( 'CTRL+D' ).setClass( 'key' ) );
 	option.onClick( function () {
 
 		let object = editor.selected;
@@ -113,6 +137,9 @@ function MenubarEdit( editor ) {
 		if ( object === null || object.parent === null ) return; // avoid cloning the camera or scene
 
 		object = clone( object );
+
+		// Deep clone materials so each clone has independent materials/textures
+		deepCloneMaterials( object );
 
 		editor.execute( new AddObjectCommand( editor, object ) );
 

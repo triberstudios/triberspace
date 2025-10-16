@@ -23,7 +23,7 @@ export const FILE_LIMITS = {
   },
   models: {
     types: ['glb', 'gltf'],
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 100 * 1024 * 1024, // 100MB
   },
   videos: {
     types: ['mp4', 'webm', 'mov'],

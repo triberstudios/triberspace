@@ -422,8 +422,57 @@ class SceneCommandExecutor {
 			let object = this.editor.scene.getObjectByName(target);
 			if (object) return object;
 
-			// Try to find by color + type combination (e.g., "purple_sphere", "blue_cube")
+			// Try partial name matching (case-insensitive) for imported models
 			const lowerTarget = target.toLowerCase();
+			let partialMatches = [];
+			this.editor.scene.traverse((child) => {
+				const childName = (child.name || '').toLowerCase();
+				// Skip objects with empty names
+				if (!childName) return;
+
+				// Match if the target is contained in the name, or the name (without extension) matches
+				const nameWithoutExt = childName.replace(/\.(glb|gltf|fbx|obj)$/i, '');
+
+				// Check for matches: target in name, or name (no ext) matches target
+				if (childName.includes(lowerTarget) || nameWithoutExt === lowerTarget) {
+					partialMatches.push(child);
+				}
+			});
+
+			if (partialMatches.length > 0) {
+				// Log all matches for debugging
+				console.log(`Found ${partialMatches.length} partial matches for "${target}":`,
+					partialMatches.map(m => `${m.name} (${m.type})`).join(', '));
+
+				// Prioritize: 1) exact matches, 2) parent groups/objects, 3) name starts with target, 4) shorter names
+				partialMatches.sort((a, b) => {
+					const aName = (a.name || '').toLowerCase().replace(/\.(glb|gltf|fbx|obj)$/i, '');
+					const bName = (b.name || '').toLowerCase().replace(/\.(glb|gltf|fbx|obj)$/i, '');
+
+					// 1. Exact match without extension gets highest priority
+					if (aName === lowerTarget && bName !== lowerTarget) return -1;
+					if (aName !== lowerTarget && bName === lowerTarget) return 1;
+
+					// 2. Prioritize Group/Object3D (parent containers) over Mesh (child geometry)
+					const aIsContainer = a.type === 'Group' || a.type === 'Object3D' || a.type === 'Scene';
+					const bIsContainer = b.type === 'Group' || b.type === 'Object3D' || b.type === 'Scene';
+					if (aIsContainer && !bIsContainer) return -1;
+					if (!aIsContainer && bIsContainer) return 1;
+
+					// 3. Name starts with target gets priority
+					const aStarts = aName.startsWith(lowerTarget);
+					const bStarts = bName.startsWith(lowerTarget);
+					if (aStarts && !bStarts) return -1;
+					if (!aStarts && bStarts) return 1;
+
+					// 4. Shorter names are more specific
+					return aName.length - bName.length;
+				});
+				console.log(`Using best match: ${partialMatches[0].name} (type: ${partialMatches[0].type})`);
+				return partialMatches[0];
+			}
+
+			// Try to find by color + type combination (e.g., "purple_sphere", "blue_cube")
 			const colorTypes = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'white', 'black', 'gray', 'brown'];
 			const objectTypes = ['cube', 'sphere', 'plane', 'cylinder'];
 
@@ -556,9 +605,9 @@ class SceneCommandExecutor {
 			});
 		}
 
-		// Get all scene objects info (meshes and lights)
+		// Get all scene objects info (meshes, lights, and groups)
 		this.editor.scene.traverse((child) => {
-			if ((child.isMesh || child.isLight) && child !== this.editor.camera) {
+			if ((child.isMesh || child.isLight || child.type === 'Group' || child.type === 'Object3D') && child !== this.editor.camera && child !== this.editor.scene) {
 				// Get material color if available (for meshes only)
 				let color = 'white';
 				if (child.isMesh && child.material && child.material.color) {

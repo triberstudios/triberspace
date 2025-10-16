@@ -1,6 +1,8 @@
 import { UIPanel, UIText, UIRow, UIInput } from './libs/ui.js';
 
+import { AddObjectCommand } from './commands/AddObjectCommand.js';
 import { RemoveObjectCommand } from './commands/RemoveObjectCommand.js';
+import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
 function SidebarSettingsShortcuts( editor ) {
 
@@ -19,11 +21,34 @@ function SidebarSettingsShortcuts( editor ) {
 
 	const container = new UIPanel();
 
+	function deepCloneMaterials( object ) {
+
+		object.traverse( function ( child ) {
+
+			if ( child.isMesh && child.material ) {
+
+				// Clone material (handles both single materials and material arrays)
+				if ( Array.isArray( child.material ) ) {
+
+					child.material = child.material.map( mat => mat.clone() );
+
+				} else {
+
+					child.material = child.material.clone();
+
+				}
+
+			}
+
+		} );
+
+	}
+
 	const headerRow = new UIRow();
 	headerRow.add( new UIText( strings.getKey( 'sidebar/settings/shortcuts' ).toUpperCase() ) );
 	container.add( headerRow );
 
-	const shortcuts = [ 'translate', 'rotate', 'scale', 'undo', 'focus', 'placeOnSurface' ];
+	const shortcuts = [ 'translate', 'rotate', 'scale', 'undo', 'focus', 'placeOnSurface', 'clone' ];
 
 	function createShortcutInput( name ) {
 
@@ -188,6 +213,27 @@ function SidebarSettingsShortcuts( editor ) {
 
 				const isActive = editor.placementMode.isActive;
 				editor.signals.placementModeChanged.dispatch( ! isActive );
+
+			}
+
+			break;
+
+		case config.getKey( 'settings/shortcuts/clone' ):
+
+			if ( IS_MAC ? event.metaKey : event.ctrlKey ) {
+
+				event.preventDefault(); // Prevent browser bookmark hotkey
+
+				let object = editor.selected;
+
+				if ( object === null || object.parent === null ) return; // avoid cloning the camera or scene
+
+				object = clone( object );
+
+				// Deep clone materials so each clone has independent materials/textures
+				deepCloneMaterials( object );
+
+				editor.execute( new AddObjectCommand( editor, object ) );
 
 			}
 

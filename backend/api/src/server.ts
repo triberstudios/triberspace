@@ -14,7 +14,7 @@ config({ path: resolve(__dirname, '../../../.env') });
 
 const fastify = Fastify({
   logger: true,
-  bodyLimit: 10 * 1024 * 1024 // 10MB limit for large scene uploads
+  bodyLimit: 100 * 1024 * 1024 // 100MB limit for large scene uploads
 });
 
 // Set error handler

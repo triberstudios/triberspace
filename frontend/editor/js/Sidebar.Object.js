@@ -398,6 +398,7 @@ const AspectRatioUtils = {
 		const ratios = {
 			'16:9': 16 / 9,
 			'4:3': 4 / 3,
+			'3:4': 3 / 4,
 			'1:1': 1 / 1,
 			'3:2': 3 / 2,
 			'21:9': 21 / 9,
@@ -446,6 +447,7 @@ const AspectRatioUtils = {
 		const standardRatios = {
 			'16:9': 16 / 9,
 			'4:3': 4 / 3,
+			'3:4': 3 / 4,
 			'1:1': 1 / 1,
 			'3:2': 3 / 2,
 			'21:9': 21 / 9,
@@ -1097,6 +1099,7 @@ function SidebarObject( editor ) {
 		'custom': 'Custom',
 		'16:9': '16:9 (Widescreen)',
 		'4:3': '4:3 (Standard)',
+		'3:4': '3:4 (Portrait)',
 		'1:1': '1:1 (Square)',
 		'3:2': '3:2 (Photo)',
 		'21:9': '21:9 (Ultrawide)',
