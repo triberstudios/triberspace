@@ -12,17 +12,26 @@ import { Trophy } from '@phosphor-icons/react';
 
 export default function BelovedExperience() {
     const [metadataModal, setMetadataModal] = useState<any>(null);
+    const [clickedObjects, setClickedObjects] = useState<Set<string>>(new Set());
 
     const handleMetadataClick = (metadata: any) => {
-        // Show points toast
-        toast.success('+10 Beloved. Points', {
-            description: 'Points earned for exploring',
-            icon: <Trophy size={20} weight="fill" />,
-            duration: 3000,
-            position: 'top-center',
-        });
+        // Generate a unique key for this object (using title or a combination of fields)
+        const objectKey = metadata.title || `${metadata.artist}-${metadata.year}`;
 
-        // Open metadata modal
+        // Only show toast if this object hasn't been clicked before
+        if (!clickedObjects.has(objectKey)) {
+            toast.success('+10 Beloved. Points', {
+                description: 'Points earned for exploring',
+                icon: <Trophy size={20} weight="fill" />,
+                duration: 3000,
+                position: 'top-center',
+            });
+
+            // Mark this object as clicked
+            setClickedObjects(prev => new Set(prev).add(objectKey));
+        }
+
+        // Always open metadata modal
         setMetadataModal(metadata);
     };
 
