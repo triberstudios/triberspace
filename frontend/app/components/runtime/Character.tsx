@@ -56,11 +56,11 @@ const Character = React.forwardRef<THREE.Group, CharacterProps>(({
     useEffect(() => {
         if (scene) {
             scene.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    (child.material as THREE.MeshStandardMaterial).color.set(color);
-                    if ((child.material as THREE.MeshStandardMaterial).emissive) {
-                        (child.material as THREE.MeshStandardMaterial).emissive.set(color);
-                        (child.material as THREE.MeshStandardMaterial).emissiveIntensity = 200;
+                if ((child as THREE.Mesh).isMesh && (child as THREE.Mesh).material) {
+                    ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).color.set(color);
+                    if (((child as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive) {
+                        ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.set(color);
+                        ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = 200;
                     }
                 }
             });

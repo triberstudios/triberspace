@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import nipplejs from 'nipplejs';
 import { throttle } from 'lodash';
+
+// Dynamic import nipplejs to avoid SSR issues
+let nipplejs: any = null;
+if (typeof window !== 'undefined') {
+    nipplejs = require('nipplejs');
+}
 
 const MobileJoystick = () => {
     const [joystickManager, setJoystickManager] = useState<any>(null);
@@ -22,7 +27,7 @@ const MobileJoystick = () => {
     }, []);
 
     useEffect(() => {
-        if (containerRef.current && isMobile) {
+        if (containerRef.current && isMobile && nipplejs) {
             const manager = nipplejs.create({
                 zone: containerRef.current,
                 mode: 'static',

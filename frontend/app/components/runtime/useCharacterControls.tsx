@@ -78,7 +78,7 @@ function useKeyboardControls() {
 }
 
 interface UseCharacterControlsProps {
-    characterRef: React.RefObject<THREE.Group>;
+    characterRef: React.RefObject<THREE.Group | null>;
     rigidBodyRef: React.RefObject<any>;
     cameraAngle: number;
     setCameraAngle: (angle: number | ((prevAngle: number) => number)) => void;
