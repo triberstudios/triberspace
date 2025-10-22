@@ -1765,6 +1765,12 @@ function SidebarObject( editor ) {
 					hasVideoTexture: true,
 					videoSrc: videoUrl,
 					originalFileName: fileName
+				},
+				// Default spatial audio to enabled for video uploads
+				spatialAudio: object.userData.spatialAudio || {
+					enabled: true,
+					maxDistance: 15,
+					rolloffFactor: 1.5
 				}
 			} );
 
