@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { creators } from "./creators";
+import { worlds } from "./worlds";
 // Note: pointTransactions reference is handled in relations.ts to avoid circular imports
 
 // =============================================================================
@@ -42,6 +43,7 @@ export const products = pgTable("products", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1000 }),
   publicId: varchar("public_id", { length: 12 }).unique().notNull().$defaultFn(() => generateNanoId()),
   creatorId: integer("creatorId").notNull().references(() => creators.id, { onDelete: "cascade" }),
+  worldId: integer("world_id").notNull().references(() => worlds.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   productType: text("productType").notNull(),
@@ -56,10 +58,13 @@ export const products = pgTable("products", {
   releaseDate: timestamp("releaseDate", { withTimezone: true }),
   metadata: jsonb("metadata"),
   displayOrder: integer("displayOrder"),
+  totalSales: integer("total_sales").default(0),
+  totalRevenuePoints: integer("total_revenue_points").default(0),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   index("products_creator_idx").on(table.creatorId),
+  index("products_world_idx").on(table.worldId),
   index("products_type_idx").on(table.productType),
   index("products_active_idx").on(table.isActive),
   index("products_release_idx").on(table.releaseDate),

@@ -21,7 +21,14 @@ import {
 import {
   worlds,
   spaces,
-  events
+  events,
+  spaceWorlds,
+  worldStewards,
+  worldMemberships,
+  userWorldPoints,
+  payoutCycles,
+  stewardPayouts,
+  awards
 } from "./worlds";
 import {
   creatorPointsConfig,
@@ -39,6 +46,7 @@ import {
 } from "./store";
 import {
   calendarEvents,
+  attendance,
   eventAttendance
 } from "./analytics";
 
@@ -58,7 +66,14 @@ export const userRelations = relations(user, ({ many, one }) => ({
   pointsPurchases: many(pointsPurchases),
   orders: many(orders),
   inventory: many(userInventory),
-  eventAttendances: many(eventAttendance),
+  eventAttendances: many(eventAttendance), // Legacy
+  attendances: many(attendance),
+  foundedWorlds: many(worlds),
+  worldStewardships: many(worldStewards),
+  worldMemberships: many(worldMemberships),
+  worldPoints: many(userWorldPoints),
+  awardsGiven: many(awards),
+  awardsReceived: many(awards),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -85,7 +100,7 @@ export const creatorRelations = relations(creators, ({ one, many }) => ({
     references: [user.id],
   }),
   tribe: one(tribes),
-  world: one(worlds),
+  spaces: many(spaces),
   store: one(creatorStores),
   pointsConfig: one(creatorPointsConfig),
   pointsPackages: many(pointsPackages),
@@ -120,19 +135,28 @@ export const userTribeMembershipRelations = relations(userTribeMemberships, ({ o
 // =============================================================================
 
 export const worldRelations = relations(worlds, ({ one, many }) => ({
-  creator: one(creators, {
-    fields: [worlds.creatorId],
-    references: [creators.id],
+  founder: one(user, {
+    fields: [worlds.founderId],
+    references: [user.id],
   }),
-  spaces: many(spaces),
+  spaceWorlds: many(spaceWorlds),
+  stewards: many(worldStewards),
+  memberships: many(worldMemberships),
+  userPoints: many(userWorldPoints),
+  products: many(products),
+  payoutCycles: many(payoutCycles),
+  awards: many(awards),
 }));
 
 export const spaceRelations = relations(spaces, ({ one, many }) => ({
-  world: one(worlds, {
-    fields: [spaces.worldId],
-    references: [worlds.id],
+  creator: one(creators, {
+    fields: [spaces.creatorId],
+    references: [creators.id],
   }),
+  spaceWorlds: many(spaceWorlds),
   events: many(events),
+  awards: many(awards),
+  attendances: many(attendance),
 }));
 
 export const eventRelations = relations(events, ({ one, many }) => ({
@@ -141,7 +165,103 @@ export const eventRelations = relations(events, ({ one, many }) => ({
     references: [spaces.id],
   }),
   calendarEvent: one(calendarEvents),
-  attendances: many(eventAttendance),
+  eventAttendances: many(eventAttendance), // Legacy
+  attendances: many(attendance),
+}));
+
+// Junction table relations
+export const spaceWorldRelations = relations(spaceWorlds, ({ one }) => ({
+  space: one(spaces, {
+    fields: [spaceWorlds.spaceId],
+    references: [spaces.id],
+  }),
+  world: one(worlds, {
+    fields: [spaceWorlds.worldId],
+    references: [worlds.id],
+  }),
+  addedByUser: one(user, {
+    fields: [spaceWorlds.addedBy],
+    references: [user.id],
+  }),
+}));
+
+// World economy relations
+export const worldStewardRelations = relations(worldStewards, ({ one, many }) => ({
+  world: one(worlds, {
+    fields: [worldStewards.worldId],
+    references: [worlds.id],
+  }),
+  user: one(user, {
+    fields: [worldStewards.userId],
+    references: [user.id],
+  }),
+  appointedByUser: one(user, {
+    fields: [worldStewards.appointedBy],
+    references: [user.id],
+  }),
+  payouts: many(stewardPayouts),
+}));
+
+export const worldMembershipRelations = relations(worldMemberships, ({ one }) => ({
+  world: one(worlds, {
+    fields: [worldMemberships.worldId],
+    references: [worlds.id],
+  }),
+  user: one(user, {
+    fields: [worldMemberships.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userWorldPointsRelations = relations(userWorldPoints, ({ one }) => ({
+  user: one(user, {
+    fields: [userWorldPoints.userId],
+    references: [user.id],
+  }),
+  world: one(worlds, {
+    fields: [userWorldPoints.worldId],
+    references: [worlds.id],
+  }),
+}));
+
+// Payout cycle relations
+export const payoutCycleRelations = relations(payoutCycles, ({ one, many }) => ({
+  world: one(worlds, {
+    fields: [payoutCycles.worldId],
+    references: [worlds.id],
+  }),
+  stewardPayouts: many(stewardPayouts),
+}));
+
+export const stewardPayoutRelations = relations(stewardPayouts, ({ one }) => ({
+  cycle: one(payoutCycles, {
+    fields: [stewardPayouts.cycleId],
+    references: [payoutCycles.id],
+  }),
+  steward: one(worldStewards, {
+    fields: [stewardPayouts.stewardId],
+    references: [worldStewards.id],
+  }),
+}));
+
+// Award relations
+export const awardRelations = relations(awards, ({ one }) => ({
+  world: one(worlds, {
+    fields: [awards.worldId],
+    references: [worlds.id],
+  }),
+  space: one(spaces, {
+    fields: [awards.spaceId],
+    references: [spaces.id],
+  }),
+  fromUser: one(user, {
+    fields: [awards.fromUserId],
+    references: [user.id],
+  }),
+  toUser: one(user, {
+    fields: [awards.toUserId],
+    references: [user.id],
+  }),
 }));
 
 // =============================================================================
@@ -273,6 +393,10 @@ export const productRelations = relations(products, ({ one, many }) => ({
     fields: [products.creatorId],
     references: [creators.id],
   }),
+  world: one(worlds, {
+    fields: [products.worldId],
+    references: [worlds.id],
+  }),
   avatarItem: one(avatarItems, {
     fields: [products.itemId],
     references: [avatarItems.id],
@@ -349,5 +473,24 @@ export const eventAttendanceRelations = relations(eventAttendance, ({ one }) => 
   event: one(events, {
     fields: [eventAttendance.eventId],
     references: [events.id],
+  }),
+}));
+
+export const attendanceRelations = relations(attendance, ({ one }) => ({
+  user: one(user, {
+    fields: [attendance.userId],
+    references: [user.id],
+  }),
+  space: one(spaces, {
+    fields: [attendance.spaceId],
+    references: [spaces.id],
+  }),
+  event: one(events, {
+    fields: [attendance.eventId],
+    references: [events.id],
+  }),
+  world: one(worlds, {
+    fields: [attendance.worldId],
+    references: [worlds.id],
   }),
 }));
