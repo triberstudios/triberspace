@@ -1,6 +1,6 @@
 /**
  * PublishModal - Two-step modal for publishing experiences
- * Step 1: Form (name, description, visibility)
+ * Step 1: Form (name, description, world tags)
  * Step 2: Success/Share view with social buttons
  */
 
@@ -13,7 +13,7 @@ class PublishModal {
 		this.formData = {
 			name: '',
 			description: '',
-			visibility: 'public'
+			worlds: [] // Array of selected world objects { id, slug, name }
 		};
 
 		this.init();
@@ -112,32 +112,38 @@ class PublishModal {
 		descGroup.appendChild( descLabel );
 		descGroup.appendChild( this.descInput );
 
-		// Visibility select
-		const visGroup = document.createElement( 'div' );
-		visGroup.className = 'publish-form-group';
+		// World tags input (replaces visibility)
+		const worldsGroup = document.createElement( 'div' );
+		worldsGroup.className = 'publish-form-group';
 
-		const visLabel = document.createElement( 'label' );
-		visLabel.textContent = 'Visibility';
-		visLabel.className = 'publish-form-label';
+		const worldsLabel = document.createElement( 'label' );
+		worldsLabel.textContent = 'Worlds';
+		worldsLabel.className = 'publish-form-label';
 
-		this.visibilitySelect = document.createElement( 'select' );
-		this.visibilitySelect.className = 'publish-form-select';
+		const worldsHint = document.createElement( 'span' );
+		worldsHint.className = 'publish-form-hint';
+		worldsHint.textContent = 'Add at least one world/category';
 
-		const options = [
-			{ value: 'public', label: '🌍 Public - Anyone can discover' },
-			{ value: 'unlisted', label: '🔗 Unlisted - Only with link' },
-			{ value: 'private', label: '🔒 Private - Only you' }
-		];
+		this.worldsInput = document.createElement( 'input' );
+		this.worldsInput.type = 'text';
+		this.worldsInput.className = 'publish-form-input';
+		this.worldsInput.placeholder = 'Type to search worlds (e.g., art, music, gaming)';
+		this.worldsInput.autocomplete = 'off';
 
-		options.forEach( opt => {
-			const option = document.createElement( 'option' );
-			option.value = opt.value;
-			option.textContent = opt.label;
-			this.visibilitySelect.appendChild( option );
-		});
+		// Selected tags container
+		this.worldTagsContainer = document.createElement( 'div' );
+		this.worldTagsContainer.className = 'publish-world-tags';
 
-		visGroup.appendChild( visLabel );
-		visGroup.appendChild( this.visibilitySelect );
+		// Autocomplete dropdown
+		this.worldSuggestions = document.createElement( 'div' );
+		this.worldSuggestions.className = 'publish-world-suggestions';
+		this.worldSuggestions.style.display = 'none';
+
+		worldsGroup.appendChild( worldsLabel );
+		worldsGroup.appendChild( worldsHint );
+		worldsGroup.appendChild( this.worldsInput );
+		worldsGroup.appendChild( this.worldTagsContainer );
+		worldsGroup.appendChild( this.worldSuggestions );
 
 		// Button group
 		const buttonGroup = document.createElement( 'div' );
@@ -159,7 +165,7 @@ class PublishModal {
 		// Assemble form
 		form.appendChild( nameGroup );
 		form.appendChild( descGroup );
-		form.appendChild( visGroup );
+		form.appendChild( worldsGroup );
 		form.appendChild( buttonGroup );
 
 		view.appendChild( form );
@@ -341,10 +347,127 @@ class PublishModal {
 		const socialButtons = this.successView.querySelectorAll( '[data-social]' );
 		socialButtons.forEach( btn => {
 			btn.addEventListener( 'click', (e) => {
-				const social = e.target.getAttribute( 'data-social' );
+				const social = e.currentTarget.getAttribute( 'data-social' );
 				this.handleSocialShare( social );
 			});
 		});
+
+		// World tags input - autocomplete
+		this.worldsInput.addEventListener( 'input', () => this.debounce( () => this.handleWorldSearch(), 300 ) );
+
+		// Hide suggestions when clicking outside
+		document.addEventListener( 'click', (e) => {
+			if ( !this.worldsInput.contains( e.target ) && !this.worldSuggestions.contains( e.target ) ) {
+				this.worldSuggestions.style.display = 'none';
+			}
+		});
+	}
+
+	// Debounce helper
+	debounce( func, wait ) {
+		clearTimeout( this.debounceTimer );
+		this.debounceTimer = setTimeout( func, wait );
+	}
+
+	async handleWorldSearch() {
+		const query = this.worldsInput.value.trim();
+
+		if ( query.length < 2 ) {
+			this.worldSuggestions.style.display = 'none';
+			return;
+		}
+
+		try {
+			const response = await fetch( `http://localhost:3001/api/v1/worlds/search?q=${encodeURIComponent(query)}` );
+			const data = await response.json();
+
+			if ( data.success && data.data.worlds ) {
+				this.renderWorldSuggestions( data.data.worlds, query );
+			}
+		} catch ( error ) {
+			console.error( 'Error searching worlds:', error );
+		}
+	}
+
+	renderWorldSuggestions( worlds, query ) {
+		this.worldSuggestions.innerHTML = '';
+
+		// Filter out already selected worlds
+		const selectedIds = this.formData.worlds.map( w => w.id );
+		const availableWorlds = worlds.filter( w => !selectedIds.includes( w.id ) );
+
+		// Show existing worlds
+		availableWorlds.forEach( world => {
+			const option = document.createElement( 'div' );
+			option.className = 'publish-suggestion-item';
+			option.innerHTML = `
+				<span class="publish-suggestion-name">${world.name}</span>
+				<span class="publish-suggestion-count">${world.spaceCount || 0} spaces</span>
+			`;
+			option.addEventListener( 'click', () => this.selectWorld( world ) );
+			this.worldSuggestions.appendChild( option );
+		});
+
+		// Show "create new" if no exact match
+		const slug = this.generateSlug( query );
+		const exactMatch = worlds.find( w => w.slug === slug );
+
+		if ( !exactMatch ) {
+			const createOption = document.createElement( 'div' );
+			createOption.className = 'publish-suggestion-item publish-suggestion-create';
+			createOption.innerHTML = `
+				<span class="publish-suggestion-name">+ Create "${query}"</span>
+			`;
+			createOption.addEventListener( 'click', () => this.selectWorld({ name: query, slug, isNew: true }) );
+			this.worldSuggestions.appendChild( createOption );
+		}
+
+		this.worldSuggestions.style.display = availableWorlds.length > 0 || !exactMatch ? 'block' : 'none';
+	}
+
+	selectWorld( world ) {
+		// Add to selected worlds
+		this.formData.worlds.push( world );
+
+		// Render tags
+		this.renderWorldTags();
+
+		// Clear input and hide suggestions
+		this.worldsInput.value = '';
+		this.worldSuggestions.style.display = 'none';
+	}
+
+	removeWorld( worldSlug ) {
+		this.formData.worlds = this.formData.worlds.filter( w => w.slug !== worldSlug );
+		this.renderWorldTags();
+	}
+
+	renderWorldTags() {
+		this.worldTagsContainer.innerHTML = '';
+
+		this.formData.worlds.forEach( world => {
+			const tag = document.createElement( 'div' );
+			tag.className = 'publish-world-tag';
+			tag.innerHTML = `
+				<span>${world.name}</span>
+				<button type="button" class="publish-world-tag-remove" data-slug="${world.slug}">&times;</button>
+			`;
+
+			const removeBtn = tag.querySelector( '.publish-world-tag-remove' );
+			removeBtn.addEventListener( 'click', () => this.removeWorld( world.slug ) );
+
+			this.worldTagsContainer.appendChild( tag );
+		});
+	}
+
+	generateSlug( name ) {
+		return name
+			.toLowerCase()
+			.trim()
+			.replace( /[^\w\s-]/g, '' )
+			.replace( /\s+/g, '-' )
+			.replace( /-+/g, '-' )
+			.substring( 0, 100 );
 	}
 
 	open() {
@@ -354,7 +477,9 @@ class PublishModal {
 		// Reset form
 		this.nameInput.value = '';
 		this.descInput.value = '';
-		this.visibilitySelect.value = 'public';
+		this.worldsInput.value = '';
+		this.formData.worlds = [];
+		this.renderWorldTags();
 
 		// Show form view
 		this.switchToFormView();
@@ -393,15 +518,21 @@ class PublishModal {
 		setTimeout( () => this.doneButton.focus(), 100 );
 	}
 
-	handlePublish() {
+	async handlePublish() {
 		// Get form data
 		this.formData.name = this.nameInput.value.trim();
 		this.formData.description = this.descInput.value.trim();
-		this.formData.visibility = this.visibilitySelect.value;
 
 		// Validate
 		if ( !this.formData.name ) {
+			alert( 'Please enter an experience name' );
 			this.nameInput.focus();
+			return;
+		}
+
+		if ( this.formData.worlds.length === 0 ) {
+			alert( 'Please add at least one world/category' );
+			this.worldsInput.focus();
 			return;
 		}
 
@@ -410,19 +541,106 @@ class PublishModal {
 		this.publishButton.textContent = 'Publishing...';
 		this.publishButton.disabled = true;
 
-		// Simulate publishing delay
-		setTimeout( () => {
-			// Generate mock URL
-			const randomId = Math.random().toString(36).substring(2, 10);
-			this.urlInput.value = `https://triber.space/experience/${randomId}`;
+		try {
+			// 1. Ensure worlds exist
+			const worldNames = this.formData.worlds.map( w => w.name );
+			const worldsResponse = await fetch( 'http://localhost:3001/api/v1/worlds/ensure', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ worldNames })
+			});
 
-			// Switch to success view
+			const worldsData = await worldsResponse.json();
+			if ( !worldsData.success ) {
+				throw new Error( 'Failed to ensure worlds exist' );
+			}
+
+			const worlds = worldsData.data.worlds;
+
+			// Check permissions (all public worlds allow publishing for now)
+			const cannotPublishTo = worlds.filter( w => !w.canPublishTo );
+			if ( cannotPublishTo.length > 0 ) {
+				throw new Error( `You don't have permission to publish to: ${cannotPublishTo.map(w => w.slug).join(', ')}` );
+			}
+
+			// 2. Serialize scene to JSON
+			const sceneData = this.editor.toJSON();
+			const sceneBlob = new Blob( [JSON.stringify( sceneData )], { type: 'application/json' } );
+
+			// 3. Get presigned URL for scene upload
+			const timestamp = Date.now();
+			const filename = `scene-${timestamp}.json`;
+
+			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'x-dev-bypass': 'media-plane-editor'
+				},
+				body: JSON.stringify({
+					category: 'spaces',
+					entityId: 'temp',
+					filename,
+					fileSize: sceneBlob.size
+				})
+			});
+
+			const presignedData = await presignedResponse.json();
+			if ( !presignedData.success ) {
+				throw new Error( 'Failed to get upload URL' );
+			}
+
+			// 4. Upload scene JSON to R2
+			const uploadResponse = await fetch( presignedData.data.uploadUrl, {
+				method: 'PUT',
+				body: sceneBlob,
+				headers: { 'Content-Type': 'application/json' }
+			});
+
+			if ( !uploadResponse.ok ) {
+				throw new Error( 'Failed to upload scene data' );
+			}
+
+			// 5. Create space with worldIds
+			const spaceResponse = await fetch( 'http://localhost:3001/api/v1/spaces', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'x-dev-bypass': 'media-plane-editor'
+				},
+				body: JSON.stringify({
+					name: this.formData.name,
+					description: this.formData.description,
+					spaceType: 'custom',
+					sceneDataUrl: presignedData.data.cdnUrl,
+					worldIds: worlds.map( w => w.id ),
+					publishStatus: 'published'
+				})
+			});
+
+			const spaceData = await spaceResponse.json();
+			if ( !spaceData.success ) {
+				const errorMsg = spaceData.error?.message || 'Failed to create space';
+				throw new Error( errorMsg );
+			}
+
+			// 6. Show success - Generate URL with format /{worldSlug}/{spaceName-publicId}
+			const worldSlug = worlds[0].slug; // Use first world's slug
+			const spaceName = this.formData.name.toLowerCase()
+				.replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+				.replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+			const spaceSlug = `${spaceName}-${spaceData.data.space.id}`;
+
+			this.urlInput.value = `http://localhost:3000/${worldSlug}/${spaceSlug}`;
 			this.switchToSuccessView();
 
-			// Reset button
+		} catch ( error ) {
+			console.error( 'Publish failed:', error );
+			alert( 'Publish failed: ' + error.message );
+		} finally {
 			this.publishButton.textContent = originalText;
 			this.publishButton.disabled = false;
-		}, 1000 );
+		}
 	}
 
 	handleCopy() {

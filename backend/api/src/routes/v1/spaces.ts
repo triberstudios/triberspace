@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { db, spaces, worlds, creators, user } from '@triberspace/database';
-import { eq, desc, sql, and } from 'drizzle-orm';
+import { db, spaces, spaceWorlds, worlds, creators, user } from '@triberspace/database';
+import { eq, desc, sql, and, inArray } from 'drizzle-orm';
 import { optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
 import { validateParams, validateQuery, validateBody } from '../../middleware/validation';
 import { publicIdSchema, paginationSchema } from '../../schemas/common';
@@ -13,29 +13,45 @@ const spaceParamsSchema = z.object({
 
 const spacesQuerySchema = paginationSchema.extend({
   spaceType: z.enum(['gallery', 'theater', 'meetup', 'store', 'custom']).optional(),
-  worldId: publicIdSchema.optional()
+  creatorId: publicIdSchema.optional()
 });
 
 const createSpaceSchema = z.object({
   name: z.string().min(1, 'Space name is required').max(100),
+  description: z.string().max(500).optional(),
   spaceType: z.enum(['gallery', 'theater', 'meetup', 'store', 'custom'], {
     errorMap: () => ({ message: 'Space type must be one of: gallery, theater, meetup, store, custom' })
   }),
   thumbnail_url: z.string().url().optional(),
-  model_url: z.string().url().optional(),
-  worldId: publicIdSchema.optional() // If not provided, uses creator's world
+  sceneDataUrl: z.string().url('Scene data URL must be a valid URL'),
+  worldIds: z.array(publicIdSchema).min(1, 'At least one world is required'),
+
+  // Persistence & Availability
+  persistence: z.enum(['permanent', 'temporary']).default('permanent'),
+  expiresAt: z.string().datetime().optional(),
+  availability: z.enum(['always', 'scheduled']).default('always'),
+  schedule: z.any().optional(), // JSONB - flexible structure
+  capacity: z.number().int().positive().optional(),
+
+  // Publishing
+  publishStatus: z.enum(['draft', 'published']).default('published'),
+  isPremium: z.boolean().default(false),
+  accessCost: z.number().int().min(0).default(0)
 });
 
 const updateSpaceSchema = z.object({
   name: z.string().min(1, 'Space name is required').max(100).optional(),
+  description: z.string().max(500).optional(),
   spaceType: z.enum(['gallery', 'theater', 'meetup', 'store', 'custom']).optional(),
   thumbnail_url: z.string().url().optional(),
-  model_url: z.string().url().optional(),
-  isActive: z.boolean().optional()
+  sceneDataUrl: z.string().url().optional(),
+  worldIds: z.array(publicIdSchema).optional(),
+  isActive: z.boolean().optional(),
+  publishStatus: z.enum(['draft', 'published']).optional()
 });
 
 export async function v1SpacesRoutes(fastify: FastifyInstance) {
-  
+
   // ===================================================================
   // PUBLIC SPACE ENDPOINTS
   // ===================================================================
@@ -44,55 +60,90 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
   fastify.get('/', {
     preHandler: [optionalAuthMiddleware, validateQuery(spacesQuerySchema)]
   }, async (request: AuthenticatedRequest, reply) => {
-    const { page, limit, spaceType, worldId } = request.query as z.infer<typeof spacesQuerySchema>;
+    const { page, limit, spaceType, creatorId } = request.query as z.infer<typeof spacesQuerySchema>;
     const offset = (page - 1) * limit;
 
     try {
       // Build where conditions
       const conditions = [
-        eq(spaces.isActive, true) // Base condition for public viewing
+        eq(spaces.isActive, true),
+        eq(spaces.publishStatus, 'published')
       ];
-      
+
       if (spaceType) {
         conditions.push(eq(spaces.spaceType, spaceType));
       }
-      
-      if (worldId) {
-        conditions.push(eq(worlds.publicId, worldId));
+
+      if (creatorId) {
+        // Need to join with creators to filter by publicId
+        const [creatorInfo] = await db
+          .select({ id: creators.id })
+          .from(creators)
+          .where(eq(creators.publicId, creatorId))
+          .limit(1);
+
+        if (creatorInfo) {
+          conditions.push(eq(spaces.creatorId, creatorInfo.id));
+        }
       }
 
-      // Build the query with optional filters
+      // Query spaces with creator info
       const spacesList = await db
         .select({
           id: spaces.publicId,
           name: spaces.name,
+          description: spaces.description,
           spaceType: spaces.spaceType,
           thumbnail_url: spaces.thumbnail_url,
-          model_url: spaces.model_url,
+          persistence: spaces.persistence,
+          availability: spaces.availability,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt,
-          world: {
-            id: worlds.publicId,
-            name: worlds.name
-          },
           creator: {
             id: creators.publicId,
             username: user.username
           }
         })
         .from(spaces)
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-        .innerJoin(creators, eq(worlds.creatorId, creators.id))
+        .innerJoin(creators, eq(spaces.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
         .where(and(...conditions))
         .orderBy(desc(spaces.createdAt))
         .limit(limit)
         .offset(offset);
 
+      // For each space, get its worlds
+      const spacesWithWorlds = await Promise.all(
+        spacesList.map(async (space) => {
+          const [spaceInfo] = await db
+            .select({ internalId: spaces.id })
+            .from(spaces)
+            .where(eq(spaces.publicId, space.id))
+            .limit(1);
+
+          if (!spaceInfo) return { ...space, worlds: [] };
+
+          const worldsList = await db
+            .select({
+              id: worlds.publicId,
+              slug: worlds.slug,
+              name: worlds.name
+            })
+            .from(worlds)
+            .innerJoin(spaceWorlds, eq(worlds.id, spaceWorlds.worldId))
+            .where(eq(spaceWorlds.spaceId, spaceInfo.internalId));
+
+          return {
+            ...space,
+            worlds: worldsList
+          };
+        })
+      );
+
       return {
         success: true,
         data: {
-          spaces: spacesList,
+          spaces: spacesWithWorlds,
           pagination: {
             page,
             limit,
@@ -100,7 +151,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           },
           filters: {
             spaceType: spaceType || null,
-            worldId: worldId || null
+            creatorId: creatorId || null
           }
         }
       };
@@ -128,16 +179,24 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
         .select({
           id: spaces.publicId,
           name: spaces.name,
+          description: spaces.description,
           spaceType: spaces.spaceType,
           thumbnail_url: spaces.thumbnail_url,
-          model_url: spaces.model_url,
+          sceneDataUrl: spaces.sceneDataUrl,
+          sceneVersion: spaces.sceneVersion,
+          persistence: spaces.persistence,
+          expiresAt: spaces.expiresAt,
+          availability: spaces.availability,
+          schedule: spaces.schedule,
+          capacity: spaces.capacity,
+          currentOccupancy: spaces.currentOccupancy,
+          isPremium: spaces.isPremium,
+          accessCost: spaces.accessCost,
+          publishStatus: spaces.publishStatus,
+          publishedAt: spaces.publishedAt,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt,
-          world: {
-            id: worlds.publicId,
-            name: worlds.name,
-            description: worlds.description
-          },
+          internalId: spaces.id,
           creator: {
             id: creators.publicId,
             username: user.username,
@@ -145,8 +204,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           }
         })
         .from(spaces)
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-        .innerJoin(creators, eq(worlds.creatorId, creators.id))
+        .innerJoin(creators, eq(spaces.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
         .where(eq(spaces.publicId, spaceId))
         .limit(1);
@@ -161,11 +219,11 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Only show inactive spaces to their creator or admins
-      if (!space.isActive) {
+      // Only show inactive/draft spaces to their creator or admins
+      if (!space.isActive || space.publishStatus === 'draft') {
         const isCreator = request.user && request.creator?.publicId === space.creator.id;
         const isAdmin = request.user?.role === 'admin';
-        
+
         if (!isCreator && !isAdmin) {
           return reply.code(404).send({
             error: {
@@ -177,9 +235,28 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // Get worlds this space belongs to
+      const worldsList = await db
+        .select({
+          id: worlds.publicId,
+          slug: worlds.slug,
+          name: worlds.name,
+          description: worlds.description
+        })
+        .from(worlds)
+        .innerJoin(spaceWorlds, eq(worlds.id, spaceWorlds.worldId))
+        .where(eq(spaceWorlds.spaceId, space.internalId));
+
+      const { internalId, ...spaceData } = space;
+
       return {
         success: true,
-        data: { space }
+        data: {
+          space: {
+            ...spaceData,
+            worlds: worldsList
+          }
+        }
       };
 
     } catch (error) {
@@ -202,71 +279,103 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
   fastify.post('/', {
     preHandler: [creatorOnlyMiddleware, validateBody(createSpaceSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
-    const { name, spaceType, worldId } = request.body as z.infer<typeof createSpaceSchema>;
+    const {
+      name,
+      description,
+      spaceType,
+      thumbnail_url,
+      sceneDataUrl,
+      worldIds,
+      persistence,
+      expiresAt,
+      availability,
+      schedule,
+      capacity,
+      publishStatus,
+      isPremium,
+      accessCost
+    } = request.body as z.infer<typeof createSpaceSchema>;
     const creatorId = request.creator!.id;
 
     try {
-      let targetWorldId: number;
+      // Verify all worlds exist and get their internal IDs
+      const worldsList = await db
+        .select({
+          publicId: worlds.publicId,
+          internalId: worlds.id
+        })
+        .from(worlds)
+        .where(inArray(worlds.publicId, worldIds));
 
-      if (worldId) {
-        // Verify the specified world belongs to the creator
-        const [world] = await db
-          .select({ internalId: worlds.id })
-          .from(worlds)
-          .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(worlds.publicId, worldId)}`)
-          .limit(1);
-
-        if (!world) {
-          return reply.code(404).send({
-            error: {
-              code: 'WORLD_NOT_FOUND',
-              message: 'Specified world not found or not owned by creator',
-              statusCode: 404
-            }
-          });
-        }
-        targetWorldId = world.internalId;
-      } else {
-        // Use creator's default world
-        const [world] = await db
-          .select({ id: worlds.id })
-          .from(worlds)
-          .where(eq(worlds.creatorId, creatorId))
-          .limit(1);
-
-        if (!world) {
-          return reply.code(404).send({
-            error: {
-              code: 'WORLD_NOT_FOUND',
-              message: 'Creator must have a world before creating spaces',
-              statusCode: 404
-            }
-          });
-        }
-        targetWorldId = world.id;
+      if (worldsList.length !== worldIds.length) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLDS_NOT_FOUND',
+            message: 'One or more specified worlds not found',
+            statusCode: 404
+          }
+        });
       }
 
       // Create the space
       const [newSpace] = await db
         .insert(spaces)
         .values({
-          worldId: targetWorldId,
+          creatorId,
           name,
-          spaceType
+          description,
+          spaceType,
+          thumbnail_url,
+          sceneDataUrl,
+          persistence,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          availability,
+          schedule,
+          capacity,
+          publishStatus,
+          publishedAt: publishStatus === 'published' ? new Date() : null,
+          isPremium,
+          accessCost
         })
         .returning({
           id: spaces.publicId,
+          internalId: spaces.id,
           name: spaces.name,
           spaceType: spaces.spaceType,
+          publishStatus: spaces.publishStatus,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt
         });
+
+      // Create space_worlds junction records
+      await db
+        .insert(spaceWorlds)
+        .values(
+          worldsList.map(world => ({
+            spaceId: newSpace.internalId,
+            worldId: world.internalId
+          }))
+        );
+
+      // Update world space counts
+      await Promise.all(
+        worldsList.map(world =>
+          db.update(worlds)
+            .set({ spaceCount: sql`${worlds.spaceCount} + 1` })
+            .where(eq(worlds.id, world.internalId))
+        )
+      );
+
+      const { internalId, ...spaceData } = newSpace;
 
       return reply.code(201).send({
         success: true,
         data: {
           message: 'Space created successfully',
-          space: newSpace
+          space: {
+            ...spaceData,
+            worlds: worldsList.map(w => ({ id: w.publicId }))
+          }
         }
       });
 
@@ -291,12 +400,14 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
-      // Verify space ownership through world ownership
+      // Verify space ownership
       const [spaceInfo] = await db
         .select({ internalId: spaces.id })
         .from(spaces)
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-        .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(spaces.publicId, spaceId)}`)
+        .where(and(
+          eq(spaces.creatorId, creatorId),
+          eq(spaces.publicId, spaceId)
+        ))
         .limit(1);
 
       if (!spaceInfo) {
@@ -309,15 +420,76 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
         });
       }
 
+      // Handle world updates if provided
+      if (updates.worldIds) {
+        // Verify all new worlds exist
+        const worldsList = await db
+          .select({
+            publicId: worlds.publicId,
+            internalId: worlds.id
+          })
+          .from(worlds)
+          .where(inArray(worlds.publicId, updates.worldIds));
+
+        if (worldsList.length !== updates.worldIds.length) {
+          return reply.code(404).send({
+            error: {
+              code: 'WORLDS_NOT_FOUND',
+              message: 'One or more specified worlds not found',
+              statusCode: 404
+            }
+          });
+        }
+
+        // Get old worlds to decrement their counts
+        const oldWorlds = await db
+          .select({ worldId: spaceWorlds.worldId })
+          .from(spaceWorlds)
+          .where(eq(spaceWorlds.spaceId, spaceInfo.internalId));
+
+        // Delete old junction records
+        await db
+          .delete(spaceWorlds)
+          .where(eq(spaceWorlds.spaceId, spaceInfo.internalId));
+
+        // Create new junction records
+        await db
+          .insert(spaceWorlds)
+          .values(
+            worldsList.map(world => ({
+              spaceId: spaceInfo.internalId,
+              worldId: world.internalId
+            }))
+          );
+
+        // Update world space counts (decrement old, increment new)
+        await Promise.all([
+          ...oldWorlds.map(w =>
+            db.update(worlds)
+              .set({ spaceCount: sql`${worlds.spaceCount} - 1` })
+              .where(eq(worlds.id, w.worldId))
+          ),
+          ...worldsList.map(w =>
+            db.update(worlds)
+              .set({ spaceCount: sql`${worlds.spaceCount} + 1` })
+              .where(eq(worlds.id, w.internalId))
+          )
+        ]);
+      }
+
+      // Remove worldIds from updates object (already handled above)
+      const { worldIds, ...spaceUpdates } = updates;
+
       // Update the space
       const [updatedSpace] = await db
         .update(spaces)
-        .set(updates)
+        .set(spaceUpdates)
         .where(eq(spaces.id, spaceInfo.internalId))
         .returning({
           id: spaces.publicId,
           name: spaces.name,
           spaceType: spaces.spaceType,
+          publishStatus: spaces.publishStatus,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt
         });
@@ -350,12 +522,14 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
-      // Verify space ownership through world ownership
+      // Verify space ownership
       const [spaceInfo] = await db
         .select({ internalId: spaces.id })
         .from(spaces)
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-        .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(spaces.publicId, spaceId)}`)
+        .where(and(
+          eq(spaces.creatorId, creatorId),
+          eq(spaces.publicId, spaceId)
+        ))
         .limit(1);
 
       if (!spaceInfo) {
@@ -368,10 +542,25 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Delete the space
+      // Get worlds to decrement their counts
+      const associatedWorlds = await db
+        .select({ worldId: spaceWorlds.worldId })
+        .from(spaceWorlds)
+        .where(eq(spaceWorlds.spaceId, spaceInfo.internalId));
+
+      // Delete the space (junction records will cascade)
       await db
         .delete(spaces)
         .where(eq(spaces.id, spaceInfo.internalId));
+
+      // Update world space counts
+      await Promise.all(
+        associatedWorlds.map(w =>
+          db.update(worlds)
+            .set({ spaceCount: sql`${worlds.spaceCount} - 1` })
+            .where(eq(worlds.id, w.worldId))
+        )
+      );
 
       return {
         success: true,

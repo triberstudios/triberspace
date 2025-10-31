@@ -15,9 +15,21 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const isCreatorDashboard = pathname.startsWith('/creator-dashboard')
   const isRuntimePreview = pathname.startsWith('/runtime/preview')
   const isExperience = pathname.startsWith('/experience')
+  const isSpaceViewer = pathname.startsWith('/spaces/')
 
-  if (isRuntimePreview || isExperience) {
-    // Runtime preview or experience - no sidebar, no navigation, fullscreen experience
+  // Check if pathname matches /{worldSlug}/{spaceSlug} format (2 segments that aren't special routes)
+  const pathSegments = pathname.split('/').filter(Boolean)
+  const isWorldSpaceRoute = pathSegments.length === 2 &&
+    !isCreatorDashboard &&
+    !isRuntimePreview &&
+    !isExperience &&
+    !pathname.startsWith('/profile') &&
+    !pathname.startsWith('/settings') &&
+    !pathname.startsWith('/worlds') &&
+    !pathname.startsWith('/discover')
+
+  if (isRuntimePreview || isExperience || isSpaceViewer || isWorldSpaceRoute) {
+    // Runtime preview, experience, or space viewer - no sidebar, no navigation, fullscreen experience
     return (
       <div className="flex h-full overflow-hidden">
         {children}

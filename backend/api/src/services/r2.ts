@@ -37,6 +37,10 @@ export const FILE_LIMITS = {
     types: ['pdf', 'zip'],
     maxSize: 25 * 1024 * 1024, // 25MB
   },
+  scenes: {
+    types: ['json'],
+    maxSize: 15 * 1024 * 1024, // 15MB (scene data files)
+  },
 };
 
 // Supported upload categories
@@ -174,24 +178,27 @@ function getContentType(filename: string): string {
     png: 'image/png',
     webp: 'image/webp',
     gif: 'image/gif',
-    
+
     // 3D Models
     glb: 'model/gltf-binary',
     gltf: 'model/gltf+json',
-    
+
     // Videos
     mp4: 'video/mp4',
     webm: 'video/webm',
     mov: 'video/quicktime',
-    
+
     // Audio
     mp3: 'audio/mpeg',
     ogg: 'audio/ogg',
     wav: 'audio/wav',
-    
+
     // Documents
     pdf: 'application/pdf',
     zip: 'application/zip',
+
+    // Scenes
+    json: 'application/json',
   };
 
   return contentTypes[extension || ''] || 'application/octet-stream';

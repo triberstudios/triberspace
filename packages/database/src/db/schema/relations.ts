@@ -69,11 +69,11 @@ export const userRelations = relations(user, ({ many, one }) => ({
   eventAttendances: many(eventAttendance), // Legacy
   attendances: many(attendance),
   foundedWorlds: many(worlds),
-  worldStewardships: many(worldStewards),
+  worldStewards: many(worldStewards, { relationName: "userStewardships" }),
   worldMemberships: many(worldMemberships),
   worldPoints: many(userWorldPoints),
-  awardsGiven: many(awards),
-  awardsReceived: many(awards),
+  awardsGiven: many(awards, { relationName: "awardsFromUser" }),
+  awardsReceived: many(awards, { relationName: "awardsToUser" }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -194,6 +194,7 @@ export const worldStewardRelations = relations(worldStewards, ({ one, many }) =>
   user: one(user, {
     fields: [worldStewards.userId],
     references: [user.id],
+    relationName: "userStewardships",
   }),
   appointedByUser: one(user, {
     fields: [worldStewards.appointedBy],
@@ -257,10 +258,12 @@ export const awardRelations = relations(awards, ({ one }) => ({
   fromUser: one(user, {
     fields: [awards.fromUserId],
     references: [user.id],
+    relationName: "awardsFromUser",
   }),
   toUser: one(user, {
     fields: [awards.toUserId],
     references: [user.id],
+    relationName: "awardsToUser",
   }),
 }));
 

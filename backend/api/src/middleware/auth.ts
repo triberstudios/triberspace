@@ -157,8 +157,20 @@ export async function requireCompleteProfile(request: AuthenticatedRequest, repl
 }
 
 export async function creatorOnlyMiddleware(request: AuthenticatedRequest, reply: FastifyReply) {
+  // Check for dev bypass header
+  const devBypass = request.headers['x-dev-bypass'];
+  if (devBypass === 'media-plane-editor' && process.env.NODE_ENV !== 'production') {
+    // Create a fake creator for development
+    request.creator = {
+      id: 1001,
+      publicId: 'devcreator99'
+    };
+    request.log.info('Using dev bypass for creator access');
+    return;
+  }
+
   await requireCompleteProfile(request, reply);
-  
+
   if (!request.user) return;
 
   try {

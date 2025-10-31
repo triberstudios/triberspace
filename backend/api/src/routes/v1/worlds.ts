@@ -1,124 +1,103 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { db, worlds, spaces, creators, user } from '@triberspace/database';
-import { eq, desc, sql } from 'drizzle-orm';
-import { optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
+import { db, worlds, spaces, spaceWorlds, creators, user } from '@triberspace/database';
+import { eq, desc, sql, ilike, or } from 'drizzle-orm';
+import { optionalAuthMiddleware, AuthenticatedRequest } from '../../middleware/auth';
 import { validateParams, validateQuery, validateBody } from '../../middleware/validation';
 import { publicIdSchema, paginationSchema } from '../../schemas/common';
-import { NotFoundError } from '../../middleware/error';
 
-const worldParamsSchema = z.object({
-  worldId: publicIdSchema
+// Validation schemas
+const worldSlugSchema = z.object({
+  slug: z.string().min(1, 'World slug is required')
 });
 
 const worldsQuerySchema = paginationSchema.extend({
-  search: z.string().optional()
+  search: z.string().optional(),
+  isVerified: z.boolean().optional()
 });
 
-// Creator world management schemas
-const createWorldSchema = z.object({
-  name: z.string().min(1, 'World name is required').max(100),
-  description: z.string().max(500).optional(),
-  thumbnail_url: z.string().url().optional(),
-  model_url: z.string().url().optional()
+const worldSearchSchema = z.object({
+  q: z.string().min(2, 'Search query must be at least 2 characters')
 });
 
-const updateWorldSchema = z.object({
-  name: z.string().min(1, 'World name is required').max(100).optional(),
-  description: z.string().max(500).optional(),
-  thumbnail_url: z.string().url().optional(),
-  model_url: z.string().url().optional()
+const ensureWorldsSchema = z.object({
+  worldNames: z.array(z.string().min(1).max(100)).min(1, 'At least one world name is required')
 });
+
+// Helper: Generate slug from name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special chars
+    .replace(/\s+/g, '-')      // Replace spaces with hyphens
+    .replace(/-+/g, '-')       // Replace multiple hyphens with single
+    .substring(0, 100);         // Limit length
+}
 
 export async function v1WorldsRoutes(fastify: FastifyInstance) {
-  // Public: List all worlds (enhanced from simple version)
+  // ===================================================================
+  // PUBLIC WORLD ENDPOINTS
+  // ===================================================================
+
+  // Public: List all worlds with filters
   fastify.get('/', {
     preHandler: [optionalAuthMiddleware, validateQuery(worldsQuerySchema)]
   }, async (request: AuthenticatedRequest, reply) => {
-    const { page, limit, search } = request.query as z.infer<typeof worldsQuerySchema>;
+    const { page, limit, search, isVerified } = request.query as z.infer<typeof worldsQuerySchema>;
     const offset = (page - 1) * limit;
 
     try {
-      // Get worlds with or without search
-      const worldsList = search 
+      // Build where conditions
+      const conditions = [];
+
+      if (search) {
+        conditions.push(ilike(worlds.name, `%${search}%`));
+      }
+
+      if (isVerified !== undefined) {
+        // For now, all worlds can be considered public (isVerified = false)
+        // This will be used later when we add verified world applications
+      }
+
+      // Query worlds
+      const worldsList = conditions.length > 0
         ? await db
             .select({
               id: worlds.publicId,
+              slug: worlds.slug,
               name: worlds.name,
               description: worlds.description,
               thumbnail_url: worlds.thumbnail_url,
-              model_url: worlds.model_url,
-              createdAt: worlds.createdAt,
-              creatorId: worlds.creatorId
+              spaceCount: worlds.spaceCount,
+              memberCount: worlds.memberCount,
+              createdAt: worlds.createdAt
             })
             .from(worlds)
-            .where(sql`${worlds.name} ILIKE ${'%' + search + '%'}`)
-            .orderBy(desc(worlds.createdAt))
+            .where(or(...conditions))
+            .orderBy(desc(worlds.spaceCount), desc(worlds.createdAt))
             .limit(limit)
             .offset(offset)
         : await db
             .select({
               id: worlds.publicId,
+              slug: worlds.slug,
               name: worlds.name,
               description: worlds.description,
               thumbnail_url: worlds.thumbnail_url,
-              model_url: worlds.model_url,
-              createdAt: worlds.createdAt,
-              creatorId: worlds.creatorId
+              spaceCount: worlds.spaceCount,
+              memberCount: worlds.memberCount,
+              createdAt: worlds.createdAt
             })
             .from(worlds)
-            .orderBy(desc(worlds.createdAt))
+            .orderBy(desc(worlds.spaceCount), desc(worlds.createdAt))
             .limit(limit)
             .offset(offset);
-
-      // If no worlds found, return empty array instead of processing
-      if (worldsList.length === 0) {
-        return {
-          success: true,
-          data: {
-            worlds: [],
-            pagination: {
-              page,
-              limit,
-              hasMore: false
-            }
-          }
-        };
-      }
-
-      // Get creator info for each world
-      const worldsWithCreators = await Promise.all(
-        worldsList.map(async (world) => {
-          try {
-            const [creatorInfo] = await db
-              .select({
-                id: creators.publicId,
-                name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-                username: user.username
-              })
-              .from(creators)
-              .innerJoin(user, eq(creators.userId, user.id))
-              .where(eq(creators.id, world.creatorId))
-              .limit(1);
-
-            return {
-              ...world,
-              creator: creatorInfo || null
-            };
-          } catch (creatorError) {
-            fastify.log.warn({ worldId: world.id }, 'Failed to fetch creator for world');
-            return {
-              ...world,
-              creator: null
-            };
-          }
-        })
-      );
 
       return {
         success: true,
         data: {
-          worlds: worldsWithCreators,
+          worlds: worldsList,
           pagination: {
             page,
             limit,
@@ -126,41 +105,155 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
           }
         }
       };
+
     } catch (error) {
       fastify.log.error(error as Error, 'Error fetching worlds');
-      return {
-        success: true,
-        data: {
-          worlds: [],
-          pagination: {
-            page,
-            limit,
-            hasMore: false
-          },
-          message: 'No worlds available (database might be empty)'
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch worlds',
+          statusCode: 500
         }
-      };
+      });
     }
   });
 
-  // Public: Get world details
-  fastify.get('/:worldId', {
-    preHandler: [optionalAuthMiddleware, validateParams(worldParamsSchema)]
+  // Public: Search worlds (for autocomplete)
+  fastify.get('/search', {
+    preHandler: [optionalAuthMiddleware, validateQuery(worldSearchSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
-    const { worldId } = request.params as z.infer<typeof worldParamsSchema>;
+    const { q } = request.query as z.infer<typeof worldSearchSchema>;
+
+    try {
+      // Search for worlds matching the query
+      const worldsList = await db
+        .select({
+          id: worlds.publicId,
+          slug: worlds.slug,
+          name: worlds.name,
+          spaceCount: worlds.spaceCount
+        })
+        .from(worlds)
+        .where(ilike(worlds.name, `%${q}%`))
+        .orderBy(desc(worlds.spaceCount))
+        .limit(10);
+
+      return {
+        success: true,
+        data: { worlds: worldsList }
+      };
+
+    } catch (error) {
+      fastify.log.error(error as Error, 'Error searching worlds');
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to search worlds',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Public: Ensure worlds exist (auto-create if needed)
+  fastify.post('/ensure', {
+    preHandler: [optionalAuthMiddleware, validateBody(ensureWorldsSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { worldNames } = request.body as z.infer<typeof ensureWorldsSchema>;
+
+    try {
+      const results = await Promise.all(
+        worldNames.map(async (name) => {
+          const slug = generateSlug(name);
+
+          // Check if world exists
+          const [existingWorld] = await db
+            .select({
+              id: worlds.id,
+              publicId: worlds.publicId,
+              slug: worlds.slug,
+              name: worlds.name
+            })
+            .from(worlds)
+            .where(eq(worlds.slug, slug))
+            .limit(1);
+
+          if (existingWorld) {
+            return {
+              id: existingWorld.publicId,
+              slug: existingWorld.slug,
+              name: existingWorld.name,
+              isNew: false,
+              canPublishTo: true // Public worlds allow anyone to publish
+            };
+          }
+
+          // Create new public world
+          const [newWorld] = await db
+            .insert(worlds)
+            .values({
+              slug,
+              name,
+              governanceType: 'public'
+              // founderId is null for public worlds
+            })
+            .returning({
+              id: worlds.publicId,
+              slug: worlds.slug,
+              name: worlds.name
+            });
+
+          return {
+            id: newWorld.id,
+            slug: newWorld.slug,
+            name: newWorld.name,
+            isNew: true,
+            canPublishTo: true
+          };
+        })
+      );
+
+      return {
+        success: true,
+        data: { worlds: results }
+      };
+
+    } catch (error) {
+      fastify.log.error(error as Error, 'Error ensuring worlds');
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to ensure worlds exist',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Public: Get world details by slug
+  fastify.get('/:slug', {
+    preHandler: [optionalAuthMiddleware, validateParams(worldSlugSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { slug } = request.params as z.infer<typeof worldSlugSchema>;
 
     try {
       // Get world basic info
       const [world] = await db
         .select({
           id: worlds.publicId,
+          slug: worlds.slug,
           name: worlds.name,
           description: worlds.description,
-          createdAt: worlds.createdAt,
-          creatorId: worlds.creatorId
+          thumbnail_url: worlds.thumbnail_url,
+          banner_url: worlds.banner_url,
+          governanceType: worlds.governanceType,
+          pointsName: worlds.pointsName,
+          spaceCount: worlds.spaceCount,
+          memberCount: worlds.memberCount,
+          createdAt: worlds.createdAt
         })
         .from(worlds)
-        .where(eq(worlds.publicId, worldId))
+        .where(eq(worlds.slug, slug))
         .limit(1);
 
       if (!world) {
@@ -173,25 +266,18 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Get creator info
-      const [creatorInfo] = await db
-        .select({
-          id: creators.publicId,
-          name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-          username: user.username,
-          bio: creators.bio
-        })
-        .from(creators)
-        .innerJoin(user, eq(creators.userId, user.id))
-        .where(eq(creators.id, world.creatorId))
-        .limit(1);
+      // Get founder info if world has one
+      let founder = null;
+      if (world.governanceType !== 'public') {
+        // TODO: Get founder from founderId when we implement verified worlds
+      }
 
       return {
         success: true,
         data: {
           world: {
             ...world,
-            creator: creatorInfo || null
+            founder
           }
         }
       };
@@ -207,23 +293,27 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Public: Get world spaces
-  fastify.get('/:worldId/spaces', {
-    preHandler: [optionalAuthMiddleware, validateParams(worldParamsSchema), validateQuery(paginationSchema)]
+  // Public: Get world spaces (via junction table)
+  fastify.get('/:slug/spaces', {
+    preHandler: [optionalAuthMiddleware, validateParams(worldSlugSchema), validateQuery(paginationSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
-    const { worldId } = request.params as z.infer<typeof worldParamsSchema>;
+    const { slug } = request.params as z.infer<typeof worldSlugSchema>;
     const { page, limit } = request.query as z.infer<typeof paginationSchema>;
     const offset = (page - 1) * limit;
 
     try {
-      // First verify world exists
-      const [worldExists] = await db
-        .select({ id: worlds.id })
+      // First verify world exists and get its internal ID
+      const [worldInfo] = await db
+        .select({
+          id: worlds.id,
+          publicId: worlds.publicId,
+          name: worlds.name
+        })
         .from(worlds)
-        .where(eq(worlds.publicId, worldId))
+        .where(eq(worlds.slug, slug))
         .limit(1);
 
-      if (!worldExists) {
+      if (!worldInfo) {
         return reply.code(404).send({
           error: {
             code: 'NOT_FOUND',
@@ -233,17 +323,23 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Get spaces for this world
+      // Get spaces via junction table
       const spacesList = await db
         .select({
           id: spaces.publicId,
           name: spaces.name,
+          description: spaces.description,
           spaceType: spaces.spaceType,
+          thumbnail_url: spaces.thumbnail_url,
+          persistence: spaces.persistence,
+          availability: spaces.availability,
+          publishStatus: spaces.publishStatus,
           isActive: spaces.isActive,
           createdAt: spaces.createdAt
         })
         .from(spaces)
-        .where(eq(spaces.worldId, worldExists.id))
+        .innerJoin(spaceWorlds, eq(spaces.id, spaceWorlds.spaceId))
+        .where(eq(spaceWorlds.worldId, worldInfo.id))
         .orderBy(desc(spaces.createdAt))
         .limit(limit)
         .offset(offset);
@@ -251,6 +347,11 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
       return {
         success: true,
         data: {
+          world: {
+            id: worldInfo.publicId,
+            name: worldInfo.name,
+            slug
+          },
           spaces: spacesList,
           pagination: {
             page,
@@ -265,177 +366,6 @@ export async function v1WorldsRoutes(fastify: FastifyInstance) {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'Failed to fetch world spaces',
-          statusCode: 500
-        }
-      });
-    }
-  });
-
-  // ===================================================================
-  // CREATOR WORLD MANAGEMENT (CRUD OPERATIONS)
-  // ===================================================================
-
-  // Protected: Create world (creators only)
-  fastify.post('/', {
-    preHandler: [creatorOnlyMiddleware, validateBody(createWorldSchema)]
-  }, async (request: AuthenticatedRequest, reply) => {
-    const { name, description } = request.body as z.infer<typeof createWorldSchema>;
-    const creatorId = request.creator!.id;
-
-    try {
-      // Check if creator already has a world (one world per creator rule)
-      const [existingWorld] = await db
-        .select({ id: worlds.id })
-        .from(worlds)
-        .where(eq(worlds.creatorId, creatorId))
-        .limit(1);
-
-      if (existingWorld) {
-        return reply.code(409).send({
-          error: {
-            code: 'WORLD_EXISTS',
-            message: 'Creator already has a world. Only one world per creator is allowed.',
-            statusCode: 409
-          }
-        });
-      }
-
-      // Create the world
-      const [newWorld] = await db
-        .insert(worlds)
-        .values({
-          creatorId,
-          name,
-          description
-        })
-        .returning({
-          id: worlds.publicId,
-          name: worlds.name,
-          description: worlds.description,
-          createdAt: worlds.createdAt
-        });
-
-      return reply.code(201).send({
-        success: true,
-        data: {
-          message: 'World created successfully',
-          world: newWorld
-        }
-      });
-
-    } catch (error) {
-      fastify.log.error(error as Error, 'Create world error');
-      return reply.code(500).send({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to create world',
-          statusCode: 500
-        }
-      });
-    }
-  });
-
-  // Protected: Update world (creator only, their own world)
-  fastify.put('/:worldId', {
-    preHandler: [creatorOnlyMiddleware, validateParams(worldParamsSchema), validateBody(updateWorldSchema)]
-  }, async (request: AuthenticatedRequest, reply) => {
-    const { worldId } = request.params as z.infer<typeof worldParamsSchema>;
-    const updates = request.body as z.infer<typeof updateWorldSchema>;
-    const creatorId = request.creator!.id;
-
-    try {
-      // Verify world ownership
-      const [worldInfo] = await db
-        .select({ internalId: worlds.id })
-        .from(worlds)
-        .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(worlds.publicId, worldId)}`)
-        .limit(1);
-
-      if (!worldInfo) {
-        return reply.code(404).send({
-          error: {
-            code: 'WORLD_NOT_FOUND',
-            message: 'World not found or not owned by creator',
-            statusCode: 404
-          }
-        });
-      }
-
-      // Update the world
-      const [updatedWorld] = await db
-        .update(worlds)
-        .set(updates)
-        .where(eq(worlds.id, worldInfo.internalId))
-        .returning({
-          id: worlds.publicId,
-          name: worlds.name,
-          description: worlds.description,
-          createdAt: worlds.createdAt
-        });
-
-      return {
-        success: true,
-        data: {
-          message: 'World updated successfully',
-          world: updatedWorld
-        }
-      };
-
-    } catch (error) {
-      fastify.log.error(error as Error, 'Update world error');
-      return reply.code(500).send({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to update world',
-          statusCode: 500
-        }
-      });
-    }
-  });
-
-  // Protected: Delete world (creator only, their own world)
-  fastify.delete('/:worldId', {
-    preHandler: [creatorOnlyMiddleware, validateParams(worldParamsSchema)]
-  }, async (request: AuthenticatedRequest, reply) => {
-    const { worldId } = request.params as z.infer<typeof worldParamsSchema>;
-    const creatorId = request.creator!.id;
-
-    try {
-      // Verify world ownership
-      const [worldInfo] = await db
-        .select({ internalId: worlds.id })
-        .from(worlds)
-        .where(sql`${eq(worlds.creatorId, creatorId)} AND ${eq(worlds.publicId, worldId)}`)
-        .limit(1);
-
-      if (!worldInfo) {
-        return reply.code(404).send({
-          error: {
-            code: 'WORLD_NOT_FOUND',
-            message: 'World not found or not owned by creator',
-            statusCode: 404
-          }
-        });
-      }
-
-      // Delete the world (spaces will be cascade deleted)
-      await db
-        .delete(worlds)
-        .where(eq(worlds.id, worldInfo.internalId));
-
-      return {
-        success: true,
-        data: {
-          message: 'World and all spaces deleted successfully'
-        }
-      };
-
-    } catch (error) {
-      fastify.log.error(error as Error, 'Delete world error');
-      return reply.code(500).send({
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to delete world',
           statusCode: 500
         }
       });

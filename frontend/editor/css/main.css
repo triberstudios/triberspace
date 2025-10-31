@@ -1482,6 +1482,101 @@ div.shortcut-row input {
 	cursor: pointer;
 }
 
+.publish-form-hint {
+	font-size: 12px;
+	color: #888;
+	margin-top: -4px;
+}
+
+/* World tags UI */
+.publish-world-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-height: 32px;
+	padding: 4px 0;
+}
+
+.publish-world-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background-color: #4a9eff20;
+	border: 1px solid #4a9eff;
+	border-radius: 16px;
+	padding: 4px 12px;
+	font-size: 13px;
+	color: #4a9eff;
+	white-space: nowrap;
+}
+
+.publish-world-tag-remove {
+	background: none;
+	border: none;
+	color: #4a9eff;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0;
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	transition: background-color 0.2s;
+}
+
+.publish-world-tag-remove:hover {
+	background-color: #4a9eff40;
+}
+
+/* Autocomplete suggestions */
+.publish-world-suggestions {
+	position: relative;
+	background-color: #1a1a1a;
+	border: 1px solid #3a3a3a;
+	border-radius: 4px;
+	max-height: 200px;
+	overflow-y: auto;
+	margin-top: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	z-index: 10;
+}
+
+.publish-suggestion-item {
+	padding: 10px 12px;
+	cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	transition: background-color 0.2s;
+}
+
+.publish-suggestion-item:hover {
+	background-color: #2a2a2a;
+}
+
+.publish-suggestion-name {
+	color: #fff;
+	font-size: 14px;
+	flex: 1;
+}
+
+.publish-suggestion-count {
+	color: #888;
+	font-size: 12px;
+}
+
+.publish-suggestion-create {
+	border-top: 1px solid #3a3a3a;
+}
+
+.publish-suggestion-create .publish-suggestion-name {
+	color: #4a9eff;
+}
+
 .publish-form-buttons {
 	display: flex;
 	gap: 12px;

@@ -74,7 +74,7 @@ export const worlds = pgTable("worlds", {
   // Metadata
   settings: jsonb("settings"),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   index("worlds_slug_idx").on(table.slug),
   index("worlds_name_idx").on(table.name),
@@ -129,7 +129,7 @@ export const spaces = pgTable("spaces", {
 
   isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   index("spaces_creator_idx").on(table.creatorId),
   index("space_type_idx").on(table.spaceType),
