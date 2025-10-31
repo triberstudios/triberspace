@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/common/button";
 import { Input } from "@/components/common/input";
 import { Label } from "@/components/common/label";
@@ -17,6 +17,10 @@ export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get redirect URL from query params or default to /explore
+  const redirectUrl = searchParams.get('redirect') || '/explore';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +29,8 @@ export function SignInForm() {
     try {
       await signInWithEmailOrUsername(identifier, password);
       toast.success("Successfully signed in!");
-      router.push("/explore");
+      // Redirect to specified URL or default
+      window.location.href = redirectUrl;
     } catch (error: any) {
       toast.error(error.message || "Invalid credentials");
     } finally {
@@ -35,9 +40,14 @@ export function SignInForm() {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Store redirect in session storage to preserve it through OAuth flow
+      if (redirectUrl !== '/explore') {
+        sessionStorage.setItem('auth_redirect', redirectUrl);
+      }
+
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "http://localhost:3000/"
+        callbackURL: redirectUrl
       });
     } catch (error: any) {
       toast.error(error.message || "Google sign-in failed");
@@ -45,7 +55,7 @@ export function SignInForm() {
   };
 
   return (
-    <div className="rounded-lg border bg-card px-8 py-8">
+    <div className="rounded-lg border bg-card px-8 py-8 bg-white/1">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold">Sign In</h1>

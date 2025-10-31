@@ -11,11 +11,30 @@ import { Menubar } from './js/Menubar.js';
 import { Resizer } from './js/Resizer.js';
 import { InteractionEditorWindow } from './js/InteractionEditorWindow.jsx';
 import { AddObjectCommand } from './js/commands/AddObjectCommand.js';
+import { AuthChecker } from './js/auth/AuthChecker.js';
+import { AuthOverlay } from './js/auth/AuthOverlay.js';
 
 window.URL = window.URL || window.webkitURL;
 window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
 
 //
+
+// Initialize auth checker
+const authChecker = new AuthChecker();
+const authOverlay = new AuthOverlay();
+
+// Check authentication before loading editor
+const authResult = await authChecker.checkSession();
+
+if (!authResult.authenticated) {
+	// Show auth overlay - user must log in
+	authOverlay.show();
+	// Stop here - don't initialize editor
+	throw new Error('Authentication required');
+}
+
+// Store auth session for later use
+window.authSession = authResult.session;
 
 const editor = new Editor();
 

@@ -72,7 +72,7 @@ export function SignUpForm() {
   };
 
   return (
-    <div className="rounded-lg border bg-card px-8 py-8">
+    <div className="rounded-lg border bg-card px-8 py-8 bg-white/1">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold">Sign Up</h1>

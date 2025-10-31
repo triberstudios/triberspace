@@ -573,9 +573,9 @@ class PublishModal {
 
 			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
 				method: 'POST',
+				credentials: 'include', // Include auth cookies
 				headers: {
-					'Content-Type': 'application/json',
-					'x-dev-bypass': 'media-plane-editor'
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					category: 'spaces',
@@ -604,9 +604,9 @@ class PublishModal {
 			// 5. Create space with worldIds
 			const spaceResponse = await fetch( 'http://localhost:3001/api/v1/spaces', {
 				method: 'POST',
+				credentials: 'include', // Include auth cookies
 				headers: {
-					'Content-Type': 'application/json',
-					'x-dev-bypass': 'media-plane-editor'
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					name: this.formData.name,

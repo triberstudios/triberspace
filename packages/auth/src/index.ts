@@ -8,6 +8,8 @@ import { db } from "@triberspace/database";
 // Load .env from root directory
 config({ path: resolve(__dirname, '../../../.env') });
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -75,10 +77,34 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL!,
   basePath: "/api/auth",
   trustedOrigins: [
+    // Development
     process.env.FRONTEND_URL || "http://localhost:3000",
     "http://localhost:3000",
-    "http://127.0.0.1:3000"
+    "http://127.0.0.1:3000",
+    "http://localhost:3003", // Editor
+    "http://127.0.0.1:3003",
+    // Production
+    "https://triber.space",
+    "https://editor.triber.space",
+    "https://api.triber.space",
   ],
+  advanced: {
+    // Enable cross-subdomain cookies in production
+    // In development, localhost automatically shares cookies across all ports
+    crossSubDomainCookies: isProduction ? {
+      enabled: true,
+      domain: "triber.space", // Root domain (Better Auth adds leading dot automatically)
+    } : undefined,
+
+    // Use secure cookies in production
+    useSecureCookies: isProduction,
+
+    // Cookie attributes
+    defaultCookieAttributes: {
+      sameSite: "lax", // Works for subdomains, more secure than "none"
+      secure: isProduction, // HTTPS only in production
+    }
+  },
   plugins: [
     username()
   ]

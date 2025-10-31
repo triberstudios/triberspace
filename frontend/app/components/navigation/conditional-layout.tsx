@@ -16,6 +16,7 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const isRuntimePreview = pathname.startsWith('/runtime/preview')
   const isExperience = pathname.startsWith('/experience')
   const isSpaceViewer = pathname.startsWith('/spaces/')
+  const isAuthPage = pathname.startsWith('/auth/')
 
   // Check if pathname matches /{worldSlug}/{spaceSlug} format (2 segments that aren't special routes)
   const pathSegments = pathname.split('/').filter(Boolean)
@@ -26,10 +27,11 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
     !pathname.startsWith('/profile') &&
     !pathname.startsWith('/settings') &&
     !pathname.startsWith('/worlds') &&
-    !pathname.startsWith('/discover')
+    !pathname.startsWith('/discover') &&
+    !pathname.startsWith('/auth')
 
-  if (isRuntimePreview || isExperience || isSpaceViewer || isWorldSpaceRoute) {
-    // Runtime preview, experience, or space viewer - no sidebar, no navigation, fullscreen experience
+  if (isRuntimePreview || isExperience || isSpaceViewer || isWorldSpaceRoute || isAuthPage) {
+    // Runtime preview, experience, space viewer, or auth page - no sidebar, no navigation, fullscreen experience
     return (
       <div className="flex h-full overflow-hidden">
         {children}
