@@ -27,12 +27,13 @@ class AuthOverlay {
 		const modal = document.createElement('div');
 		modal.className = 'auth-modal';
 
-		// Lock icon
+		// Lock icon (Phosphor)
 		const icon = document.createElement('i');
 		icon.className = 'ph-fill ph-lock';
 		icon.style.fontSize = '48px';
-		icon.style.color = '#ffffff';
-		icon.style.marginBottom = '20px';
+		icon.style.color = '#fcfcfc';
+		icon.style.marginBottom = '24px';
+		icon.style.display = 'block';
 
 		// Heading
 		const heading = document.createElement('h2');
@@ -42,12 +43,12 @@ class AuthOverlay {
 		// Description
 		const description = document.createElement('p');
 		description.className = 'auth-description';
-		description.textContent = 'Please log in to access the Triber Editor';
+		description.textContent = 'Please sign in to access the Triber Editor';
 
 		// Login button
 		const loginButton = document.createElement('button');
 		loginButton.className = 'auth-button';
-		loginButton.textContent = 'Go to login';
+		loginButton.textContent = 'Sign in';
 
 		// Handle button click
 		loginButton.addEventListener('click', () => {
