@@ -27,9 +27,9 @@
 }
 
 .auth-modal {
-	/* Matches frontend card styling - using card color + 1% white overlay */
-	background: rgba(52, 52, 52, 1);
-	background: linear-gradient(rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.01)), #343434;
+	/* Matches editor background color with subtle white overlay for definition */
+	background: #0f0f0f;
+	background: linear-gradient(rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.01)), #0f0f0f;
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 12px;
 	padding: 32px;

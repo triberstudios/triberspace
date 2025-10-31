@@ -26,16 +26,7 @@ const authOverlay = new AuthOverlay();
 // Check authentication before loading editor
 const authResult = await authChecker.checkSession();
 
-if (!authResult.authenticated) {
-	// Show auth overlay - user must log in
-	authOverlay.show();
-	// Stop here - don't initialize editor
-	throw new Error('Authentication required');
-}
-
-// Store auth session for later use
-window.authSession = authResult.session;
-
+// Always initialize editor first so UI exists
 const editor = new Editor();
 
 window.editor = editor; // Expose editor to Console - Vite setup complete!
@@ -279,7 +270,26 @@ Object.defineProperty(editor, 'patchEditor', {
 
 //
 
-editor.storage.init( function () {
+// Handle authentication overlay after editor UI is fully initialized
+if (!authResult.authenticated) {
+	// Show auth overlay over the fully rendered editor UI
+	authOverlay.show();
+
+	// Disable editor interactions until authenticated
+	const editorContainer = document.querySelector('.editor-container');
+	if (editorContainer) {
+		editorContainer.style.pointerEvents = 'none';
+	}
+
+	console.log('🔒 Editor loaded in view-only mode - authentication required');
+} else {
+	// Store session for authenticated users
+	window.authSession = authResult.session;
+	console.log('✅ Editor loaded with authentication');
+
+	//
+
+	editor.storage.init( function () {
 
 	editor.storage.get( async function ( state ) {
 
@@ -463,6 +473,8 @@ isLoadingFromHash = true;
 	}
 
 }
+
+} // End authenticated user initialization
 
 // ServiceWorker - disabled for now due to CDN migration
 
