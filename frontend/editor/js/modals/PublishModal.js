@@ -631,7 +631,7 @@ class PublishModal {
 				.replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 			const spaceSlug = `${spaceName}-${spaceData.data.space.id}`;
 
-			this.urlInput.value = `http://localhost:3000/${worldSlug}/${spaceSlug}`;
+			this.urlInput.value = `http://localhost:3000/t/${worldSlug}/${spaceSlug}`;
 			this.switchToSuccessView();
 
 		} catch ( error ) {

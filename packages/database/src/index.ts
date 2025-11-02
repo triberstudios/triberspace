@@ -10,6 +10,7 @@ import * as worlds from './db/schema/worlds';
 import * as points from './db/schema/points';
 import * as store from './db/schema/store';
 import * as analytics from './db/schema/analytics';
+import * as comments from './db/schema/comments';
 import * as relations from './db/schema/relations';
 
 // Combine all schemas
@@ -21,6 +22,7 @@ const schema = {
   ...points,
   ...store,
   ...analytics,
+  ...comments,
   ...relations,
 };
 
@@ -37,4 +39,5 @@ export * from './db/schema/worlds';
 export * from './db/schema/points';
 export * from './db/schema/store';
 export * from './db/schema/analytics';
+export * from './db/schema/comments';
 export * from './db/schema/relations';

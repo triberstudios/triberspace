@@ -70,28 +70,12 @@ export const products = pgTable("products", {
   index("products_release_idx").on(table.releaseDate),
 ]);
 
-export const creatorStores = pgTable("creator_stores", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1000 }),
-  publicId: varchar("public_id", { length: 12 }).unique().notNull().$defaultFn(() => generateNanoId()),
-  creatorId: integer("creatorId").notNull().references(() => creators.id, { onDelete: "cascade" }),
-  storeName: text("storeName").notNull(),
-  description: text("description"),
-  bannerUrl: text("bannerUrl"),
-  logoUrl: text("logoUrl"),
-  isActive: boolean("isActive").default(true),
-  settings: jsonb("settings"),
-  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-}, (table) => [
-  unique("creator_store_idx").on(table.creatorId),
-  index("creator_stores_active_idx").on(table.isActive),
-]);
-
 export const orders = pgTable("orders", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity({ startWith: 1000 }),
   orderNumber: uuid("order_number").notNull().$defaultFn(() => generateUUIDv7()),
   userId: text("userId").notNull().references(() => user.id),
   creatorId: integer("creatorId").notNull().references(() => creators.id),
+  worldId: integer("worldId").notNull().references(() => worlds.id),
   totalPoints: integer("totalPoints").notNull(),
   status: text("status").notNull().default("pending"),
   paymentTransactionId: integer("paymentTransactionId"), // FK defined in relations.ts
@@ -101,6 +85,7 @@ export const orders = pgTable("orders", {
 }, (table) => [
   index("orders_user_idx").on(table.userId),
   index("orders_creator_idx").on(table.creatorId),
+  index("orders_world_idx").on(table.worldId),
   index("orders_status_idx").on(table.status),
   unique("order_number_idx").on(table.orderNumber),
 ]);

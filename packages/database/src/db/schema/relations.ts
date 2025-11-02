@@ -31,19 +31,20 @@ import {
   awards
 } from "./worlds";
 import {
-  creatorPointsConfig,
   pointsPackages,
   pointsPurchases,
-  pointBalances,
   pointTransactions
 } from "./points";
 import {
   products,
-  creatorStores,
   orders,
   orderItems,
   userInventory
 } from "./store";
+import {
+  spaceComments,
+  commentLikes
+} from "./comments";
 import {
   calendarEvents,
   attendance,
@@ -61,7 +62,6 @@ export const userRelations = relations(user, ({ many, one }) => ({
   tribeMemberships: many(userTribeMemberships),
   avatars: many(userAvatars),
   avatarInventory: many(userAvatarInventory),
-  pointBalances: many(pointBalances),
   pointTransactions: many(pointTransactions),
   pointsPurchases: many(pointsPurchases),
   orders: many(orders),
@@ -74,6 +74,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
   worldPoints: many(userWorldPoints),
   awardsGiven: many(awards, { relationName: "awardsFromUser" }),
   awardsReceived: many(awards, { relationName: "awardsToUser" }),
+  spaceComments: many(spaceComments),
+  commentLikes: many(commentLikes),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -101,13 +103,7 @@ export const creatorRelations = relations(creators, ({ one, many }) => ({
   }),
   tribe: one(tribes),
   spaces: many(spaces),
-  store: one(creatorStores),
-  pointsConfig: one(creatorPointsConfig),
-  pointsPackages: many(pointsPackages),
   products: many(products),
-  pointsPurchases: many(pointsPurchases),
-  pointTransactions: many(pointTransactions),
-  pointBalances: many(pointBalances),
   orders: many(orders),
 }));
 
@@ -146,6 +142,10 @@ export const worldRelations = relations(worlds, ({ one, many }) => ({
   products: many(products),
   payoutCycles: many(payoutCycles),
   awards: many(awards),
+  pointsPackages: many(pointsPackages),
+  pointsPurchases: many(pointsPurchases),
+  pointTransactions: many(pointTransactions),
+  spaceComments: many(spaceComments),
 }));
 
 export const spaceRelations = relations(spaces, ({ one, many }) => ({
@@ -157,6 +157,7 @@ export const spaceRelations = relations(spaces, ({ one, many }) => ({
   events: many(events),
   awards: many(awards),
   attendances: many(attendance),
+  comments: many(spaceComments),
 }));
 
 export const eventRelations = relations(events, ({ one, many }) => ({
@@ -335,17 +336,10 @@ export const userAvatarInventoryRelations = relations(userAvatarInventory, ({ on
 // POINTS RELATIONS
 // =============================================================================
 
-export const creatorPointsConfigRelations = relations(creatorPointsConfig, ({ one }) => ({
-  creator: one(creators, {
-    fields: [creatorPointsConfig.creatorId],
-    references: [creators.id],
-  }),
-}));
-
 export const pointsPackageRelations = relations(pointsPackages, ({ one, many }) => ({
-  creator: one(creators, {
-    fields: [pointsPackages.creatorId],
-    references: [creators.id],
+  world: one(worlds, {
+    fields: [pointsPackages.worldId],
+    references: [worlds.id],
   }),
   purchases: many(pointsPurchases),
 }));
@@ -355,24 +349,13 @@ export const pointsPurchaseRelations = relations(pointsPurchases, ({ one }) => (
     fields: [pointsPurchases.userId],
     references: [user.id],
   }),
-  creator: one(creators, {
-    fields: [pointsPurchases.creatorId],
-    references: [creators.id],
+  world: one(worlds, {
+    fields: [pointsPurchases.worldId],
+    references: [worlds.id],
   }),
   package: one(pointsPackages, {
     fields: [pointsPurchases.packageId],
     references: [pointsPackages.id],
-  }),
-}));
-
-export const pointBalanceRelations = relations(pointBalances, ({ one }) => ({
-  user: one(user, {
-    fields: [pointBalances.userId],
-    references: [user.id],
-  }),
-  creator: one(creators, {
-    fields: [pointBalances.creatorId],
-    references: [creators.id],
   }),
 }));
 
@@ -381,9 +364,9 @@ export const pointTransactionRelations = relations(pointTransactions, ({ one }) 
     fields: [pointTransactions.userId],
     references: [user.id],
   }),
-  creator: one(creators, {
-    fields: [pointTransactions.creatorId],
-    references: [creators.id],
+  world: one(worlds, {
+    fields: [pointTransactions.worldId],
+    references: [worlds.id],
   }),
 }));
 
@@ -408,13 +391,6 @@ export const productRelations = relations(products, ({ one, many }) => ({
   inventoryItems: many(userInventory),
 }));
 
-export const creatorStoreRelations = relations(creatorStores, ({ one }) => ({
-  creator: one(creators, {
-    fields: [creatorStores.creatorId],
-    references: [creators.id],
-  }),
-}));
-
 export const orderRelations = relations(orders, ({ one, many }) => ({
   user: one(user, {
     fields: [orders.userId],
@@ -423,6 +399,10 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
   creator: one(creators, {
     fields: [orders.creatorId],
     references: [creators.id],
+  }),
+  world: one(worlds, {
+    fields: [orders.worldId],
+    references: [worlds.id],
   }),
   paymentTransaction: one(pointTransactions, {
     fields: [orders.paymentTransactionId],
@@ -495,5 +475,41 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
   world: one(worlds, {
     fields: [attendance.worldId],
     references: [worlds.id],
+  }),
+}));
+
+// =============================================================================
+// COMMENTS RELATIONS
+// =============================================================================
+
+export const spaceCommentRelations = relations(spaceComments, ({ one, many }) => ({
+  space: one(spaces, {
+    fields: [spaceComments.spaceId],
+    references: [spaces.id],
+  }),
+  user: one(user, {
+    fields: [spaceComments.userId],
+    references: [user.id],
+  }),
+  world: one(worlds, {
+    fields: [spaceComments.worldId],
+    references: [worlds.id],
+  }),
+  parentComment: one(spaceComments, {
+    fields: [spaceComments.parentCommentId],
+    references: [spaceComments.id],
+  }),
+  replies: many(spaceComments),
+  likes: many(commentLikes),
+}));
+
+export const commentLikeRelations = relations(commentLikes, ({ one }) => ({
+  comment: one(spaceComments, {
+    fields: [commentLikes.commentId],
+    references: [spaceComments.id],
+  }),
+  user: one(user, {
+    fields: [commentLikes.userId],
+    references: [user.id],
   }),
 }));

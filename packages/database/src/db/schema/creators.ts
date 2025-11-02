@@ -35,7 +35,6 @@ export const creators = pgTable("creators", {
   publicId: varchar("public_id", { length: 12 }).unique().notNull().$defaultFn(() => generateNanoId()),
   userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
   bio: text("bio"),
-  pointsName: text("pointsName").default("Points"),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
