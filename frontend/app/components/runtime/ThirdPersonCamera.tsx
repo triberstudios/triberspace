@@ -6,6 +6,7 @@ import { PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import Character from './Character';
 import { useCharacterControls } from './useCharacterControls';
+import { usePartyKit } from '@/contexts/multiplayer/PartyKitContext';
 
 interface ThirdPersonCameraProps {
     initialPosition?: [number, number, number];
@@ -37,6 +38,10 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     const [lastClientX, setLastClientX] = useState(0);
     const [lastClientY, setLastClientY] = useState(0);
     const [joystickData, setJoystickData] = useState<{ angle: number; force: number } | null>(null);
+
+    // Multiplayer integration
+    const { sendPlayerUpdate, isConnected } = usePartyKit();
+    const lastUpdateRef = useRef<number>(0);
 
     // Poll joystick data from localStorage for mobile controls
     useEffect(() => {
@@ -190,6 +195,23 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
         // Use final position as the cam destination
         camera.position.lerp(finalPosition, smoothness);
         camera.lookAt(characterPosition.x, characterPosition.y + yOffset, characterPosition.z);
+
+        // Send position updates to multiplayer server (throttled to ~10Hz)
+        if (isConnected) {
+            const now = Date.now();
+            if (now - lastUpdateRef.current > 100) { // Update every 100ms (10Hz)
+                sendPlayerUpdate({
+                    position: {
+                        x: characterPosition.x,
+                        y: characterPosition.y,
+                        z: characterPosition.z
+                    },
+                    rotation: cameraAngle,
+                    animation: animation
+                });
+                lastUpdateRef.current = now;
+            }
+        }
     });
 
     return (

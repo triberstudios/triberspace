@@ -1,16 +1,23 @@
 {
   "name": "@triberspace/game-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/server.ts",
   "scripts": {
+    "dev": "partykit dev",
+    "deploy": "partykit deploy",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Triberspace multiplayer game server powered by PartyKit",
   "dependencies": {
-    "colyseus": "^0.16.4",
-    "express": "^5.1.0"
+    "partykit": "^0.0.111",
+    "partysocket": "^1.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
   }
 }

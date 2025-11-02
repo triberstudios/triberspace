@@ -8,6 +8,8 @@ import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
 import { StaticSceneLoader } from '@/components/runtime/StaticSceneLoader';
 import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
 import MobileJoystick from '@/components/runtime/MobileJoystick';
+import { PartyKitProvider } from '@/contexts/multiplayer/PartyKitContext';
+import { MultiplayerManager } from '@/components/multiplayer/MultiplayerManager';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
 
@@ -133,31 +135,36 @@ export default function SpaceViewer() {
                     powerPreference: 'high-performance'
                 }}
             >
-                <Physics gravity={[0, -30, 0]}>
-                    {/* Ground plane with physics */}
-                    <RigidBody type="fixed">
-                        <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                            <planeGeometry args={[50, 50]} />
-                            <meshStandardMaterial color="#444444" visible={false} />
-                        </mesh>
-                    </RigidBody>
+                <PartyKitProvider spaceId={spaceId}>
+                    <Physics gravity={[0, -30, 0]}>
+                        {/* Ground plane with physics */}
+                        <RigidBody type="fixed">
+                            <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                                <planeGeometry args={[50, 50]} />
+                                <meshStandardMaterial color="#444444" visible={false} />
+                            </mesh>
+                        </RigidBody>
 
-                    {/* Character and Camera */}
-                    <ThirdPersonCamera
-                        initialPosition={[-10.677, 1, -0.324]}
-                        characterColor="#4080ff"
-                        initialCameraAngle={1.5215926535898001}
-                    />
-
-                    {/* Load Scene from CDN */}
-                    <Suspense fallback={<LoadingIndicator />}>
-                        <StaticSceneLoader
-                            sceneJsonPath={spaceData.sceneDataUrl}
-                            onMetadataClick={handleMetadataClick}
-                            onLoadingChange={handleLoadingChange}
+                        {/* Character and Camera */}
+                        <ThirdPersonCamera
+                            initialPosition={[-10.677, 1, -0.324]}
+                            characterColor="#4080ff"
+                            initialCameraAngle={1.5215926535898001}
                         />
-                    </Suspense>
-                </Physics>
+
+                        {/* Multiplayer - Other players */}
+                        <MultiplayerManager />
+
+                        {/* Load Scene from CDN */}
+                        <Suspense fallback={<LoadingIndicator />}>
+                            <StaticSceneLoader
+                                sceneJsonPath={spaceData.sceneDataUrl}
+                                onMetadataClick={handleMetadataClick}
+                                onLoadingChange={handleLoadingChange}
+                            />
+                        </Suspense>
+                    </Physics>
+                </PartyKitProvider>
             </Canvas>
 
             {/* Loading Screen */}
