@@ -1,5 +1,15 @@
 // Shared TypeScript types for multiplayer game server
 
+export interface AvatarData {
+  baseModelUrl: string;
+  primaryColor?: string;
+  equippedItems?: Array<{
+    slotName: string;
+    meshUrl: string;
+    textureUrl?: string;
+  }>;
+}
+
 export interface PlayerState {
   id: string;
   userId: string;
@@ -8,7 +18,7 @@ export interface PlayerState {
   rotation: number;
   animation: string;
   color: string;
-  avatarUrl?: string;
+  avatar?: AvatarData;
 }
 
 export interface PlayerUpdateMessage {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, CapsuleCollider } from "@react-three/rapier";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface OtherPlayerProps {
   player: {
@@ -15,16 +16,104 @@ interface OtherPlayerProps {
     animation: string;
     color: string;
     lastMessage?: string;
+    avatar?: {
+      baseModelUrl: string;
+      primaryColor?: string;
+    };
   };
 }
 
 export function OtherPlayer({ player }: OtherPlayerProps) {
   const rigidBodyRef = useRef<any>();
-  const meshRef = useRef<THREE.Mesh>(null);
+  const characterRef = useRef<THREE.Group>(null);
 
-  // Smoothly interpolate to target position
-  useFrame(() => {
-    if (!rigidBodyRef.current || !meshRef.current) return;
+  // Model loading state
+  const [scene, setScene] = useState<THREE.Group | null>(null);
+  const [animations, setAnimations] = useState<THREE.AnimationClip[]>([]);
+  const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
+
+  // Use separate model to avoid conflicts
+  const modelUrl = "/assets/TriberOtherCharacter.glb";
+
+  // Load GLB model using GLTFLoader
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    const color = player.avatar?.primaryColor || player.color;
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        const loadedScene = gltf.scene;
+
+        // CRITICAL: Clone materials to ensure uniqueness per player
+        // This prevents geometry/material ownership conflicts
+        loadedScene.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.material) {
+            const material = child.material.clone(); // Clone material for this player
+            material.color.set(color);
+            if (material.emissive) {
+              material.emissive.set(color);
+              material.emissiveIntensity = 200;
+            }
+            child.material = material;
+          }
+        });
+
+        setScene(loadedScene);
+        setAnimations(gltf.animations || []);
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading other player model:', error);
+      }
+    );
+
+    return () => {
+      if (scene) {
+        scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry?.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => mat.dispose());
+            } else {
+              child.material?.dispose();
+            }
+          }
+        });
+      }
+    };
+  }, [modelUrl, player.color, player.avatar?.primaryColor]);
+
+  // Initialize animation mixer
+  useEffect(() => {
+    if (scene) {
+      const mixerInstance = new THREE.AnimationMixer(scene);
+      setMixer(mixerInstance);
+    }
+  }, [scene]);
+
+  // Handle animation changes
+  useEffect(() => {
+    if (mixer && animations.length > 0) {
+      mixer.stopAllAction();
+      const clip = animations.find((clip) => clip.name === player.animation);
+      if (clip) {
+        const action = mixer.clipAction(clip);
+        action.play();
+      }
+    }
+  }, [mixer, player.animation, animations]);
+
+  // Color is now applied during model load (no separate useEffect needed)
+
+  // Smoothly interpolate to target position and update animation
+  useFrame((_, deltaTime) => {
+    if (!rigidBodyRef.current || !characterRef.current) return;
+
+    // Update animation mixer
+    if (mixer) {
+      mixer.update(deltaTime);
+    }
 
     const currentPos = rigidBodyRef.current.translation();
     const targetPos = new THREE.Vector3(
@@ -53,7 +142,7 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
     }
 
     // Set rotation
-    meshRef.current.rotation.y = player.rotation;
+    characterRef.current.rotation.y = player.rotation;
   });
 
   return (
@@ -67,15 +156,18 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
     >
       <CapsuleCollider args={[0.5, 0.75]} position={[0, 1.2, 0]} />
 
-      {/* Simple capsule character */}
-      <mesh ref={meshRef} castShadow position={[0, 1.2, 0]}>
-        <capsuleGeometry args={[0.5, 1.5, 4, 8]} />
-        <meshStandardMaterial
-          color={player.color}
-          emissive={player.color}
-          emissiveIntensity={0.2}
-        />
-      </mesh>
+      {/* Remote player character model */}
+      {scene && (
+        <group
+          ref={characterRef}
+          scale={[0.35, 0.35, 0.35]}
+          rotation={[0, Math.PI, 0]}
+          position={[0, 0, 0]}
+          dispose={null}
+        >
+          <primitive object={scene} />
+        </group>
+      )}
 
       {/* Nametag */}
       <Html position={[0, 2.77, 0]} center>

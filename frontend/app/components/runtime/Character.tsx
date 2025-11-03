@@ -11,15 +11,17 @@ interface CharacterProps {
     position?: [number, number, number];
     color?: string;
     rigidBodyRef?: React.RefObject<any>;
+    modelUrl?: string;
 }
 
 const Character = React.forwardRef<THREE.Group, CharacterProps>(({
     animation = 'idle',
     position = [0, 2, 0],
     color = '#4080ff',
-    rigidBodyRef
+    rigidBodyRef,
+    modelUrl = '/assets/TriberCharacterThinner.glb'
 }, characterRef) => {
-    const { scene, animations } = useGLTF('/assets/TriberCharacterThinner.glb');
+    const { scene, animations } = useGLTF(modelUrl);
     const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
     const internalRigidBodyRef = useRef<any>(null);
     const actualRigidBodyRef = rigidBodyRef || internalRigidBodyRef;

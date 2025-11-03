@@ -4,6 +4,17 @@ import { createContext, useContext, ReactNode, useState, useEffect } from "react
 import usePartySocket from "partysocket/react";
 import { useSession } from "@/lib/auth-client";
 
+// Avatar data interface (matches backend)
+interface AvatarData {
+  baseModelUrl: string;
+  primaryColor?: string;
+  equippedItems?: Array<{
+    slotName: string;
+    meshUrl: string;
+    textureUrl?: string;
+  }>;
+}
+
 // Player state interface (matches backend)
 interface PlayerState {
   id: string;
@@ -13,6 +24,7 @@ interface PlayerState {
   rotation: number;
   animation: string;
   color: string;
+  avatar?: AvatarData;
 }
 
 interface PartyKitContextValue {

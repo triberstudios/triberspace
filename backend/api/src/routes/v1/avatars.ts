@@ -305,6 +305,64 @@ export async function v1AvatarsRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Public: Get any user's active avatar (for multiplayer)
+  fastify.get('/users/:userId/avatar', {
+    preHandler: [optionalAuthMiddleware]
+  }, async (request: AuthenticatedRequest, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    try {
+      // Get user's active avatar
+      const [userAvatar] = await db
+        .select({
+          baseModel: {
+            meshUrl: avatarBaseModels.meshUrl,
+          }
+        })
+        .from(userAvatars)
+        .innerJoin(avatarBaseModels, eq(userAvatars.baseModelId, avatarBaseModels.id))
+        .where(and(
+          eq(userAvatars.userId, userId),
+          eq(userAvatars.isActive, true)
+        ))
+        .limit(1);
+
+      if (!userAvatar) {
+        // Return default avatar if user has none
+        return {
+          success: true,
+          data: {
+            avatar: {
+              baseModelUrl: "/assets/TriberCharacterThinner.glb"
+            }
+          }
+        };
+      }
+
+      // TODO: Add equipped items when avatar customization is fully implemented
+      return {
+        success: true,
+        data: {
+          avatar: {
+            baseModelUrl: userAvatar.baseModel.meshUrl
+          }
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error(error as Error, 'Error fetching user avatar');
+      // Return default avatar on error
+      return {
+        success: true,
+        data: {
+          avatar: {
+            baseModelUrl: "/assets/TriberCharacterThinner.glb"
+          }
+        }
+      };
+    }
+  });
+
   // Protected: Get user's current active avatar
   fastify.get('/my-avatar', {
     preHandler: [authMiddleware]

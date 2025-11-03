@@ -73,6 +73,10 @@ export default class SpaceParty implements Party.Server {
 
     console.log(`✅ ${username} joined space ${this.room.id} (${this.players.size + 1} players)`);
 
+    // TODO: Fetch user's active avatar from database via API
+    // For now, use hardcoded default avatar
+    const playerColor = this.generatePlayerColor(userId);
+
     // Create player state with default spawn position
     const playerState: PlayerState = {
       id: connection.id,
@@ -81,7 +85,11 @@ export default class SpaceParty implements Party.Server {
       position: { x: 0, y: 1, z: 0 },
       rotation: 0,
       animation: "idle",
-      color: this.generatePlayerColor(userId),
+      color: playerColor,
+      avatar: {
+        baseModelUrl: "/assets/TriberCharacterThinner.glb",
+        primaryColor: playerColor,
+      },
     };
 
     this.players.set(connection.id, playerState);
