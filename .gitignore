@@ -51,3 +51,6 @@ backend/api/server.log
 
 # PartyKit local state
 .partykit/
+
+# preview scenes
+.temp-scenes/

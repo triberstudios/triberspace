@@ -40,7 +40,7 @@ interface PartyKitContextValue {
   isConnected: boolean;
 }
 
-const PartyKitContext = createContext<PartyKitContextValue | null>(null);
+export const PartyKitContext = createContext<PartyKitContextValue | null>(null);
 
 export function PartyKitProvider({
   spaceId,
