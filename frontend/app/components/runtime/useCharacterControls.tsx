@@ -95,6 +95,7 @@ export function useCharacterControls({
     const [animation, setAnimation] = useState('idle');
     const keys = useKeyboardControls();
     const [lastDesiredRotationAngle, setLastDesiredRotationAngle] = useState(cameraAngle);
+    const currentRotationRef = useRef(cameraAngle); // Track actual character rotation
 
     // Movement parameters
     const walkSpeed = 5;
@@ -189,6 +190,9 @@ export function useCharacterControls({
         newQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), desiredRotationAngle);
         character.quaternion.copy(newQuaternion);
 
+        // Store the actual character rotation for multiplayer sync
+        currentRotationRef.current = desiredRotationAngle;
+
         // Update the animation state based on movement (only idle/walk, no run)
         const animationState = isMoving ? 'walk' : 'idle';
 
@@ -199,6 +203,7 @@ export function useCharacterControls({
 
     return {
         animation,
+        rotation: currentRotationRef.current, // Actual character rotation for multiplayer
         isMoving: keys.up || keys.down,
         isRunning: false // V2World doesn't have running
     };

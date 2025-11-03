@@ -75,7 +75,7 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     }, [cameraAngle]);
 
     // Character controls
-    const { animation } = useCharacterControls({
+    const { animation, rotation: characterRotation } = useCharacterControls({
         characterRef,
         rigidBodyRef,
         cameraAngle,
@@ -196,17 +196,17 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
         camera.position.lerp(finalPosition, smoothness);
         camera.lookAt(characterPosition.x, characterPosition.y + yOffset, characterPosition.z);
 
-        // Send position updates to multiplayer server (throttled to ~10Hz)
+        // Send position updates to multiplayer server (throttled to ~20Hz)
         if (isConnected) {
             const now = Date.now();
-            if (now - lastUpdateRef.current > 100) { // Update every 100ms (10Hz)
+            if (now - lastUpdateRef.current > 50) { // Update every 50ms (20Hz)
                 sendPlayerUpdate({
                     position: {
                         x: characterPosition.x,
                         y: characterPosition.y,
                         z: characterPosition.z
                     },
-                    rotation: cameraAngle,
+                    rotation: characterRotation, // Send actual character rotation, not camera angle
                     animation: animation
                 });
                 lastUpdateRef.current = now;

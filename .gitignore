@@ -48,3 +48,6 @@ next-env.d.ts
 **/turbo-cookies
 **/.turbo-daemon
 backend/api/server.log
+
+# PartyKit local state
+.partykit/

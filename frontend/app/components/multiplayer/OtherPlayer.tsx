@@ -106,43 +106,38 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
 
   // Color is now applied during model load (no separate useEffect needed)
 
-  // Smoothly interpolate to target position and update animation
-  useFrame((_, deltaTime) => {
+  // Smoothly interpolate to target position and update animation (V2World approach)
+  useFrame((_, delta) => {
     if (!rigidBodyRef.current || !characterRef.current) return;
 
     // Update animation mixer
     if (mixer) {
-      mixer.update(deltaTime);
+      mixer.update(delta);
     }
 
+    // Apply rotation to character group using quaternion (V2World approach)
+    // Convert single rotation angle to quaternion for proper 3D rotation
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation);
+    characterRef.current.quaternion.copy(quaternion);
+    characterRef.current.position.set(0, 0, 0);
+
+    // Smooth position interpolation using velocity
     const currentPos = rigidBodyRef.current.translation();
-    const targetPos = new THREE.Vector3(
-      player.position.x,
-      player.position.y,
-      player.position.z
+    const currentPosition = new THREE.Vector3(currentPos.x, currentPos.y, currentPos.z);
+    const targetPosition = new THREE.Vector3(player.position.x, player.position.y, player.position.z);
+
+    const direction = targetPosition.clone().sub(currentPosition).normalize();
+    const distance = currentPosition.distanceTo(targetPosition);
+
+    // Delta-time based velocity for smooth, frame-rate independent movement
+    const speed = 7;
+    const desiredVelocity = direction.multiplyScalar(Math.min(distance, speed * delta));
+
+    rigidBodyRef.current.setLinvel(
+      { x: desiredVelocity.x, y: desiredVelocity.y, z: desiredVelocity.z },
+      true
     );
-
-    // Calculate direction and distance
-    const direction = targetPos.clone().sub(
-      new THREE.Vector3(currentPos.x, currentPos.y, currentPos.z)
-    );
-    const distance = direction.length();
-
-    // Smooth movement with velocity-based interpolation
-    if (distance > 0.01) {
-      direction.normalize();
-      const speed = Math.min(distance * 10, 5); // Cap speed at 5 units/sec
-      rigidBodyRef.current.setLinvel(
-        { x: direction.x * speed, y: direction.y * speed, z: direction.z * speed },
-        true
-      );
-    } else {
-      // Stop if very close
-      rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    }
-
-    // Set rotation
-    characterRef.current.rotation.y = player.rotation;
   });
 
   return (
