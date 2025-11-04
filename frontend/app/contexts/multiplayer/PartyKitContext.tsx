@@ -63,7 +63,7 @@ export function PartyKitProvider({
   };
 
   const socket = usePartySocket({
-    host: process.env.NEXT_PUBLIC_PARTYKIT_HOST || "localhost:1999",
+    host: process.env.NEXT_PUBLIC_PARTYKIT_HOST || (typeof window !== 'undefined' ? `${window.location.hostname}:1999` : "localhost:1999"),
     room: spaceId,
     query: () => {
       const token = getSessionToken();
