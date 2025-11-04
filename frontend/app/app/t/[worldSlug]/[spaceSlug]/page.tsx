@@ -4,13 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody } from '@react-three/rapier';
-import ThirdPersonCamera from '@/lib/runtime/ThirdPersonCamera';
 import { StaticSceneLoader } from '@/lib/runtime/StaticSceneLoader';
 import { MediaMetadataModal } from '@/lib/runtime/MediaMetadataModal';
 import { SimplePostProcessing } from '@/lib/runtime/SimplePostProcessing';
 import MobileJoystick from '@/lib/runtime/MobileJoystick';
 import { PartyKitProvider } from '@/contexts/multiplayer/PartyKitContext';
 import { MultiplayerManager } from '@/components/multiplayer/MultiplayerManager';
+import { LocalPlayer } from '@/components/multiplayer/LocalPlayer';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
 
@@ -156,14 +156,16 @@ export default function SpaceViewer() {
                             </mesh>
                         </RigidBody>
 
-                        {/* Character and Camera */}
-                        <ThirdPersonCamera
-                            initialPosition={[-10.677, 1, -0.324]}
+                        {/* Local Player with Smart Spawning */}
+                        <LocalPlayer
+                            defaultSpawnPoint={[0, 0, 0]}
+                            spawnRadius={1.5}
+                            minDistance={0.5}
                             characterColor="#4080ff"
                             initialCameraAngle={1.5215926535898001}
                         />
 
-                        {/* Multiplayer - Other players */}
+                        {/* Remote Players */}
                         <MultiplayerManager />
 
                         {/* Load Scene from CDN */}

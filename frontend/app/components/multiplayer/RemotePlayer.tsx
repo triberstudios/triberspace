@@ -7,7 +7,7 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-interface OtherPlayerProps {
+interface RemotePlayerProps {
   player: {
     id: string;
     username: string;
@@ -23,7 +23,7 @@ interface OtherPlayerProps {
   };
 }
 
-export function OtherPlayer({ player }: OtherPlayerProps) {
+export function RemotePlayer({ player }: RemotePlayerProps) {
   const rigidBodyRef = useRef<any>();
   const characterRef = useRef<THREE.Group>(null);
 
