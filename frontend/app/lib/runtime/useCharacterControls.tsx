@@ -140,25 +140,6 @@ export function useCharacterControls({
         }
         // Handle keyboard input (desktop)
         else if (keys.up || keys.down || keys.left || keys.right) {
-            const forward = new THREE.Vector3(0, 0, -1);
-            const characterQuaternion = new THREE.Quaternion().copy(character.quaternion);
-
-            // Apply the character's current rotation to the forward vector
-            forward.applyQuaternion(characterQuaternion);
-
-            // Handle forward and backward movement (UP/DOWN keys)
-            if (keys.up || keys.down) {
-                const directionMultiplier = keys.up ? -1 : -1; // V2World uses same direction for both
-                rigidBody.setLinvel({
-                    x: forward.x * movementSpeed * directionMultiplier,
-                    y: 0,
-                    z: forward.z * movementSpeed * directionMultiplier
-                }, true);
-            } else {
-                // Stop movement if neither forward nor backward keys are pressed
-                rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-            }
-
             // Handle left and right rotation (LEFT/RIGHT keys)
             if (keys.left || keys.right) {
                 const rotationDirection = keys.left ? 1 : -1;
@@ -177,6 +158,28 @@ export function useCharacterControls({
                 setLastDesiredRotationAngle(desiredRotationAngle);
             }
 
+            // Calculate movement direction from desiredRotationAngle (not character quaternion)
+            // This ensures straight-line movement while visual rotation smoothly catches up
+            // Uses same coordinate system as joystick for consistency
+            const forward = new THREE.Vector3(
+                Math.sin(desiredRotationAngle),
+                0,
+                Math.cos(desiredRotationAngle)
+            );
+
+            // Handle forward and backward movement (UP/DOWN keys)
+            if (keys.up || keys.down) {
+                // Apply velocity directly (same as joystick, no negation needed)
+                rigidBody.setLinvel({
+                    x: forward.x * movementSpeed,
+                    y: 0,
+                    z: forward.z * movementSpeed
+                }, true);
+            } else {
+                // Stop movement if neither forward nor backward keys are pressed
+                rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            }
+
             isMoving = keys.up || keys.down;
         }
         // No input - stop movement
@@ -185,10 +188,13 @@ export function useCharacterControls({
             desiredRotationAngle = lastDesiredRotationAngle;
         }
 
-        // Apply the new rotation to the character
-        const newQuaternion = new THREE.Quaternion();
-        newQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), desiredRotationAngle);
-        character.quaternion.copy(newQuaternion);
+        // Apply smooth rotation to the character visual (decoupled from movement)
+        const targetQuaternion = new THREE.Quaternion();
+        targetQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), desiredRotationAngle);
+
+        const currentQuat = character.quaternion.clone();
+        currentQuat.slerp(targetQuaternion, 0.15); // Smooth rotation lerp
+        character.quaternion.copy(currentQuat);
 
         // Store the actual character rotation for multiplayer sync
         currentRotationRef.current = desiredRotationAngle;

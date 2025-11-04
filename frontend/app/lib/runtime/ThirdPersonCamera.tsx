@@ -199,10 +199,10 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
         camera.position.lerp(finalPosition, smoothness);
         camera.lookAt(characterPosition.x, characterPosition.y + yOffset, characterPosition.z);
 
-        // Send position updates to multiplayer server (throttled to ~20Hz)
+        // Send position updates to multiplayer server (throttled to ~30Hz)
         if (isConnected) {
             const now = Date.now();
-            if (now - lastUpdateRef.current > 50) { // Update every 50ms (20Hz)
+            if (now - lastUpdateRef.current > 33) { // Update every 33ms (30Hz)
                 sendPlayerUpdate({
                     position: {
                         x: characterPosition.x,

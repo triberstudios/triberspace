@@ -32,6 +32,9 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
   const [animations, setAnimations] = useState<THREE.AnimationClip[]>([]);
   const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
 
+  // Smooth rotation tracking
+  const targetRotation = useRef<number>(player.rotation);
+
   // Use separate model to avoid conflicts
   const modelUrl = "/assets/TriberOtherCharacter.glb";
 
@@ -104,6 +107,11 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
     }
   }, [mixer, player.animation, animations]);
 
+  // Update target rotation when player rotates
+  useEffect(() => {
+    targetRotation.current = player.rotation;
+  }, [player.rotation]);
+
   // Color is now applied during model load (no separate useEffect needed)
 
   // Smoothly interpolate to target position and update animation (V2World approach)
@@ -115,11 +123,13 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
       mixer.update(delta);
     }
 
-    // Apply rotation to character group using quaternion (V2World approach)
-    // Convert single rotation angle to quaternion for proper 3D rotation
-    const quaternion = new THREE.Quaternion();
-    quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation);
-    characterRef.current.quaternion.copy(quaternion);
+    // Smooth rotation interpolation (frame-rate independent)
+    const targetQuat = new THREE.Quaternion();
+    targetQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotation.current);
+
+    const currentQuat = characterRef.current.quaternion.clone();
+    currentQuat.slerp(targetQuat, delta * 10); // Smooth, frame-rate independent
+    characterRef.current.quaternion.copy(currentQuat);
     characterRef.current.position.set(0, 0, 0);
 
     // Smooth position interpolation using velocity
