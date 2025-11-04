@@ -7,6 +7,8 @@ import { Physics, RigidBody } from '@react-three/rapier';
 import { SceneLoader, SceneDebugInfo } from '@/components/runtime/SceneLoader';
 import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
 import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
+import { AdaptivePostProcessing } from '@/components/runtime/AdaptivePostProcessing';
+import { useControls } from 'leva';
 
 interface PreviewPageProps {
     params: Promise<{
@@ -20,6 +22,21 @@ export default function PreviewPage({ params }: PreviewPageProps) {
     const [error, setError] = useState<string | null>(null);
     const [sceneData, setSceneData] = useState<any>(null);
     const [metadataModal, setMetadataModal] = useState<any>(null);
+    const [postProcessingEnabled, setPostProcessingEnabled] = useState(true);
+
+    // N8AO Controls with Leva
+    const n8aoControls = useControls('N8AO Settings', {
+        enabled: { value: true, label: 'Enable N8AO' },
+        aoSamples: { value: 16, min: 1, max: 64, step: 1 },
+        aoRadius: { value: 6.9, min: 1, max: 10, step: 0.1 },
+        intensity: { value: 5.0, min: 0, max: 10, step: 0.1 },
+        denoiseSamples: { value: 12, min: 1, max: 64, step: 1 },
+        denoiseRadius: { value: 16, min: 0, max: 24, step: 1 },
+        distanceFalloff: { value: 4.0, min: 0, max: 10, step: 0.1 },
+        halfRes: { value: true, label: 'Half Resolution' },
+        screenSpaceRadius: { value: true },
+        depthAwareUpsampling: { value: true }
+    });
 
     return (
         <div className="w-full h-screen bg-black">
@@ -32,10 +49,20 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                     </div>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => window.close()}
-                            className="px-3 py-1.5 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-md transition-colors"
+                            onClick={() => setPostProcessingEnabled(!postProcessingEnabled)}
+                            className={`px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer ${
+                                postProcessingEnabled
+                                    ? 'bg-blue-500/20 text-blue-200 hover:bg-blue-500/30'
+                                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white/80'
+                            }`}
                         >
-                            Close Preview
+                            Effects: {postProcessingEnabled ? 'ON' : 'OFF'}
+                        </button>
+                        <button
+                            onClick={() => window.close()}
+                            className="px-3 py-1.5 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-md transition-colors cursor-pointer"
+                        >
+                            Close preview
                         </button>
                     </div>
                 </div>
@@ -95,6 +122,14 @@ export default function PreviewPage({ params }: PreviewPageProps) {
 
                     {/* Development Stats */}
                     {process.env.NODE_ENV === 'development' && <Stats />}
+
+                    {/* Post-processing Effects */}
+                    {postProcessingEnabled && (
+                        <AdaptivePostProcessing
+                            enabled={true}
+                            controls={n8aoControls}
+                        />
+                    )}
                 </Physics>
             </Canvas>
 

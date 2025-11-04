@@ -32,6 +32,9 @@ const start = async () => {
         'http://127.0.0.1:3000',
         'http://127.0.0.1:3001',
         'http://127.0.0.1:3003',
+        'http://192.168.1.17:3000', // Local network access
+        'http://192.168.1.17:3001',
+        'http://192.168.1.17:3003',
         process.env.FRONTEND_URL || 'http://localhost:3000'
       ],
       credentials: true,

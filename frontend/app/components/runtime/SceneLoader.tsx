@@ -1420,7 +1420,9 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
             // console.log('SceneLoader: Loading scene', sceneId);
 
             // Fetch scene data from backend API
-            const response = await fetch(`http://localhost:3001/api/v1/runtime/scenes/${sceneId}`);
+            // Use window.location.hostname for mobile device support
+            const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+            const response = await fetch(`http://${hostname}:3001/api/v1/runtime/scenes/${sceneId}`);
 
             if (!response.ok) {
                 throw new Error(`Failed to load scene: ${response.statusText}`);

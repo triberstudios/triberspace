@@ -7,6 +7,7 @@ import { Physics, RigidBody } from '@react-three/rapier';
 import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
 import { StaticSceneLoader } from '@/components/runtime/StaticSceneLoader';
 import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
+import { SimplePostProcessing } from '@/components/runtime/SimplePostProcessing';
 import MobileJoystick from '@/components/runtime/MobileJoystick';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
@@ -37,6 +38,7 @@ export default function SpaceViewer() {
     const [isLoadingSpace, setIsLoadingSpace] = useState(true);
     const [isLoadingScene, setIsLoadingScene] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [n8aoEnabled, setN8aoEnabled] = useState(true);
 
     // Extract publicId from slug (format: spaceName-publicId)
     const getPublicIdFromSlug = (slug: string): string => {
@@ -51,7 +53,8 @@ export default function SpaceViewer() {
             try {
                 setIsLoadingSpace(true);
                 const publicId = getPublicIdFromSlug(spaceSlug);
-                const response = await fetch(`http://localhost:3001/api/v1/spaces/${publicId}`);
+                const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+                const response = await fetch(`http://${hostname}:3001/api/v1/spaces/${publicId}`);
 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -165,6 +168,9 @@ export default function SpaceViewer() {
                             onLoadingChange={handleLoadingChange}
                         />
                     </Suspense>
+
+                    {/* Post-processing Effects */}
+                    <SimplePostProcessing n8aoEnabled={n8aoEnabled} />
                 </Physics>
             </Canvas>
 
@@ -188,6 +194,20 @@ export default function SpaceViewer() {
 
             {/* Mobile Joystick */}
             <MobileJoystick />
+
+            {/* Post-processing Toggle */}
+            {!isLoadingScene && (
+                <button
+                    onClick={() => setN8aoEnabled(!n8aoEnabled)}
+                    className={`fixed top-4 right-4 z-10 px-4 py-2 text-sm rounded-md transition-colors cursor-pointer ${
+                        n8aoEnabled
+                            ? 'bg-white/20 text-white hover:bg-white/30'
+                            : 'bg-white/10 text-white/60 hover:bg-white/20'
+                    }`}
+                >
+                    AO: {n8aoEnabled ? 'ON' : 'OFF'}
+                </button>
+            )}
         </div>
     );
 }
