@@ -45,6 +45,9 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     const sendPlayerUpdate = partyKitContext?.sendPlayerUpdate;
     const isConnected = partyKitContext?.isConnected || false;
     const lastUpdateRef = useRef<number>(0);
+    const lastPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(...initialPosition));
+    const lastRotationRef = useRef<number>(initialCameraAngle);
+    const lastAnimationRef = useRef<string>('idle');
 
     // Poll joystick data from localStorage for mobile controls
     useEffect(() => {
@@ -199,19 +202,32 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
         camera.position.lerp(finalPosition, smoothness);
         camera.lookAt(characterPosition.x, characterPosition.y + yOffset, characterPosition.z);
 
-        // Send position updates to multiplayer server (throttled to ~30Hz)
+        // Send position updates to multiplayer server (only when changed, throttled to ~30Hz)
         if (isConnected) {
             const now = Date.now();
-            if (now - lastUpdateRef.current > 33) { // Update every 33ms (30Hz)
+
+            // Check if position, rotation, or animation has changed significantly
+            const currentPosition = new THREE.Vector3(characterPosition.x, characterPosition.y, characterPosition.z);
+            const positionChanged = currentPosition.distanceTo(lastPositionRef.current) > 0.01; // 1cm threshold
+            const rotationChanged = Math.abs(characterRotation - lastRotationRef.current) > 0.01; // ~0.57 degree threshold
+            const animationChanged = animation !== lastAnimationRef.current;
+
+            // Only send if something changed AND throttle time has passed
+            if ((positionChanged || rotationChanged || animationChanged) && now - lastUpdateRef.current > 33) {
                 sendPlayerUpdate({
                     position: {
                         x: characterPosition.x,
                         y: characterPosition.y,
                         z: characterPosition.z
                     },
-                    rotation: characterRotation, // Send actual character rotation, not camera angle
+                    rotation: characterRotation,
                     animation: animation
                 });
+
+                // Update last known state
+                lastPositionRef.current.copy(currentPosition);
+                lastRotationRef.current = characterRotation;
+                lastAnimationRef.current = animation;
                 lastUpdateRef.current = now;
             }
         }
