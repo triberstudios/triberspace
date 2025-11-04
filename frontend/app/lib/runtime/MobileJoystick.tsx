@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import nipplejs from 'nipplejs';
 import { throttle } from 'lodash';
 
 const MobileJoystick = () => {
@@ -23,14 +22,17 @@ const MobileJoystick = () => {
 
     useEffect(() => {
         if (containerRef.current && isMobile) {
-            const manager = nipplejs.create({
-                zone: containerRef.current,
-                mode: 'static',
-                position: { left: '48px', bottom: '24px' },
-                size: 100,
-                color: 'gray',
+            // Dynamically import nipplejs only on client-side
+            import('nipplejs').then((nipplejs) => {
+                const manager = nipplejs.default.create({
+                    zone: containerRef.current!,
+                    mode: 'static',
+                    position: { left: '48px', bottom: '24px' },
+                    size: 100,
+                    color: 'gray',
+                });
+                setJoystickManager(manager);
             });
-            setJoystickManager(manager);
         }
 
         return () => {
