@@ -4,10 +4,10 @@ import { Suspense, useState, use } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Stats } from '@react-three/drei';
 import { Physics, RigidBody } from '@react-three/rapier';
-import { SceneLoader, SceneDebugInfo } from '@/components/runtime/SceneLoader';
-import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
-import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
-import { AdaptivePostProcessing } from '@/components/runtime/AdaptivePostProcessing';
+import { SceneLoader, SceneDebugInfo } from '@/lib/runtime/SceneLoader';
+import ThirdPersonCamera from '@/lib/runtime/ThirdPersonCamera';
+import { MediaMetadataModal } from '@/lib/runtime/MediaMetadataModal';
+import { AdaptivePostProcessing } from '@/lib/runtime/AdaptivePostProcessing';
 import { useControls } from 'leva';
 
 interface PreviewPageProps {

@@ -4,11 +4,11 @@ import { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody } from '@react-three/rapier';
-import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
-import { StaticSceneLoader } from '@/components/runtime/StaticSceneLoader';
-import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
-import { SimplePostProcessing } from '@/components/runtime/SimplePostProcessing';
-import MobileJoystick from '@/components/runtime/MobileJoystick';
+import ThirdPersonCamera from '@/lib/runtime/ThirdPersonCamera';
+import { StaticSceneLoader } from '@/lib/runtime/StaticSceneLoader';
+import { MediaMetadataModal } from '@/lib/runtime/MediaMetadataModal';
+import { SimplePostProcessing } from '@/lib/runtime/SimplePostProcessing';
+import MobileJoystick from '@/lib/runtime/MobileJoystick';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
 

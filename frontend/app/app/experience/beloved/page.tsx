@@ -3,13 +3,13 @@
 import { Suspense, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody } from '@react-three/rapier';
-import ThirdPersonCamera from '@/components/runtime/ThirdPersonCamera';
-import { StaticSceneLoader } from '@/components/runtime/StaticSceneLoader';
-import { NavMeshCollider } from '@/components/runtime/NavMeshCollider';
-import { MediaMetadataModal } from '@/components/runtime/MediaMetadataModal';
-import { PreviewWelcomeModal } from '@/components/runtime/PreviewWelcomeModal';
-import { PreviewBanner } from '@/components/runtime/PreviewBanner';
-import MobileJoystick from '@/components/runtime/MobileJoystick';
+import ThirdPersonCamera from '@/lib/runtime/ThirdPersonCamera';
+import { StaticSceneLoader } from '@/lib/runtime/StaticSceneLoader';
+import { NavMeshCollider } from '@/lib/runtime/NavMeshCollider';
+import { MediaMetadataModal } from '@/lib/runtime/MediaMetadataModal';
+import { PreviewWelcomeModal } from '@/lib/runtime/PreviewWelcomeModal';
+import { PreviewBanner } from '@/lib/runtime/PreviewBanner';
+import MobileJoystick from '@/lib/runtime/MobileJoystick';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
 
