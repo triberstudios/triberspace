@@ -149,7 +149,7 @@ export function OtherPlayer({ player }: OtherPlayerProps) {
       type="kinematicPosition"
       lockRotations
     >
-      <CapsuleCollider args={[0.5, 0.75]} position={[0, 1.2, 0]} />
+      <CapsuleCollider args={[0.85, 0.4]} position={[0, 1.2, 0]} />
 
       {/* Remote player character model */}
       {scene && (

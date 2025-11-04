@@ -94,7 +94,7 @@ const Character = React.forwardRef<THREE.Group, CharacterProps>(({
                     gravityScale={15}
                     dominanceGroup={1000}
                 >
-                    <CapsuleCollider position={[0, 1.2, 0]} args={[0.5, 0.75]} />
+                    <CapsuleCollider position={[0, 1.2, 0]} args={[0.85, 0.4]} />
                     <group
                         ref={characterRef}
                         scale={[0.35, 0.35, 0.35]}
