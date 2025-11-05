@@ -4,12 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Canvas } from '@react-three/fiber';
 import { Physics, RigidBody } from '@react-three/rapier';
-import ThirdPersonCamera from '@/lib/runtime/ThirdPersonCamera';
 import { StaticSceneLoader } from '@/lib/runtime/StaticSceneLoader';
 import { MediaMetadataModal } from '@/lib/runtime/MediaMetadataModal';
+import { SimplePostProcessing } from '@/lib/runtime/SimplePostProcessing';
 import MobileJoystick from '@/lib/runtime/MobileJoystick';
 import { PartyKitProvider } from '@/contexts/multiplayer/PartyKitContext';
 import { MultiplayerManager } from '@/components/multiplayer/MultiplayerManager';
+import { LocalPlayer } from '@/components/multiplayer/LocalPlayer';
 import { toast } from 'sonner';
 import { Trophy } from '@phosphor-icons/react';
 
@@ -31,7 +32,7 @@ interface SpaceData {
 
 export default function SpaceViewer() {
     const params = useParams();
-    const spaceId = params.spaceId as string;
+    const spaceSlug = params.spaceSlug as string;
 
     const [spaceData, setSpaceData] = useState<SpaceData | null>(null);
     const [metadataModal, setMetadataModal] = useState<any>(null);
@@ -39,13 +40,23 @@ export default function SpaceViewer() {
     const [isLoadingSpace, setIsLoadingSpace] = useState(true);
     const [isLoadingScene, setIsLoadingScene] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [n8aoEnabled, setN8aoEnabled] = useState(true);
+
+    // Extract publicId from slug (format: spaceName-publicId)
+    const getPublicIdFromSlug = (slug: string): string => {
+        const parts = slug.split('-');
+        // The last part after the last hyphen is the publicId
+        return parts[parts.length - 1];
+    };
 
     // Fetch space metadata from API
     useEffect(() => {
         const fetchSpace = async () => {
             try {
                 setIsLoadingSpace(true);
-                const response = await fetch(`http://localhost:3001/api/v1/spaces/${spaceId}`);
+                const publicId = getPublicIdFromSlug(spaceSlug);
+                const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+                const response = await fetch(`http://${hostname}:3001/api/v1/spaces/${publicId}`);
 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -71,7 +82,7 @@ export default function SpaceViewer() {
         };
 
         fetchSpace();
-    }, [spaceId]);
+    }, [spaceSlug]);
 
     const handleLoadingChange = (loading: boolean) => {
         setIsLoadingScene(loading);
@@ -135,7 +146,7 @@ export default function SpaceViewer() {
                     powerPreference: 'high-performance'
                 }}
             >
-                <PartyKitProvider spaceId={spaceId}>
+                <PartyKitProvider spaceId={spaceData.id}>
                     <Physics gravity={[0, -30, 0]}>
                         {/* Ground plane with physics */}
                         <RigidBody type="fixed">
@@ -145,14 +156,16 @@ export default function SpaceViewer() {
                             </mesh>
                         </RigidBody>
 
-                        {/* Character and Camera */}
-                        <ThirdPersonCamera
-                            initialPosition={[-10.677, 1, -0.324]}
+                        {/* Local Player with Smart Spawning */}
+                        <LocalPlayer
+                            defaultSpawnPoint={[0, 0, 0]}
+                            spawnRadius={1.5}
+                            minDistance={0.5}
                             characterColor="#4080ff"
                             initialCameraAngle={1.5215926535898001}
                         />
 
-                        {/* Multiplayer - Other players */}
+                        {/* Remote Players */}
                         <MultiplayerManager />
 
                         {/* Load Scene from CDN */}
@@ -163,6 +176,9 @@ export default function SpaceViewer() {
                                 onLoadingChange={handleLoadingChange}
                             />
                         </Suspense>
+
+                        {/* Post-processing Effects */}
+                        <SimplePostProcessing n8aoEnabled={n8aoEnabled} />
                     </Physics>
                 </PartyKitProvider>
             </Canvas>
@@ -177,7 +193,6 @@ export default function SpaceViewer() {
                 </div>
             )}
 
-
             {/* Metadata Modal */}
             {metadataModal && (
                 <MediaMetadataModal
@@ -188,6 +203,20 @@ export default function SpaceViewer() {
 
             {/* Mobile Joystick */}
             <MobileJoystick />
+
+            {/* Post-processing Toggle */}
+            {!isLoadingScene && (
+                <button
+                    onClick={() => setN8aoEnabled(!n8aoEnabled)}
+                    className={`fixed top-4 right-4 z-10 px-4 py-2 text-sm rounded-md transition-colors cursor-pointer ${
+                        n8aoEnabled
+                            ? 'bg-white/20 text-white hover:bg-white/30'
+                            : 'bg-white/10 text-white/60 hover:bg-white/20'
+                    }`}
+                >
+                    AO: {n8aoEnabled ? 'ON' : 'OFF'}
+                </button>
+            )}
         </div>
     );
 }

@@ -20,7 +20,7 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
     initialCameraAngle = 0
 }) => {
     // console.log('ThirdPersonCamera initialized with:', { initialPosition, characterColor });
-    const { setDefaultCamera, scene } = useThree();
+    const { scene } = useThree();
     const cameraRef = useRef<THREE.PerspectiveCamera>(null);
     const characterRef = useRef<THREE.Group>(null);
     const rigidBodyRef = useRef<any>(null);
@@ -214,7 +214,7 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
 
             // Only send if something changed AND throttle time has passed
             if ((positionChanged || rotationChanged || animationChanged) && now - lastUpdateRef.current > 33) {
-                sendPlayerUpdate({
+                sendPlayerUpdate?.({
                     position: {
                         x: characterPosition.x,
                         y: characterPosition.y,
@@ -248,7 +248,6 @@ const ThirdPersonCamera: React.FC<ThirdPersonCameraProps> = ({
                 fov={75}
                 near={0.05}
                 far={1000}
-                onUpdate={setDefaultCamera}
             />
         </>
     );

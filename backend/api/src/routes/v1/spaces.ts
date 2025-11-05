@@ -24,7 +24,7 @@ const createSpaceSchema = z.object({
   }),
   thumbnail_url: z.string().url().optional(),
   sceneDataUrl: z.string().url('Scene data URL must be a valid URL'),
-  worldIds: z.array(publicIdSchema).min(1, 'At least one world is required'),
+  worldIds: z.array(publicIdSchema).optional(),
 
   // Persistence & Availability
   persistence: z.enum(['permanent', 'temporary']).default('permanent'),
@@ -298,23 +298,27 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
-      // Verify all worlds exist and get their internal IDs
-      const worldsList = await db
-        .select({
-          publicId: worlds.publicId,
-          internalId: worlds.id
-        })
-        .from(worlds)
-        .where(inArray(worlds.publicId, worldIds));
+      // Verify all worlds exist and get their internal IDs (only if worldIds provided)
+      let worldsList: Array<{ publicId: string; internalId: number }> = [];
 
-      if (worldsList.length !== worldIds.length) {
-        return reply.code(404).send({
-          error: {
-            code: 'WORLDS_NOT_FOUND',
-            message: 'One or more specified worlds not found',
-            statusCode: 404
-          }
-        });
+      if (worldIds && worldIds.length > 0) {
+        worldsList = await db
+          .select({
+            publicId: worlds.publicId,
+            internalId: worlds.id
+          })
+          .from(worlds)
+          .where(inArray(worlds.publicId, worldIds));
+
+        if (worldsList.length !== worldIds.length) {
+          return reply.code(404).send({
+            error: {
+              code: 'WORLDS_NOT_FOUND',
+              message: 'One or more specified worlds not found',
+              statusCode: 404
+            }
+          });
+        }
       }
 
       // Create the space
@@ -347,24 +351,26 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           createdAt: spaces.createdAt
         });
 
-      // Create space_worlds junction records
-      await db
-        .insert(spaceWorlds)
-        .values(
-          worldsList.map(world => ({
-            spaceId: newSpace.internalId,
-            worldId: world.internalId
-          }))
-        );
+      // Create space_worlds junction records (only if worlds provided)
+      if (worldsList.length > 0) {
+        await db
+          .insert(spaceWorlds)
+          .values(
+            worldsList.map(world => ({
+              spaceId: newSpace.internalId,
+              worldId: world.internalId
+            }))
+          );
 
-      // Update world space counts
-      await Promise.all(
-        worldsList.map(world =>
-          db.update(worlds)
-            .set({ spaceCount: sql`${worlds.spaceCount} + 1` })
-            .where(eq(worlds.id, world.internalId))
-        )
-      );
+        // Update world space counts
+        await Promise.all(
+          worldsList.map(world =>
+            db.update(worlds)
+              .set({ spaceCount: sql`${worlds.spaceCount} + 1` })
+              .where(eq(worlds.id, world.internalId))
+          )
+        );
+      }
 
       const { internalId, ...spaceData } = newSpace;
 
@@ -421,26 +427,7 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
       }
 
       // Handle world updates if provided
-      if (updates.worldIds) {
-        // Verify all new worlds exist
-        const worldsList = await db
-          .select({
-            publicId: worlds.publicId,
-            internalId: worlds.id
-          })
-          .from(worlds)
-          .where(inArray(worlds.publicId, updates.worldIds));
-
-        if (worldsList.length !== updates.worldIds.length) {
-          return reply.code(404).send({
-            error: {
-              code: 'WORLDS_NOT_FOUND',
-              message: 'One or more specified worlds not found',
-              statusCode: 404
-            }
-          });
-        }
-
+      if (updates.worldIds !== undefined) {
         // Get old worlds to decrement their counts
         const oldWorlds = await db
           .select({ worldId: spaceWorlds.worldId })
@@ -452,29 +439,55 @@ export async function v1SpacesRoutes(fastify: FastifyInstance) {
           .delete(spaceWorlds)
           .where(eq(spaceWorlds.spaceId, spaceInfo.internalId));
 
-        // Create new junction records
-        await db
-          .insert(spaceWorlds)
-          .values(
-            worldsList.map(world => ({
-              spaceId: spaceInfo.internalId,
-              worldId: world.internalId
-            }))
-          );
-
-        // Update world space counts (decrement old, increment new)
-        await Promise.all([
-          ...oldWorlds.map(w =>
+        // Decrement old world counts
+        await Promise.all(
+          oldWorlds.map(w =>
             db.update(worlds)
               .set({ spaceCount: sql`${worlds.spaceCount} - 1` })
               .where(eq(worlds.id, w.worldId))
-          ),
-          ...worldsList.map(w =>
-            db.update(worlds)
-              .set({ spaceCount: sql`${worlds.spaceCount} + 1` })
-              .where(eq(worlds.id, w.internalId))
           )
-        ]);
+        );
+
+        // Only add new worlds if array is not empty
+        if (updates.worldIds.length > 0) {
+          // Verify all new worlds exist
+          const worldsList = await db
+            .select({
+              publicId: worlds.publicId,
+              internalId: worlds.id
+            })
+            .from(worlds)
+            .where(inArray(worlds.publicId, updates.worldIds));
+
+          if (worldsList.length !== updates.worldIds.length) {
+            return reply.code(404).send({
+              error: {
+                code: 'WORLDS_NOT_FOUND',
+                message: 'One or more specified worlds not found',
+                statusCode: 404
+              }
+            });
+          }
+
+          // Create new junction records
+          await db
+            .insert(spaceWorlds)
+            .values(
+              worldsList.map(world => ({
+                spaceId: spaceInfo.internalId,
+                worldId: world.internalId
+              }))
+            );
+
+          // Increment new world counts
+          await Promise.all(
+            worldsList.map(w =>
+              db.update(worlds)
+                .set({ spaceCount: sql`${worlds.spaceCount} + 1` })
+                .where(eq(worlds.id, w.internalId))
+            )
+          );
+        }
       }
 
       // Remove worldIds from updates object (already handled above)

@@ -33,7 +33,7 @@ interface SceneData {
 interface SceneLoaderProps {
     sceneId: string;
     onLoadingChange?: (loading: boolean) => void;
-    onError?: (error: string) => void;
+    onError?: (error: string | null) => void;
     onSceneDataChange?: (sceneData: SceneData | null) => void;
     onMetadataClick?: (metadata: any) => void;
 }
@@ -177,7 +177,7 @@ class MediaRestoreUtils {
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: {
                     cursor: 'always' as const
-                },
+                } as any,
                 audio: options.audio || false
             });
 
@@ -1391,7 +1391,7 @@ export function SceneLoader({ sceneId, onLoadingChange, onError, onSceneDataChan
 
         // Initialize behavior executor
         behaviorExecutorRef.current = new BehaviorExecutor(
-            sceneData.compiledBehaviors,
+            sceneData.compiledBehaviors as any,
             objectMap
         );
 

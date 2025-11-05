@@ -122,7 +122,7 @@ class PublishModal {
 
 		const worldsHint = document.createElement( 'span' );
 		worldsHint.className = 'publish-form-hint';
-		worldsHint.textContent = 'Add at least one world/category';
+		worldsHint.textContent = 'Optionally add to worlds/categories';
 
 		this.worldsInput = document.createElement( 'input' );
 		this.worldsInput.type = 'text';
@@ -530,37 +530,34 @@ class PublishModal {
 			return;
 		}
 
-		if ( this.formData.worlds.length === 0 ) {
-			alert( 'Please add at least one world/category' );
-			this.worldsInput.focus();
-			return;
-		}
-
 		// Show loading state
 		const originalText = this.publishButton.textContent;
 		this.publishButton.textContent = 'Publishing...';
 		this.publishButton.disabled = true;
 
 		try {
-			// 1. Ensure worlds exist
-			const worldNames = this.formData.worlds.map( w => w.name );
-			const worldsResponse = await fetch( 'http://localhost:3001/api/v1/worlds/ensure', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ worldNames })
-			});
+			// 1. Ensure worlds exist (only if worlds were selected)
+			let worlds = [];
+			if ( this.formData.worlds.length > 0 ) {
+				const worldNames = this.formData.worlds.map( w => w.name );
+				const worldsResponse = await fetch( 'http://localhost:3001/api/v1/worlds/ensure', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ worldNames })
+				});
 
-			const worldsData = await worldsResponse.json();
-			if ( !worldsData.success ) {
-				throw new Error( 'Failed to ensure worlds exist' );
-			}
+				const worldsData = await worldsResponse.json();
+				if ( !worldsData.success ) {
+					throw new Error( 'Failed to ensure worlds exist' );
+				}
 
-			const worlds = worldsData.data.worlds;
+				worlds = worldsData.data.worlds;
 
-			// Check permissions (all public worlds allow publishing for now)
-			const cannotPublishTo = worlds.filter( w => !w.canPublishTo );
-			if ( cannotPublishTo.length > 0 ) {
-				throw new Error( `You don't have permission to publish to: ${cannotPublishTo.map(w => w.slug).join(', ')}` );
+				// Check permissions (all public worlds allow publishing for now)
+				const cannotPublishTo = worlds.filter( w => !w.canPublishTo );
+				if ( cannotPublishTo.length > 0 ) {
+					throw new Error( `You don't have permission to publish to: ${cannotPublishTo.map(w => w.slug).join(', ')}` );
+				}
 			}
 
 			// 2. Serialize scene to JSON
@@ -601,21 +598,27 @@ class PublishModal {
 				throw new Error( 'Failed to upload scene data' );
 			}
 
-			// 5. Create space with worldIds
+			// 5. Create space with worldIds (only include if worlds exist)
+			const spacePayload = {
+				name: this.formData.name,
+				description: this.formData.description,
+				spaceType: 'custom',
+				sceneDataUrl: presignedData.data.cdnUrl,
+				publishStatus: 'published'
+			};
+
+			// Only add worldIds if worlds were selected
+			if ( worlds.length > 0 ) {
+				spacePayload.worldIds = worlds.map( w => w.id );
+			}
+
 			const spaceResponse = await fetch( 'http://localhost:3001/api/v1/spaces', {
 				method: 'POST',
 				credentials: 'include', // Include auth cookies
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({
-					name: this.formData.name,
-					description: this.formData.description,
-					spaceType: 'custom',
-					sceneDataUrl: presignedData.data.cdnUrl,
-					worldIds: worlds.map( w => w.id ),
-					publishStatus: 'published'
-				})
+				body: JSON.stringify( spacePayload )
 			});
 
 			const spaceData = await spaceResponse.json();
@@ -624,14 +627,25 @@ class PublishModal {
 				throw new Error( errorMsg );
 			}
 
-			// 6. Show success - Generate URL with format /{worldSlug}/{spaceName-publicId}
-			const worldSlug = worlds[0].slug; // Use first world's slug
+			// 6. Show success - Generate URL
+			// Format: /s/{spaceName-publicId} for standalone spaces
+			//         /w/{worldSlug}/{spaceName-publicId} for world-scoped spaces
 			const spaceName = this.formData.name.toLowerCase()
 				.replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
 				.replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 			const spaceSlug = `${spaceName}-${spaceData.data.space.id}`;
 
-			this.urlInput.value = `http://localhost:3000/t/${worldSlug}/${spaceSlug}`;
+			let experienceUrl;
+			if ( worlds.length > 0 ) {
+				// World-scoped space: /w/{worldSlug}/{spaceSlug}
+				const worldSlug = worlds[0].slug; // Use first world's slug
+				experienceUrl = `http://localhost:3000/w/${worldSlug}/${spaceSlug}`;
+			} else {
+				// Standalone space: /s/{spaceSlug}
+				experienceUrl = `http://localhost:3000/s/${spaceSlug}`;
+			}
+
+			this.urlInput.value = experienceUrl;
 			this.switchToSuccessView();
 
 		} catch ( error ) {

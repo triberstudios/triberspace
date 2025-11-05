@@ -15,15 +15,15 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const isCreatorDashboard = pathname.startsWith('/creator-dashboard')
   const isRuntimePreview = pathname.startsWith('/runtime/preview')
   const isExperience = pathname.startsWith('/experience')
-  const isSpaceViewer = pathname.startsWith('/spaces/')
+  const isStandaloneSpace = pathname.startsWith('/s/')
   const isAuthPage = pathname.startsWith('/auth/')
 
-  // Check if pathname matches /t/{worldSlug}/{spaceSlug} format (3 segments: t, worldSlug, spaceSlug)
+  // Check if pathname matches /w/{worldSlug}/{spaceSlug} format (3 segments: w, worldSlug, spaceSlug)
   const pathSegments = pathname.split('/').filter(Boolean)
-  const isInsideSpace = pathname.startsWith('/t/') && pathSegments.length === 3
+  const isWorldSpace = pathname.startsWith('/w/') && pathSegments.length === 3
 
-  if (isRuntimePreview || isExperience || isSpaceViewer || isInsideSpace || isAuthPage) {
-    // Runtime preview, experience, space viewer, inside space, or auth page - no sidebar, no navigation, fullscreen experience
+  if (isRuntimePreview || isExperience || isStandaloneSpace || isWorldSpace || isAuthPage) {
+    // Runtime preview, experience, standalone space, world space, or auth page - no sidebar, no navigation, fullscreen experience
     return (
       <div className="flex h-full overflow-hidden">
         {children}

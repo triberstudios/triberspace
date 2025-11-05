@@ -24,7 +24,7 @@ interface RemotePlayerProps {
 }
 
 export function RemotePlayer({ player }: RemotePlayerProps) {
-  const rigidBodyRef = useRef<any>();
+  const rigidBodyRef = useRef<any>(null);
   const characterRef = useRef<THREE.Group>(null);
 
   // Model loading state
