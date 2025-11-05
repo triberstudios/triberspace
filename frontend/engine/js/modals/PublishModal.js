@@ -636,7 +636,7 @@ class PublishModal {
 
 			// 6. Show success - Generate URL
 			// Format: /s/{spaceName-publicId} for standalone spaces
-			//         /w/{worldSlug}/{spaceName-publicId} for world-scoped spaces
+			//         /w/{worldSlug}/s/{spaceName-publicId} for world-scoped spaces
 			const spaceName = this.formData.name.toLowerCase()
 				.replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
 				.replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
@@ -644,9 +644,9 @@ class PublishModal {
 
 			let experienceUrl;
 			if ( worlds.length > 0 ) {
-				// World-scoped space: /w/{worldSlug}/{spaceSlug}
+				// World-scoped space: /w/{worldSlug}/s/{spaceSlug}
 				const worldSlug = worlds[0].slug; // Use first world's slug
-				experienceUrl = `http://localhost:3000/w/${worldSlug}/${spaceSlug}`;
+				experienceUrl = `http://localhost:3000/w/${worldSlug}/s/${spaceSlug}`;
 			} else {
 				// Standalone space: /s/{spaceSlug}
 				experienceUrl = `http://localhost:3000/s/${spaceSlug}`;
