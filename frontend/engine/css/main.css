@@ -1495,7 +1495,6 @@ div.shortcut-row input {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
-	min-height: 32px;
 	padding: 4px 0;
 }
 
@@ -1503,19 +1502,19 @@ div.shortcut-row input {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	background-color: #4a9eff20;
-	border: 1px solid #4a9eff;
+	background-color: #ffffff20;
+	border: 1px solid #ffffff;
 	border-radius: 16px;
 	padding: 4px 12px;
 	font-size: 13px;
-	color: #4a9eff;
+	color: #ffffff;
 	white-space: nowrap;
 }
 
 .publish-world-tag-remove {
 	background: none;
 	border: none;
-	color: #4a9eff;
+	color: #ffffff;
 	font-size: 18px;
 	line-height: 1;
 	cursor: pointer;
@@ -1530,7 +1529,7 @@ div.shortcut-row input {
 }
 
 .publish-world-tag-remove:hover {
-	background-color: #4a9eff40;
+	background-color: #ffffff40;
 }
 
 /* Autocomplete suggestions */
@@ -1541,7 +1540,7 @@ div.shortcut-row input {
 	border-radius: 4px;
 	max-height: 200px;
 	overflow-y: auto;
-	margin-top: 4px;
+	margin-top: 0;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 	z-index: 10;
 }
@@ -1576,7 +1575,7 @@ div.shortcut-row input {
 }
 
 .publish-suggestion-create .publish-suggestion-name {
-	color: #4a9eff;
+	color: #ffffff;
 }
 
 .publish-form-buttons {

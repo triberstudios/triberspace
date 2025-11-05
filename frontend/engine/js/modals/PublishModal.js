@@ -445,19 +445,26 @@ class PublishModal {
 	renderWorldTags() {
 		this.worldTagsContainer.innerHTML = '';
 
-		this.formData.worlds.forEach( world => {
-			const tag = document.createElement( 'div' );
-			tag.className = 'publish-world-tag';
-			tag.innerHTML = `
-				<span>${world.name}</span>
-				<button type="button" class="publish-world-tag-remove" data-slug="${world.slug}">&times;</button>
-			`;
+		// Hide container when empty, show when tags exist
+		if ( this.formData.worlds.length === 0 ) {
+			this.worldTagsContainer.style.display = 'none';
+		} else {
+			this.worldTagsContainer.style.display = 'flex';
 
-			const removeBtn = tag.querySelector( '.publish-world-tag-remove' );
-			removeBtn.addEventListener( 'click', () => this.removeWorld( world.slug ) );
+			this.formData.worlds.forEach( world => {
+				const tag = document.createElement( 'div' );
+				tag.className = 'publish-world-tag';
+				tag.innerHTML = `
+					<span>${world.name}</span>
+					<button type="button" class="publish-world-tag-remove" data-slug="${world.slug}">&times;</button>
+				`;
 
-			this.worldTagsContainer.appendChild( tag );
-		});
+				const removeBtn = tag.querySelector( '.publish-world-tag-remove' );
+				removeBtn.addEventListener( 'click', () => this.removeWorld( world.slug ) );
+
+				this.worldTagsContainer.appendChild( tag );
+			});
+		}
 	}
 
 	generateSlug( name ) {
