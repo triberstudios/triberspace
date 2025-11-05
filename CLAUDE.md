@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Triberspace is an immersive art and entertainment platform that makes it easy to create immersive environments and shows around digital content. When fans attend these experiences, they can unlock exclusive content, collectibles, and merch by exploring, connecting, and earning points within them.
 
 The platform consists of two main applications:
-- **Triber Editor** (editor.triber.space) - Creation platform for building 3D experiences using a forked Three.js editor
+- **Triber Engine** (engine.triber.space) - Creation platform for building 3D experiences using a forked Three.js engine
 - **Triber App** (triber.space) - Runtime platform where users experience published content
 
 ## Common Development Commands
@@ -22,9 +22,9 @@ The platform consists of two main applications:
 - `npm run lint` - Run Next.js linting
 - `npm start` - Start the production server
 
-### Editor Commands (from frontend/editor/)
-- `npm run dev` - Start editor on port 3001 (Python HTTP server)
-- `npm run serve` - Alternative command to start editor
+### Engine Commands (from frontend/engine/)
+- `npm run dev` - Start engine on port 3003
+- `npm run serve` - Alternative command to start engine
 
 ### Backend Commands (from backend/api/)
 - `npm run dev` - Start Fastify API server with Better Auth
@@ -85,8 +85,8 @@ This is a Turborepo monorepo with the following structure:
   - `components/` - App-specific composed components
 - Path aliases configured: `@/components`, `@/lib`, `@/ui`
 
-#### Triber Editor (`frontend/editor/`)
-- **Three.js Editor** - Forked and customized for Triber platform at editor.triber.space
+#### Triber Engine (`frontend/engine/`)
+- **Three.js Engine** - Forked and customized for Triber platform at engine.triber.space
 - **WebGL** for 3D scene composition and editing
 - **Planned interaction paradigms**:
   1. Natural language driven (AI-powered)

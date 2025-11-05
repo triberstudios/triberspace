@@ -4,7 +4,7 @@
 
 Triberspace is a platform for creating and experiencing immersive 3D environments. The system is divided into two main applications:
 
-1. **Triber Editor** (editor.triber.space) - Creation platform for building experiences
+1. **Triber Engine** (engine.triber.space) - Creation platform for building experiences
 2. **Triber App** (triber.space) - Runtime platform for hosting and experiencing published content
 
 ## Architecture Diagram
@@ -12,7 +12,7 @@ Triberspace is a platform for creating and experiencing immersive 3D environment
 ```mermaid
 graph TB
     subgraph "Frontend Applications"
-        Editor["🎨 Triber Editor<br/>editor.triber.space<br/>(Three.js Editor Fork)"]
+        Engine["🎨 Triber Engine<br/>engine.triber.space<br/>(Three.js Engine Fork)"]
         App["🌐 Triber App<br/>triber.space<br/>(Next.js 15)"]
     end
     
@@ -33,10 +33,10 @@ graph TB
         Utils["Utils Package"]
     end
     
-    %% Editor Flow
-    Editor -->|"Publish Experience"| API
-    Editor -->|"Save Assets"| R2
-    Editor -->|"Auth"| Auth
+    %% Engine Flow
+    Engine -->|"Publish Experience"| API
+    Engine -->|"Save Assets"| R2
+    Engine -->|"Auth"| Auth
     
     %% App Flow
     App -->|"Load Experience"| API
@@ -55,9 +55,9 @@ graph TB
     API -.-> DBPkg
     GameServer -.-> DBPkg
     App -.-> AuthPkg
-    Editor -.-> AuthPkg
-    
-    style Editor fill:#e1f5fe
+    Engine -.-> AuthPkg
+
+    style Engine fill:#e1f5fe
     style App fill:#c8e6c9
     style API fill:#fff3e0
     style GameServer fill:#fff3e0
@@ -68,7 +68,7 @@ graph TB
 
 ## Application Responsibilities
 
-### 🎨 Triber Editor (editor.triber.space)
+### 🎨 Triber Engine (engine.triber.space)
 
 **Purpose**: Creation and publishing platform for immersive experiences
 
@@ -85,7 +85,7 @@ graph TB
 4. **Direct Manipulation** - Traditional 3D editing tools (existing from Three.js editor)
 
 **Technology Stack**:
-- Three.js Editor (forked and customized)
+- Three.js Engine (forked and customized)
 - WebGL for 3D rendering
 - Direct integration with backend API for publishing
 
@@ -109,11 +109,11 @@ graph TB
 
 ## Data Flow
 
-### Creation Flow (Editor → App)
+### Creation Flow (Engine → App)
 ```
-1. Creator builds experience in Editor
-2. Editor saves assets to Cloudflare R2
-3. Editor publishes metadata to API
+1. Creator builds experience in Engine
+2. Engine saves assets to Cloudflare R2
+3. Engine publishes metadata to API
 4. API stores experience data in PostgreSQL
 5. Experience becomes available in App
 ```
@@ -174,14 +174,14 @@ graph TB
 ┌─────────────────────────────────────────────┐
 │             Cloudflare CDN                  │
 │  ┌──────────────┐    ┌──────────────┐      │
-│  │editor.triber │    │   triber     │      │
+│  │engine.triber │    │   triber     │      │
 │  │   .space     │    │   .space     │      │
 │  └──────────────┘    └──────────────┘      │
 └─────────────────────────────────────────────┘
             │                  │
             ▼                  ▼
     ┌──────────────┐    ┌──────────────┐
-    │  Editor App  │    │   Main App   │
+    │  Engine App  │    │   Main App   │
     │   (Static)   │    │   (Next.js)  │
     └──────────────┘    └──────────────┘
             │                  │
@@ -210,7 +210,7 @@ graph TB
 - **Authentication**: All API endpoints require authentication except public discovery
 - **Authorization**: Role-based permissions (User, Creator, Admin)
 - **File Upload**: Validated file types and size limits with presigned URLs
-- **CORS**: Configured for editor.triber.space and triber.space origins
+- **CORS**: Configured for engine.triber.space and triber.space origins
 - **Rate Limiting**: API request throttling per user
 - **Input Validation**: Schema validation on all API inputs
 
@@ -231,13 +231,13 @@ npm run dev
 
 # Individual services
 npm run dev -w frontend/app      # Main app
-npm run dev -w frontend/editor   # Editor
+npm run dev -w frontend/engine   # Engine
 npm run dev -w backend/api       # API server
 npm run dev -w backend/game-server # Game server
 ```
 
 ### Production Deployment
-- **Editor**: Static deployment to Cloudflare Pages
+- **Engine**: Static deployment to Cloudflare Pages
 - **App**: Vercel or similar Next.js hosting
 - **Backend**: Containerized deployment (Docker/Kubernetes)
 - **Database**: Managed PostgreSQL (Supabase/Neon)

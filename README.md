@@ -16,10 +16,10 @@
 │   │   ├── public             # Static assets
 │   │   └── tsconfig.json
 │   │
-│   └── editor                 # Triber Editor (editor.triber.space)
-│       ├── index.html         # Three.js editor entry
-│       ├── js/                # Editor JavaScript modules
-│       ├── css/               # Editor styles
+│   └── engine                 # Triber Engine (engine.triber.space)
+│       ├── index.html         # Three.js engine entry
+│       ├── js/                # Engine JavaScript modules
+│       ├── css/               # Engine styles
 │       └── package.json
 │
 ├── backend

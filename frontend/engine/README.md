@@ -1,6 +1,6 @@
-# Triber Editor
+# Triber Engine
 
-The Triber Editor is a forked and customized version of the three.js editor, designed specifically for creating immersive 3D experiences within the Triber ecosystem.
+The Triber Engine is a forked and customized version of the three.js editor, designed specifically for creating immersive 3D experiences within the Triber ecosystem.
 
 ## Features
 
@@ -12,22 +12,22 @@ The Triber Editor is a forked and customized version of the three.js editor, des
 
 ## Development
 
-### Running the Editor
+### Running the Engine
 
 ```bash
 # From the root of the monorepo
 npm run dev
 
-# Or directly from the editor directory
-cd frontend/editor
+# Or directly from the engine directory
+cd frontend/engine
 npm run dev
 ```
 
-The editor will be available at `http://localhost:3001`
+The engine will be available at `http://localhost:3003`
 
 ### Architecture
 
-The Triber Editor is built on:
+The Triber Engine is built on:
 - **Three.js**: Core 3D rendering engine
 - **Vanilla JavaScript**: Lightweight and fast
 - **Modular UI System**: Custom UI components for editor interface
@@ -35,14 +35,14 @@ The Triber Editor is built on:
 
 ### Integration with Triber Platform
 
-The editor integrates with the Triber ecosystem through:
+The engine integrates with the Triber ecosystem through:
 - **Experience Publishing**: Export experiences to the main platform
 - **Asset Storage**: Upload assets to Cloudflare R2
 - **Authentication**: Single sign-on with main Triber account
 
 ## Customization
 
-This editor has been customized from the original three.js editor with:
+This engine has been customized from the original three.js editor with:
 - Triber branding and styling
 - Experience-focused workflows
 - Node-based interaction editor for interactive behaviors
@@ -69,7 +69,7 @@ The integrated interaction editor provides node-based visual programming:
 - **Persistent State**: Node graphs automatically save and restore with scene data
 
 ### Usage
-1. Access the interaction editor from the bottom panel of the editor
+1. Access the interaction editor from the bottom panel of the engine
 2. Right-click in the canvas to add new nodes
 3. Connect nodes by dragging from outputs to inputs
 4. Save your scene - node graphs persist automatically

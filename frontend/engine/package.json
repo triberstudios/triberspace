@@ -1,7 +1,7 @@
 {
-  "name": "@triberspace/editor",
+  "name": "@triberspace/engine",
   "version": "1.0.0",
-  "description": "Triber Editor - Create immersive 3D experiences",
+  "description": "Triber Engine - Create immersive 3D experiences",
   "main": "index.html",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
   },
   "keywords": [
     "3d",
-    "editor",
+    "engine",
     "threejs",
     "webgl",
     "experiences"

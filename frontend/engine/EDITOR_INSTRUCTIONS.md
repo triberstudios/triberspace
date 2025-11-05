@@ -540,7 +540,7 @@ function onMouseDown(event) {
 The editor follows a clear organizational pattern:
 
 ```
-editor/js/
+engine/js/
 ├── Editor.js                    # Core editor class
 ├── History.js                   # Command history system
 ├── Config.js                    # Configuration management

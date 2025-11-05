@@ -28,7 +28,7 @@ const start = async () => {
       origin: [
         'http://localhost:3000',
         'http://localhost:3001', // Backend API port
-        'http://localhost:3003', // Editor port
+        'http://localhost:3003', // Engine port
         'http://127.0.0.1:3000',
         'http://127.0.0.1:3001',
         'http://127.0.0.1:3003',
@@ -46,7 +46,7 @@ const start = async () => {
     // This route serves the callback.html file when Sketchfab redirects back
     fastify.get('/auth/sketchfab/callback', async (request, reply) => {
       try {
-        const callbackPath = join(__dirname, '../../..', 'frontend/editor/auth/sketchfab/callback.html');
+        const callbackPath = join(__dirname, '../../..', 'frontend/engine/auth/sketchfab/callback.html');
         const html = readFileSync(callbackPath, 'utf-8');
         return reply.type('text/html').send(html);
       } catch (error) {

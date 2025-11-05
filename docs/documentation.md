@@ -4,12 +4,12 @@
 
 Triberspace is an immersive experience platform built as a **TypeScript monorepo** with two main applications:
 
-- **Triber Editor** (editor.triber.space) - Creation platform for building 3D experiences
+- **Triber Engine** (engine.triber.space) - Creation platform for building 3D experiences
 - **Triber App** (triber.space) - Runtime platform for hosting and experiencing published content
 
 ### Technology Stack
 - **Main App (triber.space)**: Next.js 15.4.4 with App Router, React 19.1.0
-- **Editor (editor.triber.space)**: Three.js Editor (forked and customized)
+- **Engine (engine.triber.space)**: Three.js Engine (forked and customized)
 - **Backend**: Fastify API server, Colyseus game server
 - **Authentication**: Better Auth with Better Auth UI
 - **Database**: PostgreSQL with Drizzle ORM
@@ -41,10 +41,10 @@ triberspace/
 │   │   │   └── page.tsx           # Home page
 │   │   ├── components/ui/         # UI components
 │   │   └── lib/                   # Utilities and configuration
-│   └── editor/                    # Triber Editor (editor.triber.space)
-│       ├── index.html             # Editor entry point
-│       ├── js/                    # Editor modules
-│       └── css/                   # Editor styles
+│   └── engine/                    # Triber Engine (engine.triber.space)
+│       ├── index.html             # Engine entry point
+│       ├── js/                    # Engine modules
+│       └── css/                   # Engine styles
 ├── backend/api/                   # Fastify API server with full REST API
 │   ├── src/                       # Source code
 │   │   ├── server.ts              # Main server entry point
@@ -88,9 +88,9 @@ Handles authentication, world discovery, avatar customization, store purchases, 
 - Real-time multiplayer via WebSockets
 - Points economy and store
 
-#### Editor (`frontend/editor`)
+#### Engine (`frontend/engine`)
 **Purpose**: Creation platform for building experiences
-- Three.js editor for 3D scene composition
+- Three.js engine for 3D scene composition
 - Asset management and upload
 - Publishing workflow to main app
 - AI-driven creation tools (planned)
