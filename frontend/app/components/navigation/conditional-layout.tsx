@@ -18,9 +18,9 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const isStandaloneSpace = pathname.startsWith('/s/')
   const isAuthPage = pathname.startsWith('/auth/')
 
-  // Check if pathname matches /w/{worldSlug}/{spaceSlug} format (3 segments: w, worldSlug, spaceSlug)
+  // Check if pathname matches /w/{worldSlug}/s/{spaceSlug} format (4 segments: w, worldSlug, s, spaceSlug)
   const pathSegments = pathname.split('/').filter(Boolean)
-  const isWorldSpace = pathname.startsWith('/w/') && pathSegments.length === 3
+  const isWorldSpace = pathname.startsWith('/w/') && pathSegments.length === 4 && pathSegments[2] === 's'
 
   if (isRuntimePreview || isExperience || isStandaloneSpace || isWorldSpace || isAuthPage) {
     // Runtime preview, experience, standalone space, world space, or auth page - no sidebar, no navigation, fullscreen experience
