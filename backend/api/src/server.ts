@@ -26,6 +26,7 @@ const start = async () => {
     // Register CORS
     await fastify.register(cors, {
       origin: [
+        // Development
         'http://localhost:3000',
         'http://localhost:3001', // Backend API port
         'http://localhost:3003', // Engine port
@@ -35,6 +36,10 @@ const start = async () => {
         'http://192.168.1.17:3000', // Local network access
         'http://192.168.1.17:3001',
         'http://192.168.1.17:3003',
+        // Production
+        'https://triber.space',
+        'https://engine.triber.space',
+        'https://api.triber.space',
         process.env.FRONTEND_URL || 'http://localhost:3000'
       ],
       credentials: true,
@@ -68,6 +73,10 @@ const start = async () => {
           {
             url: 'http://localhost:3001',
             description: 'Development server'
+          },
+          {
+            url: 'https://api.triber.space',
+            description: 'Production server'
           }
         ],
         components: {

@@ -1,5 +1,9 @@
 {
   "name": "triberspace",
   "main": "src/server.ts",
-  "compatibilityDate": "2024-01-01"
+  "compatibilityDate": "2024-01-01",
+  "vars": {
+    "API_URL": "https://api.triber.space",
+    "BETTER_AUTH_SECRET": "your-production-secret-here"
+  }
 }
