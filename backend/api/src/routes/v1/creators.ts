@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { db, creators, user, tribes, worlds, creatorStores } from '@triberspace/database';
+import { db, creators, user, tribes, worlds } from '@triberspace/database';
 import { eq, sql } from 'drizzle-orm';
 import { authMiddleware, optionalAuthMiddleware, AuthenticatedRequest } from '../../middleware/auth';
 import { validateParams, validateBody } from '../../middleware/validation';
@@ -12,13 +12,11 @@ const creatorParamsSchema = z.object({
 });
 
 const createCreatorSchema = z.object({
-  bio: z.string().max(500).optional(),
-  pointsName: z.string().min(1).max(20).default('Points')
+  bio: z.string().max(500).optional()
 });
 
 const updateCreatorSchema = z.object({
-  bio: z.string().max(500).optional(),
-  pointsName: z.string().min(1).max(20).optional()
+  bio: z.string().max(500).optional()
 });
 
 const applyCreatorSchema = z.object({
@@ -42,7 +40,6 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
         .select({
           id: creators.publicId,
           bio: creators.bio,
-          pointsName: creators.pointsName,
           createdAt: creators.createdAt,
           user: {
             firstName: user.firstName,
@@ -108,30 +105,33 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
           .insert(creators)
           .values({
             userId: request.user!.id,
-            bio,
-            pointsName
+            bio
           })
           .returning({
             id: creators.id,
             publicId: creators.publicId,
             bio: creators.bio,
-            pointsName: creators.pointsName,
             createdAt: creators.createdAt
           });
 
         // 2. Auto-create world
         const defaultWorldName = worldName || `${request.user!.firstName || 'Creator'}'s World`;
+        const worldSlug = defaultWorldName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
         const [newWorld] = await tx
           .insert(worlds)
           .values({
-            creatorId: newCreator.id,
+            founderId: request.user!.id,
             name: defaultWorldName,
-            description: worldDescription || `Welcome to ${defaultWorldName}`
+            slug: worldSlug,
+            description: worldDescription || `Welcome to ${defaultWorldName}`,
+            pointsName: pointsName || 'Points'
           })
           .returning({
             id: worlds.publicId,
             name: worlds.name,
+            slug: worlds.slug,
             description: worlds.description,
+            pointsName: worlds.pointsName,
             createdAt: worlds.createdAt
           });
 
@@ -155,28 +155,14 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
             createdAt: tribes.createdAt
           });
 
-        // 4. Auto-create store
-        const defaultStoreName = storeName || `${request.user!.firstName || 'Creator'}'s Store`;
-        const [newStore] = await tx
-          .insert(creatorStores)
-          .values({
-            creatorId: newCreator.id,
-            storeName: defaultStoreName,
-            description: storeDescription || `Shop exclusive items from ${defaultStoreName}`
-          })
-          .returning({
-            id: creatorStores.publicId,
-            storeName: creatorStores.storeName,
-            description: creatorStores.description,
-            isActive: creatorStores.isActive,
-            createdAt: creatorStores.createdAt
-          });
+        // 4. Auto-create store (disabled - creatorStores table not yet implemented)
+        // const defaultStoreName = storeName || `${request.user!.firstName || 'Creator'}'s Store`;
+        // TODO: Implement store creation when creatorStores table is added to schema
 
         return {
           creator: newCreator,
           world: newWorld,
-          tribe: newTribe,
-          store: newStore
+          tribe: newTribe
         };
       });
 
@@ -277,7 +263,6 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
         .select({
           id: creators.publicId,
           bio: creators.bio,
-          pointsName: creators.pointsName,
           createdAt: creators.createdAt,
           user: {
             firstName: user.firstName,
@@ -323,7 +308,7 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
           }
         })
         .from(creators)
-        .innerJoin(worlds, eq(creators.id, worlds.creatorId))
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
         .where(eq(creators.publicId, creatorId))
         .limit(1);
 
@@ -419,7 +404,6 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
         .returning({
           id: creators.publicId,
           bio: creators.bio,
-          pointsName: creators.pointsName,
           updatedAt: creators.updatedAt
         });
 

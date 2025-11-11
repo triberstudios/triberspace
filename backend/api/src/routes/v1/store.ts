@@ -1,17 +1,17 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { 
-  db, 
-  creatorStores,
+import {
+  db,
   products,
   orders,
   orderItems,
   userInventory,
   pointTransactions,
-  pointBalances,
   creators,
   user,
-  avatarItems
+  avatarItems,
+  worlds,
+  userWorldPoints
 } from '@triberspace/database';
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
 import { authMiddleware, optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
@@ -111,8 +111,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
     try {
       // Build where conditions
       const conditions = [
-        eq(products.isActive, true), // Only show active products
-        eq(creatorStores.isActive, true) // Only from active stores
+        eq(products.isActive, true) // Only show active products
       ];
       
       if (search) {
@@ -180,15 +179,15 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
             id: creators.publicId,
             username: user.username
           },
-          store: {
-            id: creatorStores.publicId,
-            name: creatorStores.storeName
+          world: {
+            id: worlds.publicId,
+            name: worlds.name
           }
         })
         .from(products)
         .innerJoin(creators, eq(products.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
-        .innerJoin(creatorStores, eq(products.creatorId, creatorStores.creatorId))
+        .innerJoin(worlds, eq(products.worldId, worlds.id))
         .where(and(...conditions))
         .orderBy(orderBy)
         .limit(limit)
@@ -279,16 +278,16 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
             id: creators.publicId,
             username: user.username
           },
-          store: {
-            id: creatorStores.publicId,
-            name: creatorStores.storeName,
-            description: creatorStores.description
+          world: {
+            id: worlds.publicId,
+            name: worlds.name,
+            description: worlds.description
           }
         })
         .from(products)
         .innerJoin(creators, eq(products.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
-        .innerJoin(creatorStores, eq(products.creatorId, creatorStores.creatorId))
+        .innerJoin(worlds, eq(products.worldId, worlds.id))
         .where(and(
           eq(products.publicId, productId),
           eq(products.isActive, true)
@@ -354,7 +353,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Public: List all creator stores with enhanced info
+  // Public: List all creator worlds with stores (enhanced info)
   fastify.get('/stores', {
     preHandler: [optionalAuthMiddleware, validateQuery(paginationSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
@@ -362,41 +361,39 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
     const offset = (page - 1) * limit;
 
     try {
-      const storesList = await db
+      const worldsList = await db
         .select({
-          id: creatorStores.publicId,
-          name: creatorStores.storeName,
-          description: creatorStores.description,
-          bannerUrl: creatorStores.bannerUrl,
-          logoUrl: creatorStores.logoUrl,
-          createdAt: creatorStores.createdAt,
+          id: worlds.publicId,
+          name: worlds.name,
+          description: worlds.description,
+          thumbnailUrl: worlds.thumbnail_url,
+          createdAt: worlds.createdAt,
           creator: {
             id: creators.publicId,
             username: user.username
           }
         })
-        .from(creatorStores)
-        .innerJoin(creators, eq(creatorStores.creatorId, creators.id))
+        .from(worlds)
+        .innerJoin(creators, eq(worlds.founderId, creators.userId))
         .innerJoin(user, eq(creators.userId, user.id))
-        .where(eq(creatorStores.isActive, true))
-        .orderBy(desc(creatorStores.createdAt))
+        .orderBy(desc(worlds.createdAt))
         .limit(limit)
         .offset(offset);
 
-      // Add product count for each store
-      const storesWithProductCount = await Promise.all(
-        storesList.map(async (store) => {
+      // Add product count for each world
+      const worldsWithProductCount = await Promise.all(
+        worldsList.map(async (world) => {
           const [productCount] = await db
             .select({ count: sql<number>`count(*)` })
             .from(products)
-            .innerJoin(creators, eq(products.creatorId, creators.id))
+            .innerJoin(worlds, eq(products.worldId, worlds.id))
             .where(and(
-              eq(creators.publicId, store.creator.id),
+              eq(worlds.publicId, world.id),
               eq(products.isActive, true)
             ));
 
           return {
-            ...store,
+            ...world,
             productCount: productCount.count || 0
           };
         })
@@ -405,11 +402,11 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
       return {
         success: true,
         data: {
-          stores: storesWithProductCount,
+          stores: worldsWithProductCount,
           pagination: {
             page,
             limit,
-            hasMore: storesList.length === limit
+            hasMore: worldsList.length === limit
           }
         }
       };
@@ -438,44 +435,42 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
-      // Get current store info
-      const [storeInfo] = await db
-        .select({ internalId: creatorStores.id })
-        .from(creatorStores)
-        .where(eq(creatorStores.creatorId, creatorId))
+      // Get current world info
+      const [worldInfo] = await db
+        .select({ internalId: worlds.id })
+        .from(worlds)
+        .innerJoin(creators, eq(worlds.founderId, creators.userId))
+        .where(eq(creators.id, creatorId))
         .limit(1);
 
-      if (!storeInfo) {
+      if (!worldInfo) {
         return reply.code(404).send({
           error: {
-            code: 'STORE_NOT_FOUND',
-            message: 'Creator store not found',
+            code: 'WORLD_NOT_FOUND',
+            message: 'Creator world not found',
             statusCode: 404
           }
         });
       }
 
-      // Update the store
-      const [updatedStore] = await db
-        .update(creatorStores)
+      // Update the world
+      const [updatedWorld] = await db
+        .update(worlds)
         .set(updates)
-        .where(eq(creatorStores.id, storeInfo.internalId))
+        .where(eq(worlds.id, worldInfo.internalId))
         .returning({
-          id: creatorStores.publicId,
-          name: creatorStores.storeName,
-          description: creatorStores.description,
-          bannerUrl: creatorStores.bannerUrl,
-          logoUrl: creatorStores.logoUrl,
-          isActive: creatorStores.isActive,
-          settings: creatorStores.settings,
-          createdAt: creatorStores.createdAt
+          id: worlds.publicId,
+          name: worlds.name,
+          description: worlds.description,
+          thumbnailUrl: worlds.thumbnail_url,
+          createdAt: worlds.createdAt
         });
 
       return {
         success: true,
         data: {
-          message: 'Store updated successfully',
-          store: updatedStore
+          message: 'World updated successfully',
+          world: updatedWorld
         }
       };
 
@@ -499,11 +494,30 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
+      // Get creator's world
+      const [creatorWorld] = await db
+        .select({ worldId: worlds.id })
+        .from(creators)
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
+        .where(eq(creators.id, creatorId))
+        .limit(1);
+
+      if (!creatorWorld) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'Creator world not found',
+            statusCode: 404
+          }
+        });
+      }
+
       // Create the product
       const [newProduct] = await db
         .insert(products)
         .values({
           creatorId,
+          worldId: creatorWorld.worldId,
           ...productData,
           releaseDate: productData.releaseDate ? new Date(productData.releaseDate) : null,
           currentStock: productData.currentStock || productData.maxQuantity
@@ -690,7 +704,6 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           id: creators.id,
           publicId: creators.publicId,
           bio: creators.bio,
-          pointsName: creators.pointsName,
           user: {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -713,20 +726,18 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Get store info
-      const [store] = await db
+      // Get world info
+      const [world] = await db
         .select({
-          id: creatorStores.publicId,
-          storeName: creatorStores.storeName,
-          description: creatorStores.description,
-          bannerUrl: creatorStores.bannerUrl,
-          logoUrl: creatorStores.logoUrl,
-          isActive: creatorStores.isActive,
-          settings: creatorStores.settings,
-          createdAt: creatorStores.createdAt
+          id: worlds.publicId,
+          name: worlds.name,
+          description: worlds.description,
+          thumbnailUrl: worlds.thumbnail_url,
+          createdAt: worlds.createdAt
         })
-        .from(creatorStores)
-        .where(eq(creatorStores.creatorId, creator.id))
+        .from(worlds)
+        .innerJoin(creators, eq(worlds.founderId, creators.userId))
+        .where(eq(creators.id, creator.id))
         .limit(1);
 
       // Get basic product stats
@@ -742,7 +753,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         success: true,
         data: {
           creator,
-          store: store || null,
+          world: world || null,
           stats: productStats[0] || { totalProducts: 0, activeProducts: 0 }
         }
       };
@@ -889,6 +900,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           id: products.id,
           name: products.name,
           creatorId: products.creatorId,
+          worldId: products.worldId,
           productType: products.productType,
           pricePoints: products.pricePoints,
           isActive: products.isActive,
@@ -933,13 +945,13 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
 
       const totalPoints = product.pricePoints * quantity;
 
-      // Check user's points balance for this creator
+      // Check user's points balance for this world
       const [balance] = await db
-        .select({ balance: pointBalances.balance })
-        .from(pointBalances)
+        .select({ balance: userWorldPoints.balance })
+        .from(userWorldPoints)
         .where(and(
-          eq(pointBalances.userId, request.user!.id),
-          eq(pointBalances.creatorId, product.creatorId)
+          eq(userWorldPoints.userId, request.user!.id),
+          eq(userWorldPoints.worldId, product.worldId)
         ))
         .limit(1);
 
@@ -960,6 +972,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         .values({
           userId: request.user!.id,
           creatorId: product.creatorId,
+          worldId: product.worldId,
           totalPoints,
           status: 'pending'
         })
@@ -993,7 +1006,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         .insert(pointTransactions)
         .values({
           userId: request.user!.id,
-          creatorId: product.creatorId,
+          worldId: product.worldId,
           amount: -totalPoints,
           balance: currentBalance - totalPoints,
           type: 'purchase',
@@ -1010,14 +1023,15 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
 
       // Update points balance
       await db
-        .update(pointBalances)
+        .update(userWorldPoints)
         .set({
           balance: currentBalance - totalPoints,
-          lastUpdated: new Date()
+          totalSpent: sql`${userWorldPoints.totalSpent} + ${totalPoints}`,
+          updatedAt: new Date()
         })
         .where(and(
-          eq(pointBalances.userId, request.user!.id),
-          eq(pointBalances.creatorId, product.creatorId)
+          eq(userWorldPoints.userId, request.user!.id),
+          eq(userWorldPoints.worldId, product.worldId)
         ));
 
       // Update product stock if limited
@@ -1095,8 +1109,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           updatedAt: orders.updatedAt,
           creator: {
             id: creators.publicId,
-            name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-            pointsName: creators.pointsName
+            name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`
           }
         })
         .from(orders)
@@ -1158,8 +1171,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
             metadata: products.metadata
           },
           creator: {
-            id: creators.publicId,
-            pointsName: creators.pointsName
+            id: creators.publicId
           }
         })
         .from(userInventory)

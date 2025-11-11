@@ -1,14 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { 
-  db, 
-  pointBalances,
+import {
+  db,
   pointsPackages,
   pointsPurchases,
   pointTransactions,
-  creatorPointsConfig,
   creators,
-  user
+  user,
+  worlds,
+  userWorldPoints
 } from '@triberspace/database';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { authMiddleware, optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
@@ -59,12 +59,14 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     const { creatorId } = request.params as z.infer<typeof creatorParamsSchema>;
 
     try {
-      // Get creator info and points config
-      const [creator] = await db
+      // Get creator info and their world
+      const [creatorWorld] = await db
         .select({
-          id: creators.id,
-          publicId: creators.publicId,
-          pointsName: creators.pointsName,
+          creatorId: creators.id,
+          creatorPublicId: creators.publicId,
+          worldId: worlds.id,
+          worldPublicId: worlds.publicId,
+          pointsName: worlds.pointsName,
           user: {
             firstName: user.firstName,
             lastName: user.lastName,
@@ -73,10 +75,11 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         })
         .from(creators)
         .innerJoin(user, eq(creators.userId, user.id))
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
         .where(eq(creators.publicId, creatorId))
         .limit(1);
 
-      if (!creator) {
+      if (!creatorWorld) {
         return reply.code(404).send({
           error: {
             code: 'CREATOR_NOT_FOUND',
@@ -86,26 +89,18 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Get points config (includes custom points name and symbol)
-      const [pointsConfig] = await db
-        .select({
-          pointsName: creatorPointsConfig.pointsName,
-          pointsSymbol: creatorPointsConfig.pointsSymbol
-        })
-        .from(creatorPointsConfig)
-        .where(eq(creatorPointsConfig.creatorId, creator.id))
-        .limit(1);
-
-      // Get user's current balance
+      // Get user's current balance in this world
       const [balance] = await db
         .select({
-          balance: pointBalances.balance,
-          lastUpdated: pointBalances.lastUpdated
+          balance: userWorldPoints.balance,
+          totalEarned: userWorldPoints.totalEarned,
+          totalSpent: userWorldPoints.totalSpent,
+          lastUpdated: userWorldPoints.updatedAt
         })
-        .from(pointBalances)
+        .from(userWorldPoints)
         .where(and(
-          eq(pointBalances.userId, request.user!.id),
-          eq(pointBalances.creatorId, creator.id)
+          eq(userWorldPoints.userId, request.user!.id),
+          eq(userWorldPoints.worldId, creatorWorld.worldId)
         ))
         .limit(1);
 
@@ -120,7 +115,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         .from(pointTransactions)
         .where(and(
           eq(pointTransactions.userId, request.user!.id),
-          eq(pointTransactions.creatorId, creator.id)
+          eq(pointTransactions.worldId, creatorWorld.worldId)
         ))
         .orderBy(desc(pointTransactions.createdAt))
         .limit(5);
@@ -129,16 +124,21 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         success: true,
         data: {
           creator: {
-            id: creator.publicId,
-            name: `${creator.user.firstName} ${creator.user.lastName}`,
-            username: creator.user.username
+            id: creatorWorld.creatorPublicId,
+            name: `${creatorWorld.user.firstName} ${creatorWorld.user.lastName}`,
+            username: creatorWorld.user.username
+          },
+          world: {
+            id: creatorWorld.worldPublicId
           },
           pointsSystem: {
-            pointsName: pointsConfig?.pointsName || creator.pointsName,
-            pointsSymbol: pointsConfig?.pointsSymbol || '🪙'
+            pointsName: creatorWorld.pointsName || 'Points',
+            pointsSymbol: '🪙'
           },
           balance: {
             current: balance?.balance || 0,
+            totalEarned: balance?.totalEarned || 0,
+            totalSpent: balance?.totalSpent || 0,
             lastUpdated: balance?.lastUpdated || null
           },
           recentActivity
@@ -165,17 +165,19 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     const offset = (page - 1) * limit;
 
     try {
-      // Verify creator exists
-      const [creator] = await db
-        .select({ 
-          id: creators.id,
-          pointsName: creators.pointsName
+      // Get creator and their world
+      const [creatorWorld] = await db
+        .select({
+          creatorId: creators.id,
+          worldId: worlds.id,
+          pointsName: worlds.pointsName
         })
         .from(creators)
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
         .where(eq(creators.publicId, creatorId))
         .limit(1);
 
-      if (!creator) {
+      if (!creatorWorld) {
         return reply.code(404).send({
           error: {
             code: 'CREATOR_NOT_FOUND',
@@ -185,17 +187,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Get points config
-      const [pointsConfig] = await db
-        .select({
-          pointsName: creatorPointsConfig.pointsName,
-          pointsSymbol: creatorPointsConfig.pointsSymbol
-        })
-        .from(creatorPointsConfig)
-        .where(eq(creatorPointsConfig.creatorId, creator.id))
-        .limit(1);
-
-      // Get active points packages
+      // Get active points packages for this world
       const packages = await db
         .select({
           id: pointsPackages.publicId,
@@ -208,7 +200,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         })
         .from(pointsPackages)
         .where(and(
-          eq(pointsPackages.creatorId, creator.id),
+          eq(pointsPackages.worldId, creatorWorld.worldId),
           eq(pointsPackages.isActive, true)
         ))
         .orderBy(pointsPackages.displayOrder, pointsPackages.pointsAmount)
@@ -234,8 +226,8 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         success: true,
         data: {
           pointsSystem: {
-            pointsName: pointsConfig?.pointsName || creator.pointsName,
-            pointsSymbol: pointsConfig?.pointsSymbol || '🪙'
+            pointsName: creatorWorld.pointsName || 'Points',
+            pointsSymbol: '🪙'
           },
           packages: enhancedPackages,
           pagination: {
@@ -277,7 +269,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
       const [pointsPackage] = await db
         .select({
           id: pointsPackages.id,
-          creatorId: pointsPackages.creatorId,
+          worldId: pointsPackages.worldId,
           name: pointsPackages.name,
           pointsAmount: pointsPackages.pointsAmount,
           priceUSD: pointsPackages.priceUSD,
@@ -315,7 +307,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         .insert(pointsPurchases)
         .values({
           userId: request.user!.id,
-          creatorId: pointsPackage.creatorId,
+          worldId: pointsPackage.worldId,
           packageId: pointsPackage.id,
           pointsReceived: totalPointsReceived,
           amountUSD: pointsPackage.priceUSD,
@@ -332,11 +324,14 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
       // Get current balance or create new one
       const [currentBalance] = await db
-        .select({ balance: pointBalances.balance })
-        .from(pointBalances)
+        .select({
+          balance: userWorldPoints.balance,
+          totalEarned: userWorldPoints.totalEarned
+        })
+        .from(userWorldPoints)
         .where(and(
-          eq(pointBalances.userId, request.user!.id),
-          eq(pointBalances.creatorId, pointsPackage.creatorId)
+          eq(userWorldPoints.userId, request.user!.id),
+          eq(userWorldPoints.worldId, pointsPackage.worldId)
         ))
         .limit(1);
 
@@ -348,7 +343,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         .insert(pointTransactions)
         .values({
           userId: request.user!.id,
-          creatorId: pointsPackage.creatorId,
+          worldId: pointsPackage.worldId,
           amount: totalPointsReceived,
           balance: newBalance,
           type: 'purchase',
@@ -367,22 +362,24 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
       // Update or create balance record
       if (currentBalance) {
         await db
-          .update(pointBalances)
+          .update(userWorldPoints)
           .set({
             balance: newBalance,
-            lastUpdated: new Date()
+            totalEarned: (currentBalance.totalEarned || 0) + totalPointsReceived,
+            updatedAt: new Date()
           })
           .where(and(
-            eq(pointBalances.userId, request.user!.id),
-            eq(pointBalances.creatorId, pointsPackage.creatorId)
+            eq(userWorldPoints.userId, request.user!.id),
+            eq(userWorldPoints.worldId, pointsPackage.worldId)
           ));
       } else {
         await db
-          .insert(pointBalances)
+          .insert(userWorldPoints)
           .values({
             userId: request.user!.id,
-            creatorId: pointsPackage.creatorId,
-            balance: newBalance
+            worldId: pointsPackage.worldId,
+            balance: newBalance,
+            totalEarned: totalPointsReceived
           });
       }
 
@@ -429,15 +426,14 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           source: pointTransactions.source,
           description: pointTransactions.description,
           createdAt: pointTransactions.createdAt,
-          creator: {
-            id: creators.publicId,
-            name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-            pointsName: creators.pointsName
+          world: {
+            id: worlds.publicId,
+            name: worlds.name,
+            pointsName: worlds.pointsName
           }
         })
         .from(pointTransactions)
-        .innerJoin(creators, eq(pointTransactions.creatorId, creators.id))
-        .innerJoin(user, eq(creators.userId, user.id))
+        .innerJoin(worlds, eq(pointTransactions.worldId, worlds.id))
         .where(eq(pointTransactions.userId, request.user!.id))
         .orderBy(desc(pointTransactions.createdAt))
         .limit(limit)
@@ -454,15 +450,14 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
             source: pointTransactions.source,
             description: pointTransactions.description,
             createdAt: pointTransactions.createdAt,
-            creator: {
-              id: creators.publicId,
-              name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-              pointsName: creators.pointsName
+            world: {
+              id: worlds.publicId,
+              name: worlds.name,
+              pointsName: worlds.pointsName
             }
           })
           .from(pointTransactions)
-          .innerJoin(creators, eq(pointTransactions.creatorId, creators.id))
-          .innerJoin(user, eq(creators.userId, user.id))
+          .innerJoin(worlds, eq(pointTransactions.worldId, worlds.id))
           .where(and(
             eq(pointTransactions.userId, request.user!.id),
             eq(pointTransactions.type, type)
@@ -524,31 +519,31 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     try {
       const balances = await db
         .select({
-          balance: pointBalances.balance,
-          lastUpdated: pointBalances.lastUpdated,
-          creator: {
-            id: creators.publicId,
-            name: sql<string>`${user.firstName} || ' ' || ${user.lastName}`,
-            username: user.username,
-            pointsName: creators.pointsName
+          balance: userWorldPoints.balance,
+          totalEarned: userWorldPoints.totalEarned,
+          totalSpent: userWorldPoints.totalSpent,
+          lastUpdated: userWorldPoints.updatedAt,
+          world: {
+            id: worlds.publicId,
+            name: worlds.name,
+            pointsName: worlds.pointsName
           }
         })
-        .from(pointBalances)
-        .innerJoin(creators, eq(pointBalances.creatorId, creators.id))
-        .innerJoin(user, eq(creators.userId, user.id))
-        .where(eq(pointBalances.userId, request.user!.id))
-        .orderBy(desc(pointBalances.balance))
+        .from(userWorldPoints)
+        .innerJoin(worlds, eq(userWorldPoints.worldId, worlds.id))
+        .where(eq(userWorldPoints.userId, request.user!.id))
+        .orderBy(desc(userWorldPoints.balance))
         .limit(limit)
         .offset(offset);
 
-      // Get total points across all creators
+      // Get total points across all worlds
       const [totalStats] = await db
         .select({
-          totalPoints: sql<number>`sum(${pointBalances.balance})`,
-          creatorCount: sql<number>`count(*)`
+          totalPoints: sql<number>`sum(${userWorldPoints.balance})`,
+          worldCount: sql<number>`count(*)`
         })
-        .from(pointBalances)
-        .where(eq(pointBalances.userId, request.user!.id));
+        .from(userWorldPoints)
+        .where(eq(userWorldPoints.userId, request.user!.id));
 
       return {
         success: true,
@@ -556,7 +551,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           balances,
           summary: {
             totalPoints: totalStats?.totalPoints || 0,
-            creatorsWithPoints: totalStats?.creatorCount || 0
+            worldsWithPoints: totalStats?.worldCount || 0
           },
           pagination: {
             page,
@@ -571,7 +566,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
         success: true,
         data: {
           balances: [],
-          summary: { totalPoints: 0, creatorsWithPoints: 0 },
+          summary: { totalPoints: 0, worldsWithPoints: 0 },
           pagination: {
             page,
             limit,
@@ -596,6 +591,24 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
+      // Get creator's world
+      const [creatorWorld] = await db
+        .select({ worldId: worlds.id })
+        .from(creators)
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
+        .where(eq(creators.id, creatorId))
+        .limit(1);
+
+      if (!creatorWorld) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'Creator world not found',
+            statusCode: 404
+          }
+        });
+      }
+
       const packages = await db
         .select({
           id: pointsPackages.publicId,
@@ -608,7 +621,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
           createdAt: pointsPackages.createdAt
         })
         .from(pointsPackages)
-        .where(eq(pointsPackages.creatorId, creatorId))
+        .where(eq(pointsPackages.worldId, creatorWorld.worldId))
         .orderBy(pointsPackages.displayOrder, pointsPackages.pointsAmount)
         .limit(limit)
         .offset(offset);
@@ -670,10 +683,28 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
+      // Get creator's world
+      const [creatorWorld] = await db
+        .select({ worldId: worlds.id })
+        .from(creators)
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
+        .where(eq(creators.id, creatorId))
+        .limit(1);
+
+      if (!creatorWorld) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'Creator world not found',
+            statusCode: 404
+          }
+        });
+      }
+
       const [newPackage] = await db
         .insert(pointsPackages)
         .values({
-          creatorId,
+          worldId: creatorWorld.worldId,
           ...packageData,
           priceUSD: packageData.priceUSD.toFixed(2)
         })
@@ -719,12 +750,30 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
+      // Get creator's world
+      const [creatorWorld] = await db
+        .select({ worldId: worlds.id })
+        .from(creators)
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
+        .where(eq(creators.id, creatorId))
+        .limit(1);
+
+      if (!creatorWorld) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'Creator world not found',
+            statusCode: 404
+          }
+        });
+      }
+
       // Verify package ownership
       const [packageInfo] = await db
         .select({ internalId: pointsPackages.id })
         .from(pointsPackages)
         .where(and(
-          eq(pointsPackages.creatorId, creatorId),
+          eq(pointsPackages.worldId, creatorWorld.worldId),
           eq(pointsPackages.publicId, packageId)
         ))
         .limit(1);
@@ -790,12 +839,30 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
     const creatorId = request.creator!.id;
 
     try {
+      // Get creator's world
+      const [creatorWorld] = await db
+        .select({ worldId: worlds.id })
+        .from(creators)
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
+        .where(eq(creators.id, creatorId))
+        .limit(1);
+
+      if (!creatorWorld) {
+        return reply.code(404).send({
+          error: {
+            code: 'WORLD_NOT_FOUND',
+            message: 'Creator world not found',
+            statusCode: 404
+          }
+        });
+      }
+
       // Verify package ownership
       const [packageInfo] = await db
         .select({ internalId: pointsPackages.id })
         .from(pointsPackages)
         .where(and(
-          eq(pointsPackages.creatorId, creatorId),
+          eq(pointsPackages.worldId, creatorWorld.worldId),
           eq(pointsPackages.publicId, packageId)
         ))
         .limit(1);

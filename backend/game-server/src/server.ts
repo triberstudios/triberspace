@@ -251,6 +251,7 @@ export default class SpaceParty implements Party.Server {
  * Server options - Enable WebSocket Hibernation for cost savings
  * Hibernation mode unloads the server when idle, reducing memory costs
  */
+// @ts-ignore - PartyKit options property
 SpaceParty.options = {
   hibernate: true
 };

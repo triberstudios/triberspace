@@ -4,6 +4,7 @@ import type { BetterAuthSession } from "../types";
  * Verify Better Auth session token by calling the API
  */
 export async function verifyBetterAuthToken(token: string): Promise<BetterAuthSession> {
+  // @ts-ignore - PartyKit env vars
   const apiUrl = process.env.API_URL || "http://localhost:3001";
 
   try {
@@ -18,7 +19,7 @@ export async function verifyBetterAuthToken(token: string): Promise<BetterAuthSe
       throw new Error(`Session verification failed: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
 
     // Validate session structure
     if (!data.session?.userId || !data.user) {

@@ -1,15 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { 
-  db, 
+import {
+  db,
   userInventory,
   products,
   avatarItems,
   userAvatarInventory,
   creators,
   user,
-  orders,
-  creatorStores
+  orders
 } from '@triberspace/database';
 import { eq, desc, and, sql, or, isNull } from 'drizzle-orm';
 import { authMiddleware, AuthenticatedRequest } from '../../middleware/auth';
@@ -113,19 +112,13 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
           },
           creator: {
             id: creators.publicId,
-            username: user.username,
-            pointsName: creators.pointsName
-          },
-          store: {
-            id: creatorStores.publicId,
-            name: creatorStores.storeName
+            username: user.username
           }
         })
         .from(userInventory)
         .innerJoin(products, eq(userInventory.productId, products.id))
         .innerJoin(creators, eq(products.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
-        .innerJoin(creatorStores, eq(products.creatorId, creatorStores.creatorId))
         .where(and(...conditions))
         .orderBy(orderBy)
         .limit(limit)
@@ -249,20 +242,13 @@ export async function v1InventoryRoutes(fastify: FastifyInstance) {
           creator: {
             id: creators.publicId,
             username: user.username,
-            bio: creators.bio,
-            pointsName: creators.pointsName
-          },
-          store: {
-            id: creatorStores.publicId,
-            name: creatorStores.storeName,
-            description: creatorStores.description
+            bio: creators.bio
           }
         })
         .from(userInventory)
         .innerJoin(products, eq(userInventory.productId, products.id))
         .innerJoin(creators, eq(products.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
-        .innerJoin(creatorStores, eq(products.creatorId, creatorStores.creatorId))
         .where(and(
           eq(userInventory.id, inventoryId),
           eq(userInventory.userId, userId)

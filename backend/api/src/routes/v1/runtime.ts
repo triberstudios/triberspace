@@ -44,25 +44,28 @@ export async function v1RuntimeRoutes(fastify: FastifyInstance) {
   // Upload scene for preview
   fastify.post('/scenes', async (request, reply) => {
     try {
+      // Type the request body
+      const body = request.body as any;
+
       // Log request for debugging
       fastify.log.info('🗄️ Backend: Received scene upload request', {
-        hasBody: !!request.body,
-        bodyKeys: request.body ? Object.keys(request.body) : [],
-        compiledBehaviorsDetail: request.body?.compiledBehaviors ? {
-          behaviorCount: request.body.compiledBehaviors.behaviors?.length || 0,
-          errorCount: request.body.compiledBehaviors.errors?.length || 0,
-          behaviors: request.body.compiledBehaviors.behaviors?.map(b => ({
+        hasBody: !!body,
+        bodyKeys: body ? Object.keys(body) : [],
+        compiledBehaviorsDetail: body?.compiledBehaviors ? {
+          behaviorCount: body.compiledBehaviors.behaviors?.length || 0,
+          errorCount: body.compiledBehaviors.errors?.length || 0,
+          behaviors: body.compiledBehaviors.behaviors?.map((b: any) => ({
             objectName: b.objectName,
             objectUuid: b.objectUuid,
             behaviorCount: b.behaviors?.length || 0,
             hasUpdateFunction: !!b.updateFunction?.execute
           }))
         } : null,
-        sceneChildrenCount: request.body?.scene?.children?.length || 0
+        sceneChildrenCount: body?.scene?.children?.length || 0
       });
 
       // Validate the request body - use very permissive schema
-      const validationResult = sceneUploadSchema.safeParse(request.body);
+      const validationResult = sceneUploadSchema.safeParse(body);
 
       if (!validationResult.success) {
         fastify.log.warn('🗄️ Backend: Scene validation failed', validationResult.error.errors);

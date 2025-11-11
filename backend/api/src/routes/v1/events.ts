@@ -109,8 +109,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
         })
         .from(events)
         .innerJoin(spaces, eq(events.spaceId, spaces.id))
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-        .innerJoin(creators, eq(worlds.creatorId, creators.id))
+        .innerJoin(creators, eq(spaces.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
         .where(and(...conditions))
         .orderBy(desc(events.startTime))
@@ -182,8 +181,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
         })
         .from(events)
         .innerJoin(spaces, eq(events.spaceId, spaces.id))
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-        .innerJoin(creators, eq(worlds.creatorId, creators.id))
+        .innerJoin(creators, eq(spaces.creatorId, creators.id))
         .innerJoin(user, eq(creators.userId, user.id))
         .where(eq(events.publicId, eventId))
         .limit(1);
@@ -262,9 +260,9 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
         const [space] = await db
           .select({ internalId: spaces.id })
           .from(spaces)
-          .innerJoin(worlds, eq(spaces.worldId, worlds.id))
+          .innerJoin(creators, eq(spaces.creatorId, creators.id))
           .where(and(
-            eq(worlds.creatorId, creatorId),
+            eq(creators.id, creatorId),
             eq(spaces.publicId, spaceId)
           ))
           .limit(1);
@@ -284,8 +282,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
         const [space] = await db
           .select({ id: spaces.id })
           .from(spaces)
-          .innerJoin(worlds, eq(spaces.worldId, worlds.id))
-          .where(eq(worlds.creatorId, creatorId))
+          .where(eq(spaces.creatorId, creatorId))
           .limit(1);
 
         if (!space) {
@@ -355,9 +352,8 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
         .select({ internalId: events.id })
         .from(events)
         .innerJoin(spaces, eq(events.spaceId, spaces.id))
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
         .where(and(
-          eq(worlds.creatorId, creatorId),
+          eq(spaces.creatorId, creatorId),
           eq(events.publicId, eventId)
         ))
         .limit(1);
@@ -430,9 +426,8 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
         .select({ internalId: events.id })
         .from(events)
         .innerJoin(spaces, eq(events.spaceId, spaces.id))
-        .innerJoin(worlds, eq(spaces.worldId, worlds.id))
         .where(and(
-          eq(worlds.creatorId, creatorId),
+          eq(spaces.creatorId, creatorId),
           eq(events.publicId, eventId)
         ))
         .limit(1);
@@ -483,14 +478,19 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
     const userId = request.user!.id;
 
     try {
-      // Verify event exists and get internal ID
+      // Verify event exists and get internal ID with spaceId and worldId
       const [event] = await db
-        .select({ 
+        .select({
           internalId: events.id,
           name: events.name,
-          startTime: events.startTime
+          startTime: events.startTime,
+          spaceId: events.spaceId,
+          worldId: worlds.id
         })
         .from(events)
+        .innerJoin(spaces, eq(events.spaceId, spaces.id))
+        .innerJoin(creators, eq(spaces.creatorId, creators.id))
+        .innerJoin(worlds, eq(creators.userId, worlds.founderId))
         .where(eq(events.publicId, eventId))
         .limit(1);
 
@@ -528,8 +528,10 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
       await db
         .insert(eventAttendance)
         .values({
+          spaceId: event.spaceId,
           eventId: event.internalId,
-          userId: userId
+          userId: userId,
+          worldId: event.worldId
         });
 
       return reply.code(201).send({
@@ -591,12 +593,12 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
           lastName: user.lastName,
           username: user.username,
           image: user.image,
-          attendedAt: eventAttendance.attendedAt
+          joinedAt: eventAttendance.joinedAt
         })
         .from(eventAttendance)
         .innerJoin(user, eq(eventAttendance.userId, user.id))
         .where(eq(eventAttendance.eventId, event.internalId))
-        .orderBy(desc(eventAttendance.attendedAt));
+        .orderBy(desc(eventAttendance.joinedAt));
 
       return {
         success: true,
@@ -610,7 +612,7 @@ export async function v1EventsRoutes(fastify: FastifyInstance) {
             name: `${attendee.firstName || ''} ${attendee.lastName || ''}`.trim() || attendee.username,
             username: attendee.username,
             image: attendee.image,
-            attendedAt: attendee.attendedAt
+            joinedAt: attendee.joinedAt
           })),
           totalCount: attendees.length
         }
