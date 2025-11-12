@@ -3,7 +3,7 @@
  * Checks if user is authenticated via Better Auth session cookies
  */
 
-const API_URL = 'http://localhost:3001';
+import { API_URL } from '../api-config.js';
 
 class AuthChecker {
 	constructor() {

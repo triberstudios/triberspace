@@ -4,6 +4,8 @@
  * Step 2: Success/Share view with social buttons
  */
 
+import { getApiEndpoint } from '../api-config.js';
+
 class PublishModal {
 	constructor( editor ) {
 		this.editor = editor;
@@ -378,7 +380,7 @@ class PublishModal {
 		}
 
 		try {
-			const response = await fetch( `http://localhost:3001/api/v1/worlds/search?q=${encodeURIComponent(query)}` );
+			const response = await fetch( getApiEndpoint(`/api/v1/worlds/search?q=${encodeURIComponent(query)}`) );
 			const data = await response.json();
 
 			if ( data.success && data.data.worlds ) {
@@ -547,7 +549,7 @@ class PublishModal {
 			let worlds = [];
 			if ( this.formData.worlds.length > 0 ) {
 				const worldNames = this.formData.worlds.map( w => w.name );
-				const worldsResponse = await fetch( 'http://localhost:3001/api/v1/worlds/ensure', {
+				const worldsResponse = await fetch( getApiEndpoint('/api/v1/worlds/ensure'), {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ worldNames })
@@ -575,7 +577,7 @@ class PublishModal {
 			const timestamp = Date.now();
 			const filename = `scene-${timestamp}.json`;
 
-			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
+			const presignedResponse = await fetch( getApiEndpoint('/api/v1/uploads/presigned'), {
 				method: 'POST',
 				credentials: 'include', // Include auth cookies
 				headers: {
@@ -619,7 +621,7 @@ class PublishModal {
 				spacePayload.worldIds = worlds.map( w => w.id );
 			}
 
-			const spaceResponse = await fetch( 'http://localhost:3001/api/v1/spaces', {
+			const spaceResponse = await fetch( getApiEndpoint('/api/v1/spaces'), {
 				method: 'POST',
 				credentials: 'include', // Include auth cookies
 				headers: {
@@ -643,13 +645,17 @@ class PublishModal {
 			const spaceSlug = `${spaceName}-${spaceData.data.space.id}`;
 
 			let experienceUrl;
+			const runtimeUrl = window.location.hostname === 'engine.triber.space' || window.location.hostname.includes('pages.dev')
+				? 'https://triber.space'
+				: 'http://localhost:3000';
+
 			if ( worlds.length > 0 ) {
 				// World-scoped space: /w/{worldSlug}/s/{spaceSlug}
 				const worldSlug = worlds[0].slug; // Use first world's slug
-				experienceUrl = `http://localhost:3000/w/${worldSlug}/s/${spaceSlug}`;
+				experienceUrl = `${runtimeUrl}/w/${worldSlug}/s/${spaceSlug}`;
 			} else {
 				// Standalone space: /s/{spaceSlug}
-				experienceUrl = `http://localhost:3000/s/${spaceSlug}`;
+				experienceUrl = `${runtimeUrl}/s/${spaceSlug}`;
 			}
 
 			this.urlInput.value = experienceUrl;

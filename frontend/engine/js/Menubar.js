@@ -7,6 +7,7 @@ import { MenubarView } from './Menubar.View.js';
 import { MenubarHelp } from './Menubar.Help.js';
 import { MenubarStatus } from './Menubar.Status.js';
 import { PublishModal } from './modals/PublishModal.js';
+import { getApiEndpoint } from './api-config.js';
 
 function Menubar( editor ) {
 
@@ -51,7 +52,7 @@ function Menubar( editor ) {
 			const sceneData = editor.toJSON();
 
 			// Upload to backend
-			const response = await fetch('http://localhost:3001/api/v1/runtime/scenes', {
+			const response = await fetch(getApiEndpoint('/api/v1/runtime/scenes'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -80,7 +81,10 @@ function Menubar( editor ) {
 			const { sceneId } = result.data;
 
 			// Open preview in new tab
-			const previewUrl = `http://localhost:3000/runtime/preview/${sceneId}`;
+			const runtimeUrl = window.location.hostname === 'engine.triber.space' || window.location.hostname.includes('pages.dev')
+				? 'https://triber.space'
+				: 'http://localhost:3000';
+			const previewUrl = `${runtimeUrl}/runtime/preview/${sceneId}`;
 			window.open(previewUrl, '_blank');
 
 		} catch (error) {

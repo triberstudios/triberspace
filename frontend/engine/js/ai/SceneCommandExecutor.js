@@ -8,6 +8,7 @@ import { SetMaterialColorCommand } from '../commands/SetMaterialColorCommand.js'
 import { SetMaterialCommand } from '../commands/SetMaterialCommand.js';
 import { SetMaterialValueCommand } from '../commands/SetMaterialValueCommand.js';
 import { AddInteractionNodeCommand } from '../commands/AddInteractionNodeCommand.js';
+import { getApiEndpoint } from '../api-config.js';
 
 /**
  * Executes AI-generated commands in the Three.js editor
@@ -1631,7 +1632,7 @@ class SceneCommandExecutor {
 		const { query, count = 3 } = command;
 
 		try {
-			const response = await fetch('http://localhost:3001/api/v1/sketchfab/search', {
+			const response = await fetch(getApiEndpoint('/api/v1/sketchfab/search'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'

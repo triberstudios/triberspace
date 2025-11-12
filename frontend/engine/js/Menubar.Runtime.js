@@ -1,4 +1,5 @@
 import { UIPanel, UIRow } from './libs/ui.js';
+import { getApiEndpoint } from './api-config.js';
 
 function MenubarRuntime( editor ) {
 
@@ -50,7 +51,7 @@ function MenubarRuntime( editor ) {
 			});
 
 			// Upload to backend
-			const response = await fetch('http://localhost:3001/api/v1/runtime/scenes', {
+			const response = await fetch(getApiEndpoint('/api/v1/runtime/scenes'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -84,8 +85,11 @@ function MenubarRuntime( editor ) {
 
 			const { sceneId } = result.data;
 
-			// Open preview in new tab - point to Next.js app on port 3000
-			const previewUrl = `http://localhost:3000/runtime/preview/${sceneId}`;
+			// Open preview in new tab
+			const runtimeUrl = window.location.hostname === 'engine.triber.space' || window.location.hostname.includes('pages.dev')
+				? 'https://triber.space'
+				: 'http://localhost:3000';
+			const previewUrl = `${runtimeUrl}/runtime/preview/${sceneId}`;
 			window.open(previewUrl, '_blank');
 
 			console.log('📤 MenubarRuntime: Scene uploaded successfully, opening preview:', {

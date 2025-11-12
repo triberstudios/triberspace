@@ -58,8 +58,9 @@
                 errorDescription = urlParams.get('error_description');
             }
 
-            // Redirect to editor on port 3003 (editor is on different port than callback)
-            const editorUrl = 'http://localhost:3003/';
+            // Determine editor URL based on environment
+            const isProduction = window.location.hostname === 'api.triber.space';
+            const editorUrl = isProduction ? 'https://engine.triber.space/' : 'http://localhost:3003/';
 
             if (authCode) {
                 // Exchange authorization code for access token via backend
@@ -92,7 +93,10 @@
 
         // Exchange authorization code for access token via backend API
         async function exchangeCodeForToken(code) {
-            const apiUrl = 'http://localhost:3001/api/v1/sketchfab/token';
+            const isProduction = window.location.hostname === 'api.triber.space';
+            const apiUrl = isProduction
+                ? 'https://api.triber.space/api/v1/sketchfab/token'
+                : 'http://localhost:3001/api/v1/sketchfab/token';
             const redirectUri = window.location.href.split('?')[0]; // Current callback URL
 
             const response = await fetch(apiUrl, {
