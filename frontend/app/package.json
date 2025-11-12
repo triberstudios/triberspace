@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --no-lint",
+    "build:worker": "npx @opennextjs/cloudflare build",
+    "preview:worker": "npx @opennextjs/cloudflare preview",
+    "preview": "npm run build:worker && npm run preview:worker",
+    "deploy": "npx @opennextjs/cloudflare build && npx @opennextjs/cloudflare deploy",
     "start": "next start",
     "lint": "next lint"
   },
@@ -39,7 +43,9 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@opennextjs/cloudflare": "^1.12.0",
     "@tailwindcss/postcss": "^4",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^20",
     "@types/node-fetch": "^2.6.13",
     "@types/react": "^19",
@@ -48,7 +54,8 @@
     "eslint-config-next": "15.4.4",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.6",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "wrangler": "^4.47.0"
   },
   "overrides": {
     "zod": "3.25.76"
