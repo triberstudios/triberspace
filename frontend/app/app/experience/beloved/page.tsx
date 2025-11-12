@@ -92,7 +92,7 @@ export default function BelovedExperience() {
                     {/* Load Scene from Static JSON */}
                     <Suspense fallback={<LoadingIndicator />}>
                         <StaticSceneLoader
-                            sceneJsonPath="/scenes/beloved.json"
+                            sceneJsonPath="https://cdn.triber.space/scenes/beloved.json"
                             onMetadataClick={handleMetadataClick}
                             onLoadingChange={handleLoadingChange}
                         />
