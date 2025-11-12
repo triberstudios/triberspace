@@ -3,8 +3,18 @@
  * Non-dismissible overlay that prompts user to log in
  */
 
-const FRONTEND_URL = 'http://localhost:3000';
-const EDITOR_URL = 'http://localhost:3003';
+// Detect environment and use correct URLs
+const getUrls = () => {
+	const hostname = window.location.hostname;
+	const isProduction = hostname === 'engine.triber.space' || hostname.includes('pages.dev');
+
+	return {
+		frontendUrl: isProduction ? 'https://triber.space' : 'http://localhost:3000',
+		editorUrl: isProduction ? 'https://engine.triber.space' : 'http://localhost:3003'
+	};
+};
+
+const { frontendUrl: FRONTEND_URL, editorUrl: EDITOR_URL } = getUrls();
 
 class AuthOverlay {
 	constructor() {
