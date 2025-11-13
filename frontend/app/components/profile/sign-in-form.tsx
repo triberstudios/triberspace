@@ -46,8 +46,11 @@ export function SignInForm() {
       }
 
       // Build absolute callback URL (Better Auth needs full URL)
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const absoluteCallbackURL = `${origin}${redirectUrl}`;
+      // Check if redirectUrl is already absolute (starts with http:// or https://)
+      const isAbsoluteUrl = redirectUrl.startsWith('http://') || redirectUrl.startsWith('https://');
+      const absoluteCallbackURL = isAbsoluteUrl
+        ? redirectUrl
+        : `${typeof window !== 'undefined' ? window.location.origin : ''}${redirectUrl}`;
 
       await authClient.signIn.social({
         provider: "google",
