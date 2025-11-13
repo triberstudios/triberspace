@@ -98,7 +98,7 @@ export default function Home() {
   return (
     <div className="min-h-full font-sans">
       <div className="flex flex-col">
-        {/* Banner Section */}
+        {/* Bannerr Section */}
         <div className="px-6 sm:px-8 pt-4 sm:pt-8">
           <Banner
             variant="rightImage"
