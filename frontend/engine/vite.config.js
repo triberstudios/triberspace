@@ -1,7 +1,32 @@
 import { defineConfig } from 'vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
-export default defineConfig({
-  plugins: [],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    // Only copy static assets during build, not during dev
+    ...(command === 'build' ? [
+      viteStaticCopy({
+        targets: [
+          {
+            src: 'js',
+            dest: '.'
+          },
+          {
+            src: 'css',
+            dest: '.'
+          },
+          {
+            src: 'images',
+            dest: '.'
+          },
+          {
+            src: 'auth',
+            dest: '.'
+          }
+        ]
+      })
+    ] : [])
+  ],
   // Development server configuration
   server: {
     port: 3003,
@@ -21,7 +46,7 @@ export default defineConfig({
     }
   },
 
-  // Asset handling
+  // Let Vite serve static files in dev mode normally
   publicDir: 'public',
 
   // Module resolution - let Vite handle standard Node resolution
@@ -35,9 +60,9 @@ export default defineConfig({
     }
   },
 
-  // Optimization for Three.js
+  // Optimization for Three.js and dependencies
   optimizeDeps: {
-    include: ['three'],
+    include: ['three', '@breezystack/lamejs', '@zip.js/zip.js', 'three-gpu-pathtracer'],
     exclude: ['three/addons/', 'three/examples/']
   },
 
@@ -52,4 +77,4 @@ export default defineConfig({
     // Add any global defines if needed
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0')
   }
-})
+}))
