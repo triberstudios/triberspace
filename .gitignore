@@ -54,4 +54,4 @@ backend/api/server.log
 .partykit/
 
 # preview scenes
-.temp-scenes/
+.temp-scenes/.env.local

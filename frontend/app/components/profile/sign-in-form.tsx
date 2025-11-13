@@ -45,9 +45,13 @@ export function SignInForm() {
         sessionStorage.setItem('auth_redirect', redirectUrl);
       }
 
+      // Build absolute callback URL (Better Auth needs full URL)
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const absoluteCallbackURL = `${origin}${redirectUrl}`;
+
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: redirectUrl
+        callbackURL: absoluteCallbackURL
       });
     } catch (error: any) {
       toast.error(error.message || "Google sign-in failed");

@@ -62,9 +62,13 @@ export function SignUpForm() {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Build absolute callback URL (Better Auth needs full URL)
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const absoluteCallbackURL = `${origin}/`;
+
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "http://localhost:3000/"
+        callbackURL: absoluteCallbackURL
       });
     } catch (error: any) {
       toast.error(error.message || "Google sign-in failed");

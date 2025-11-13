@@ -81,11 +81,11 @@ export const auth = betterAuth({
     process.env.FRONTEND_URL || "http://localhost:3000",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:3003", // Editor
+    "http://localhost:3003", // Engine
     "http://127.0.0.1:3003",
     // Production
     "https://triber.space",
-    "https://editor.triber.space",
+    "https://engine.triber.space",
     "https://api.triber.space",
   ],
   advanced: {
