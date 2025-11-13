@@ -1,10 +1,10 @@
 import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields, usernameClient } from "better-auth/client/plugins";
 // TODO: Uncomment when @triberspace/auth package is fully set up
-import type { auth } from "@triberspace/auth";
+// import type { auth } from "@triberspace/auth";
 
 // Temporary auth type for deployment - remove when real auth is ready
-type auth = any;
+const auth = {} as any;
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
