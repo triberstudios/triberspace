@@ -15,6 +15,7 @@ import { SetMaterialMapCommand } from './commands/SetMaterialMapCommand.js';
 import { SetGeometryCommand } from './commands/SetGeometryCommand.js';
 
 import { SidebarObjectAnimation } from './Sidebar.Object.Animation.js';
+import { getApiEndpoint } from './api-config.js';
 
 /**
  * Media plane R2 upload utilities
@@ -37,7 +38,7 @@ class MediaUploadUtils {
 			}
 
 			// Get presigned upload URL
-			const presignedResponse = await fetch( 'http://localhost:3001/api/v1/uploads/presigned', {
+			const presignedResponse = await fetch( getApiEndpoint('/api/v1/uploads/presigned'), {
 				method: 'POST',
 				headers: headers,
 				credentials: 'include',

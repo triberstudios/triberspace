@@ -55,8 +55,8 @@ export default function SpaceViewer() {
             try {
                 setIsLoadingSpace(true);
                 const publicId = getPublicIdFromSlug(spaceSlug);
-                const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-                const response = await fetch(`http://${hostname}:3001/api/v1/spaces/${publicId}`);
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                const response = await fetch(`${apiUrl}/api/v1/spaces/${publicId}`);
 
                 if (!response.ok) {
                     if (response.status === 404) {

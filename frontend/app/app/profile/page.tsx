@@ -36,7 +36,8 @@ export default function Profile() {
     .map(([platform, data]) => ({ platform, ...data }));
 
   useEffect(() => {
-    fetch("http://localhost:3001/api/v1/users/me", {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    fetch(`${apiUrl}/api/v1/users/me`, {
       method: "GET",
       credentials: "include",
       headers: {
