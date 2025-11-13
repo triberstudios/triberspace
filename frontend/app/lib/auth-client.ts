@@ -4,6 +4,7 @@ import { inferAdditionalFields, usernameClient } from "better-auth/client/plugin
 // import type { auth } from "@triberspace/auth";
 
 // Temporary auth type for deployment - remove when real auth is ready
+// Environment variables are baked in at build time
 const auth = {} as any;
 
 export const authClient = createAuthClient({
