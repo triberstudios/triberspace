@@ -1,9 +1,9 @@
 {
-  "name": "triberspace",
+  "name": "triberspace-multiplayer",
   "main": "src/server.ts",
   "compatibilityDate": "2024-01-01",
+  "domain": "multiplayer.triber.space",
   "vars": {
-    "API_URL": "https://api.triber.space",
-    "BETTER_AUTH_SECRET": "your-production-secret-here"
+    "API_URL": "https://api.triber.space"
   }
 }

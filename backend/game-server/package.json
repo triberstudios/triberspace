@@ -13,11 +13,11 @@
   "license": "ISC",
   "description": "Triberspace multiplayer game server powered by PartyKit",
   "dependencies": {
-    "partykit": "^0.0.111",
+    "partykit": "^0.0.115",
     "partysocket": "^1.0.2"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
   }
 }
