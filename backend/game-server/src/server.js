@@ -5,7 +5,7 @@ import { verifyBetterAuthToken } from "./utils/auth";
  */
 export default class SpaceParty {
     room;
-    // In-memory player state (recreated on hibernation wake)
+    // In-memory player state (recreated on hibernation wake!)
     players = new Map();
     constructor(room) {
         this.room = room;
