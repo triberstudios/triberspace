@@ -103,7 +103,7 @@ export default function Home() {
           <Banner
             variant="rightImage"
             title="Welcome to Triberspace"
-            subtitle="Triberspace is a platform for spatial memory and gathering, enabling creators to build immersive exhibitions and community spaces - No code required. Audiences explore and connect to earn points to unlock exclusive rewards."
+            subtitle="Triberspace is a platform for spatial memory and gathering, enabling creators to build immersive exhibitions and community spaces - No code required. Audiences can explore, connect, and earn points to unlock exclusive rewards."
             backgroundVideo="/previewVideoHB.mp4"
             baseBackground="/bgGif.gif"
             baseOverlayOpacity={97}
