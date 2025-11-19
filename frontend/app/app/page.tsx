@@ -103,7 +103,7 @@ export default function Home() {
           <Banner
             variant="rightImage"
             title="Welcome to Triberspace"
-            subtitle="Triberspace enables creators to build and share digital exhibitions and community spaces in minutes - No code required. Audiences can explore, connect, and earn points to unlock exclusive rewards."
+            subtitle="Build and share digital exhibitions and community spaces in minutes - No code required. Audiences can explore, connect, and earn points to unlock exclusive rewards."
             backgroundVideo="/previewVideoHB.mp4"
             baseBackground="/bgGif.gif"
             baseOverlayOpacity={97}
