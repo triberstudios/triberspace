@@ -98,12 +98,12 @@ export default function Home() {
   return (
     <div className="min-h-full font-sans">
       <div className="flex flex-col">
-        {/* Bannerr Section */}
+        {/* Banner Section */}
         <div className="px-6 sm:px-8 pt-4 sm:pt-8">
           <Banner
             variant="rightImage"
             title="Welcome to Triberspace"
-            subtitle="Triberspace is a spatial memory platform enabling creators to build immersive exhibitions and community spaces - No code required. Audiences can explore, connect, and earn points to unlock exclusive rewards."
+            subtitle="Triberspace is a platform for spatial memory and gathering, enabling creators to build immersive exhibitions and community spaces - No code required. Audiences explore and connect to earn points to unlock exclusive rewards."
             backgroundVideo="/previewVideoHB.mp4"
             baseBackground="/bgGif.gif"
             baseOverlayOpacity={97}
