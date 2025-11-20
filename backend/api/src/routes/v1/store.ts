@@ -7,6 +7,10 @@ import {
   orderItems,
   userInventory,
   pointTransactions,
+  pointTransactionsNew,
+  userPointBalances,
+  creatorEarnings,
+  revenueSplits,
   creators,
   user,
   avatarItems,
@@ -17,6 +21,7 @@ import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
 import { authMiddleware, optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
 import { validateParams, validateQuery, validateBody } from '../../middleware/validation';
 import { publicIdSchema, paginationSchema } from '../../schemas/common';
+import { calculateRevenueSplit } from '../../config/revenue';
 
 const creatorParamsSchema = z.object({
   creatorId: publicIdSchema
@@ -945,23 +950,36 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
 
       const totalPoints = product.pricePoints * quantity;
 
-      // Check user's points balance for this world
+      // Check user's universal points balance
       const [balance] = await db
-        .select({ balance: userWorldPoints.balance })
-        .from(userWorldPoints)
-        .where(and(
-          eq(userWorldPoints.userId, request.user!.id),
-          eq(userWorldPoints.worldId, product.worldId)
-        ))
+        .select()
+        .from(userPointBalances)
+        .where(eq(userPointBalances.userId, request.user!.id))
         .limit(1);
 
-      const currentBalance = balance?.balance || 0;
+      if (!balance) {
+        return reply.code(400).send({
+          error: {
+            code: 'NO_BALANCE',
+            message: 'No points balance found. Please purchase points first.',
+            statusCode: 400
+          }
+        });
+      }
+
+      const currentBalance = balance.purchasedBalance + balance.earnedBalance;
       if (currentBalance < totalPoints) {
         return reply.code(400).send({
           error: {
             code: 'INSUFFICIENT_POINTS',
-            message: `Insufficient points. Need ${totalPoints}, have ${currentBalance}`,
-            statusCode: 400
+            message: `Insufficient points. Need ${totalPoints.toLocaleString()}, have ${currentBalance.toLocaleString()}`,
+            statusCode: 400,
+            details: {
+              required: totalPoints,
+              available: currentBalance,
+              purchased: balance.purchasedBalance,
+              earned: balance.earnedBalance
+            }
           }
         });
       }
@@ -1001,38 +1019,111 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
           totalPoints: orderItems.totalPoints
         });
 
-      // Deduct points (create transaction)
+      // Calculate revenue split
+      const revenueSplit = calculateRevenueSplit(totalPoints);
+
+      // Deduct points from user balance (purchased first, then earned)
+      let purchasedDeducted = 0;
+      let earnedDeducted = 0;
+      let remainingToDeduct = totalPoints;
+
+      // First use purchased points
+      if (balance.purchasedBalance > 0) {
+        purchasedDeducted = Math.min(balance.purchasedBalance, remainingToDeduct);
+        remainingToDeduct -= purchasedDeducted;
+      }
+
+      // Then use earned points if needed
+      if (remainingToDeduct > 0 && balance.earnedBalance > 0) {
+        earnedDeducted = Math.min(balance.earnedBalance, remainingToDeduct);
+      }
+
+      const newPurchasedBalance = balance.purchasedBalance - purchasedDeducted;
+      const newEarnedBalance = balance.earnedBalance - earnedDeducted;
+      const newTotalBalance = newPurchasedBalance + newEarnedBalance;
+
+      // Create universal points transaction
+      const transactionId = crypto.randomUUID();
       const [transaction] = await db
-        .insert(pointTransactions)
+        .insert(pointTransactionsNew)
         .values({
+          transactionId,
           userId: request.user!.id,
-          worldId: product.worldId,
+          creatorId: product.creatorId,
+          spaceId: null, // Product purchase, not space-specific
           amount: -totalPoints,
-          balance: currentBalance - totalPoints,
-          type: 'purchase',
+          balanceAfter: newTotalBalance,
+          type: 'debit',
+          pointType: purchasedDeducted > 0 ? 'purchased' : 'earned',
           source: 'store',
-          referenceType: 'order',
-          referenceId: order.id,
+          referenceType: 'product',
+          referenceId: product.id,
           description: `Purchase: ${product.name} x${quantity}`
         })
         .returning({
-          transactionId: pointTransactions.transactionId,
-          amount: pointTransactions.amount,
-          balance: pointTransactions.balance
+          transactionId: pointTransactionsNew.transactionId,
+          amount: pointTransactionsNew.amount,
+          balanceAfter: pointTransactionsNew.balanceAfter
         });
 
-      // Update points balance
+      // Update user points balance
       await db
-        .update(userWorldPoints)
+        .update(userPointBalances)
         .set({
-          balance: currentBalance - totalPoints,
-          totalSpent: sql`${userWorldPoints.totalSpent} + ${totalPoints}`,
+          purchasedBalance: newPurchasedBalance,
+          earnedBalance: newEarnedBalance,
+          earnedSpentThisMonth: balance.earnedSpentThisMonth + earnedDeducted,
+          totalSpent: balance.totalSpent + totalPoints,
           updatedAt: new Date()
         })
-        .where(and(
-          eq(userWorldPoints.userId, request.user!.id),
-          eq(userWorldPoints.worldId, product.worldId)
-        ));
+        .where(eq(userPointBalances.userId, request.user!.id));
+
+      // Record revenue split
+      await db
+        .insert(revenueSplits)
+        .values({
+          transactionId,
+          pointsSpent: totalPoints,
+          usdValue: revenueSplit.usdCents,
+          platformShare: revenueSplit.platformShare,
+          creatorShare: revenueSplit.creatorShare,
+          managerShare: revenueSplit.managerShare,
+          creatorId: product.creatorId,
+          managerId: request.user!.id, // Buyer is considered manager in this context
+          splitType: 'product_purchase'
+        });
+
+      // Update or create creator earnings
+      const [existingEarnings] = await db
+        .select()
+        .from(creatorEarnings)
+        .where(eq(creatorEarnings.creatorId, product.creatorId))
+        .limit(1);
+
+      if (existingEarnings) {
+        await db
+          .update(creatorEarnings)
+          .set({
+            pendingEarnings: existingEarnings.pendingEarnings + revenueSplit.creatorShare,
+            lifetimeEarnings: existingEarnings.lifetimeEarnings + revenueSplit.creatorShare,
+            earningsFromProducts: existingEarnings.earningsFromProducts + revenueSplit.creatorShare,
+            updatedAt: new Date()
+          })
+          .where(eq(creatorEarnings.creatorId, product.creatorId));
+      } else {
+        await db
+          .insert(creatorEarnings)
+          .values({
+            creatorId: product.creatorId,
+            pendingEarnings: revenueSplit.creatorShare,
+            lifetimeEarnings: revenueSplit.creatorShare,
+            totalCashedOut: 0,
+            earningsFromSubscriptions: 0,
+            earningsFromProducts: revenueSplit.creatorShare,
+            earningsFromPointPacks: 0,
+            minimumCashout: 5000
+          });
+      }
 
       // Update product stock if limited
       if (product.currentStock !== null) {
@@ -1064,7 +1155,7 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
         .update(orders)
         .set({
           status: 'completed',
-          paymentTransactionId: parseInt(String(transaction.transactionId)),
+          paymentTransactionId: null, // UUID transactions don't use integer IDs
           updatedAt: new Date()
         })
         .where(eq(orders.id, order.id));
@@ -1076,7 +1167,27 @@ export async function v1StoreRoutes(fastify: FastifyInstance) {
             ...order,
             status: 'completed'
           },
-          transaction,
+          transaction: {
+            id: transaction.transactionId,
+            amount: transaction.amount,
+            balanceAfter: transaction.balanceAfter
+          },
+          pointsUsed: {
+            purchased: purchasedDeducted,
+            earned: earnedDeducted,
+            total: totalPoints
+          },
+          newBalance: {
+            purchased: newPurchasedBalance,
+            earned: newEarnedBalance,
+            total: newTotalBalance
+          },
+          revenueSplit: {
+            platform: revenueSplit.platformShare,
+            creator: revenueSplit.creatorShare,
+            manager: revenueSplit.managerShare,
+            totalCents: revenueSplit.usdCents
+          },
           message: 'Purchase completed successfully'
         }
       });

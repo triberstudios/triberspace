@@ -1,11 +1,20 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { db, creators, user, tribes, worlds } from '@triberspace/database';
-import { eq, sql } from 'drizzle-orm';
-import { authMiddleware, optionalAuthMiddleware, AuthenticatedRequest } from '../../middleware/auth';
-import { validateParams, validateBody } from '../../middleware/validation';
-import { publicIdSchema } from '../../schemas/common';
+import {
+  db,
+  creators,
+  user,
+  tribes,
+  worlds,
+  creatorEarnings,
+  cashoutRequests
+} from '@triberspace/database';
+import { eq, sql, desc } from 'drizzle-orm';
+import { authMiddleware, optionalAuthMiddleware, creatorOnlyMiddleware, AuthenticatedRequest } from '../../middleware/auth';
+import { validateParams, validateBody, validateQuery } from '../../middleware/validation';
+import { publicIdSchema, paginationSchema } from '../../schemas/common';
 import { NotFoundError, ForbiddenError } from '../../middleware/error';
+import { pointsToUsdCents, formatUsdCents } from '../../config/revenue';
 
 const creatorParamsSchema = z.object({
   creatorId: publicIdSchema
@@ -415,6 +424,276 @@ export async function v1CreatorsRoutes(fastify: FastifyInstance) {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) throw error;
       fastify.log.error(error as Error, 'Error updating creator');
       throw new Error('Failed to update creator profile');
+    }
+  });
+
+  // ============================================================================
+  // CREATOR EARNINGS ENDPOINTS
+  // ============================================================================
+
+  // Protected: Get creator's earnings breakdown
+  fastify.get('/me/earnings', {
+    preHandler: [creatorOnlyMiddleware]
+  }, async (request: AuthenticatedRequest, reply) => {
+    if (!request.creator) {
+      return reply.code(403).send({
+        error: {
+          code: 'NOT_CREATOR',
+          message: 'Creator access required',
+          statusCode: 403
+        }
+      });
+    }
+
+    try {
+      // Get or create earnings record
+      let [earnings] = await db
+        .select()
+        .from(creatorEarnings)
+        .where(eq(creatorEarnings.creatorId, request.creator.id))
+        .limit(1);
+
+      if (!earnings) {
+        // Create initial earnings record
+        [earnings] = await db
+          .insert(creatorEarnings)
+          .values({
+            creatorId: request.creator.id,
+            pendingEarnings: 0,
+            lifetimeEarnings: 0,
+            totalCashedOut: 0,
+            earningsFromSubscriptions: 0,
+            earningsFromProducts: 0,
+            earningsFromPointPacks: 0,
+            minimumCashout: 5000 // $5 minimum
+          })
+          .returning();
+      }
+
+      // Convert cents to USD for display
+      const pendingUSD = earnings.pendingEarnings / 100;
+      const lifetimeUSD = earnings.lifetimeEarnings / 100;
+      const cashedOutUSD = earnings.totalCashedOut / 100;
+      const availableToCashout = earnings.pendingEarnings >= earnings.minimumCashout;
+
+      return {
+        success: true,
+        data: {
+          earnings: {
+            pending: {
+              cents: earnings.pendingEarnings,
+              usd: pendingUSD,
+              formatted: formatUsdCents(earnings.pendingEarnings)
+            },
+            lifetime: {
+              cents: earnings.lifetimeEarnings,
+              usd: lifetimeUSD,
+              formatted: formatUsdCents(earnings.lifetimeEarnings)
+            },
+            cashedOut: {
+              cents: earnings.totalCashedOut,
+              usd: cashedOutUSD,
+              formatted: formatUsdCents(earnings.totalCashedOut)
+            },
+            breakdown: {
+              subscriptions: {
+                cents: earnings.earningsFromSubscriptions,
+                formatted: formatUsdCents(earnings.earningsFromSubscriptions)
+              },
+              products: {
+                cents: earnings.earningsFromProducts,
+                formatted: formatUsdCents(earnings.earningsFromProducts)
+              },
+              pointPacks: {
+                cents: earnings.earningsFromPointPacks,
+                formatted: formatUsdCents(earnings.earningsFromPointPacks)
+              }
+            },
+            minimumCashout: {
+              cents: earnings.minimumCashout,
+              formatted: formatUsdCents(earnings.minimumCashout)
+            },
+            canCashout: availableToCashout
+          }
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error(error as Error, 'Error fetching creator earnings');
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch earnings',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Request cashout (STUBBED - no actual payout processing)
+  fastify.post('/me/cashout', {
+    preHandler: [creatorOnlyMiddleware]
+  }, async (request: AuthenticatedRequest, reply) => {
+    if (!request.creator) {
+      return reply.code(403).send({
+        error: {
+          code: 'NOT_CREATOR',
+          message: 'Creator access required',
+          statusCode: 403
+        }
+      });
+    }
+
+    try {
+      // Get earnings
+      const [earnings] = await db
+        .select()
+        .from(creatorEarnings)
+        .where(eq(creatorEarnings.creatorId, request.creator.id))
+        .limit(1);
+
+      if (!earnings) {
+        return reply.code(404).send({
+          error: {
+            code: 'NO_EARNINGS',
+            message: 'No earnings record found',
+            statusCode: 404
+          }
+        });
+      }
+
+      // Check minimum cashout amount
+      if (earnings.pendingEarnings < earnings.minimumCashout) {
+        return reply.code(400).send({
+          error: {
+            code: 'BELOW_MINIMUM',
+            message: `Minimum cashout amount is ${formatUsdCents(earnings.minimumCashout)}`,
+            statusCode: 400,
+            details: {
+              pending: earnings.pendingEarnings,
+              minimum: earnings.minimumCashout,
+              remaining: earnings.minimumCashout - earnings.pendingEarnings
+            }
+          }
+        });
+      }
+
+      // STUBBED: In production, this would integrate with Stripe/PayPal for payouts
+      fastify.log.info(`STUBBED: Creator ${request.creator.id} requested cashout of ${earnings.pendingEarnings} cents`);
+
+      // Create cashout request record
+      const requestId = crypto.randomUUID();
+      const [cashoutRequest] = await db
+        .insert(cashoutRequests)
+        .values({
+          requestId,
+          creatorId: request.creator.id,
+          amountCents: earnings.pendingEarnings,
+          status: 'pending',
+          payoutProvider: null, // Will be set when payment processing is implemented
+          payoutId: null
+        })
+        .returning();
+
+      return {
+        success: true,
+        data: {
+          message: 'Payout processing is not yet implemented',
+          request: {
+            id: cashoutRequest.requestId,
+            amount: {
+              cents: cashoutRequest.amountCents,
+              formatted: formatUsdCents(cashoutRequest.amountCents)
+            },
+            status: cashoutRequest.status,
+            requestedAt: cashoutRequest.requestedAt
+          },
+          note: 'This endpoint is stubbed for development. Payout integration coming soon.'
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error(error as Error, 'Error processing cashout request');
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to process cashout request',
+          statusCode: 500
+        }
+      });
+    }
+  });
+
+  // Protected: Get cashout history
+  fastify.get('/me/cashouts', {
+    preHandler: [creatorOnlyMiddleware, validateQuery(paginationSchema)]
+  }, async (request: AuthenticatedRequest, reply) => {
+    if (!request.creator) {
+      return reply.code(403).send({
+        error: {
+          code: 'NOT_CREATOR',
+          message: 'Creator access required',
+          statusCode: 403
+        }
+      });
+    }
+
+    const { page, limit } = request.query as z.infer<typeof paginationSchema>;
+    const offset = (page - 1) * limit;
+
+    try {
+      const cashouts = await db
+        .select({
+          id: cashoutRequests.requestId,
+          amount: cashoutRequests.amountCents,
+          status: cashoutRequests.status,
+          payoutProvider: cashoutRequests.payoutProvider,
+          payoutFee: cashoutRequests.payoutFee,
+          requestedAt: cashoutRequests.requestedAt,
+          processedAt: cashoutRequests.processedAt,
+          completedAt: cashoutRequests.completedAt,
+          notes: cashoutRequests.notes
+        })
+        .from(cashoutRequests)
+        .where(eq(cashoutRequests.creatorId, request.creator.id))
+        .orderBy(desc(cashoutRequests.requestedAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Format amounts
+      const formattedCashouts = cashouts.map(cashout => ({
+        ...cashout,
+        amount: {
+          cents: cashout.amount,
+          formatted: formatUsdCents(cashout.amount)
+        },
+        payoutFee: cashout.payoutFee ? {
+          cents: cashout.payoutFee,
+          formatted: formatUsdCents(cashout.payoutFee)
+        } : null
+      }));
+
+      return {
+        success: true,
+        data: {
+          cashouts: formattedCashouts,
+          pagination: {
+            page,
+            limit,
+            hasMore: cashouts.length === limit
+          }
+        }
+      };
+
+    } catch (error) {
+      fastify.log.error(error as Error, 'Error fetching cashout history');
+      return reply.code(500).send({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch cashout history',
+          statusCode: 500
+        }
+      });
     }
   });
 }

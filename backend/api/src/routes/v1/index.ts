@@ -10,6 +10,7 @@ import { v1AvatarsRoutes } from './avatars';
 import { v1InventoryRoutes } from './inventory';
 import { v1StoreRoutes } from './store';
 import { v1PointsRoutes } from './points';
+import { v1TriberPointsRoutes } from './triberPoints';
 import { v1UploadsRoutes } from './uploads';
 import { v1SketchfabRoutes } from './sketchfab';
 import { v1RuntimeRoutes } from './runtime';
@@ -45,7 +46,10 @@ export async function v1Routes(fastify: FastifyInstance) {
   // Store routes - product browsing and purchasing
   await fastify.register(v1StoreRoutes, { prefix: '/store' });
 
-  // Points routes - points balance, packages, and transactions
+  // Triber Points routes - universal point economy system
+  await fastify.register(v1TriberPointsRoutes, { prefix: '/triber-points' });
+
+  // Points routes - DEPRECATED (use /triber-points instead)
   await fastify.register(v1PointsRoutes, { prefix: '/points' });
 
   // Uploads - Cloudflare R2 presigned uploads
@@ -76,6 +80,7 @@ export async function v1Routes(fastify: FastifyInstance) {
           '/v1/inventory',
           '/v1/store',
           '/v1/points',
+          '/v1/triber-points',
           '/v1/uploads',
           '/v1/sketchfab',
           '/v1/runtime'

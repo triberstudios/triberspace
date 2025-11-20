@@ -8,6 +8,7 @@ import * as avatars from './db/schema/avatars';
 import * as creators from './db/schema/creators';
 import * as worlds from './db/schema/worlds';
 import * as points from './db/schema/points';
+import * as triberPoints from './db/schema/triberPoints';
 import * as store from './db/schema/store';
 import * as analytics from './db/schema/analytics';
 import * as comments from './db/schema/comments';
@@ -20,6 +21,7 @@ const schema = {
   ...creators,
   ...worlds,
   ...points,
+  ...triberPoints,
   ...store,
   ...analytics,
   ...comments,
@@ -37,6 +39,7 @@ export * from './db/schema/avatars';
 export * from './db/schema/creators';
 export * from './db/schema/worlds';
 export * from './db/schema/points';
+export * from './db/schema/triberPoints';
 export * from './db/schema/store';
 export * from './db/schema/analytics';
 export * from './db/schema/comments';

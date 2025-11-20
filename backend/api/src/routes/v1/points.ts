@@ -51,10 +51,33 @@ const packageParamsSchema = z.object({
   packageId: publicIdSchema
 });
 
+// Deprecation middleware - adds headers to all old points endpoints
+async function deprecationMiddleware(request: AuthenticatedRequest, reply: any) {
+  reply.header('X-API-Deprecated', 'true');
+  reply.header('X-API-Deprecation-Info', 'This endpoint is deprecated. Use /api/v1/triber-points/* instead');
+  reply.header('X-API-Replacement', '/api/v1/triber-points');
+}
+
 export async function v1PointsRoutes(fastify: FastifyInstance) {
+  // ===================================================================
+  // ⚠️  DEPRECATED - DO NOT USE
+  // ===================================================================
+  // These endpoints are DEPRECATED and should not be used.
+  // They exist only for backwards compatibility.
+  //
+  // USE INSTEAD: /api/v1/triber-points/* (Universal Points System)
+  //
+  // The new system provides:
+  // - Universal points across all worlds (not per-world)
+  // - Platform-defined packages with tiered bonuses (0-20%)
+  // - Automatic revenue splitting (40/50/10)
+  // - Separate purchased vs earned point tracking
+  // - Creator earnings and cashout system
+  // ===================================================================
+
   // Protected: Get user's points balance for a creator
   fastify.get('/balance/:creatorId', {
-    preHandler: [authMiddleware, validateParams(creatorParamsSchema)]
+    preHandler: [deprecationMiddleware, authMiddleware, validateParams(creatorParamsSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { creatorId } = request.params as z.infer<typeof creatorParamsSchema>;
 
@@ -158,7 +181,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Public: Get available points packages for a creator
   fastify.get('/packages/:creatorId', {
-    preHandler: [optionalAuthMiddleware, validateParams(creatorParamsSchema), validateQuery(paginationSchema)]
+    preHandler: [deprecationMiddleware, optionalAuthMiddleware, validateParams(creatorParamsSchema), validateQuery(paginationSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { creatorId } = request.params as z.infer<typeof creatorParamsSchema>;
     const { page, limit } = request.query as z.infer<typeof paginationSchema>;
@@ -260,7 +283,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Purchase a points package
   fastify.post('/purchase-package', {
-    preHandler: [authMiddleware, validateBody(purchasePackageSchema)]
+    preHandler: [deprecationMiddleware, authMiddleware, validateBody(purchasePackageSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { packageId, paymentProvider, paymentId } = request.body as z.infer<typeof purchasePackageSchema>;
 
@@ -410,7 +433,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Get user's points transaction history
   fastify.get('/transactions', {
-    preHandler: [authMiddleware, validateQuery(pointsQuerySchema)]
+    preHandler: [deprecationMiddleware, authMiddleware, validateQuery(pointsQuerySchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { page, limit, type } = request.query as z.infer<typeof pointsQuerySchema>;
     const offset = (page - 1) * limit;
@@ -511,7 +534,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Get all points balances for user (across all creators)
   fastify.get('/balances', {
-    preHandler: [authMiddleware, validateQuery(paginationSchema)]
+    preHandler: [deprecationMiddleware, authMiddleware, validateQuery(paginationSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { page, limit } = request.query as z.infer<typeof paginationSchema>;
     const offset = (page - 1) * limit;
@@ -584,7 +607,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Get creator's point packages for management
   fastify.get('/my-packages', {
-    preHandler: [creatorOnlyMiddleware, validateQuery(paginationSchema)]
+    preHandler: [deprecationMiddleware, creatorOnlyMiddleware, validateQuery(paginationSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { page, limit } = request.query as z.infer<typeof paginationSchema>;
     const offset = (page - 1) * limit;
@@ -677,7 +700,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Create new points package
   fastify.post('/packages', {
-    preHandler: [creatorOnlyMiddleware, validateBody(createPackageSchema)]
+    preHandler: [deprecationMiddleware, creatorOnlyMiddleware, validateBody(createPackageSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const packageData = request.body as z.infer<typeof createPackageSchema>;
     const creatorId = request.creator!.id;
@@ -743,7 +766,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Update points package
   fastify.put('/packages/:packageId', {
-    preHandler: [creatorOnlyMiddleware, validateParams(packageParamsSchema), validateBody(updatePackageSchema)]
+    preHandler: [deprecationMiddleware, creatorOnlyMiddleware, validateParams(packageParamsSchema), validateBody(updatePackageSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { packageId } = request.params as z.infer<typeof packageParamsSchema>;
     const updates = request.body as z.infer<typeof updatePackageSchema>;
@@ -833,7 +856,7 @@ export async function v1PointsRoutes(fastify: FastifyInstance) {
 
   // Protected: Delete points package
   fastify.delete('/packages/:packageId', {
-    preHandler: [creatorOnlyMiddleware, validateParams(packageParamsSchema)]
+    preHandler: [deprecationMiddleware, creatorOnlyMiddleware, validateParams(packageParamsSchema)]
   }, async (request: AuthenticatedRequest, reply) => {
     const { packageId } = request.params as z.infer<typeof packageParamsSchema>;
     const creatorId = request.creator!.id;
