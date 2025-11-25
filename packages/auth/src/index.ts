@@ -3,12 +3,23 @@ import { resolve } from 'path';
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins";
-import { db } from "@triberspace/database";
+import { createAuthMiddleware } from "better-auth/api";
+import { db, creators } from "@triberspace/database";
 
 // Load .env from root directory
 config({ path: resolve(__dirname, '../../../.env') });
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Generate 12-character nanoid-style public_id for creators
+function generateCreatorId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 12; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -107,7 +118,29 @@ export const auth = betterAuth({
   },
   plugins: [
     username()
-  ]
+  ],
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // Auto-create creator record for all new signups
+      if (ctx.path.startsWith("/sign-up")) {
+        const newSession = ctx.context.newSession;
+        if (newSession?.user) {
+          try {
+            await db.insert(creators).values({
+              userId: newSession.user.id,
+              public_id: generateCreatorId(),
+              bio: null
+            });
+            console.log(`✅ Creator record auto-created for user: ${newSession.user.id}`);
+          } catch (error: any) {
+            // Log error but don't block signup
+            // User can still use platform, just won't be a creator yet
+            console.error('⚠️  Failed to auto-create creator record:', error.message);
+          }
+        }
+      }
+    })
+  }
 });
 
 export type Session = typeof auth.$Infer.Session.session;

@@ -216,12 +216,18 @@ class PublishModal {
 		this.urlInput.className = 'publish-form-input publish-url-input';
 		this.urlInput.readOnly = true;
 
+		this.openButton = document.createElement( 'button' );
+		this.openButton.type = 'button';
+		this.openButton.className = 'publish-btn publish-btn-open';
+		this.openButton.textContent = 'Open';
+
 		this.copyButton = document.createElement( 'button' );
 		this.copyButton.type = 'button';
 		this.copyButton.className = 'publish-btn publish-btn-copy';
 		this.copyButton.textContent = 'Copy';
 
 		urlContainer.appendChild( this.urlInput );
+		urlContainer.appendChild( this.openButton );
 		urlContainer.appendChild( this.copyButton );
 		urlSection.appendChild( urlLabel );
 		urlSection.appendChild( urlContainer );
@@ -341,6 +347,9 @@ class PublishModal {
 
 		// Done button
 		this.doneButton.addEventListener( 'click', () => this.close() );
+
+		// Open button
+		this.openButton.addEventListener( 'click', () => this.handleOpen() );
 
 		// Copy button
 		this.copyButton.addEventListener( 'click', () => this.handleCopy() );
@@ -668,6 +677,12 @@ class PublishModal {
 			this.publishButton.textContent = originalText;
 			this.publishButton.disabled = false;
 		}
+	}
+
+	handleOpen() {
+		const url = this.urlInput.value;
+		// Open URL in new tab
+		window.open( url, '_blank' );
 	}
 
 	handleCopy() {
