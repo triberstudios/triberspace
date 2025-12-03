@@ -26,6 +26,11 @@ export function SignUpForm() {
     return null;
   };
 
+  const validatePassword = (password: string) => {
+    if (password.length < 8) return "Password must be at least 8 characters";
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -34,6 +39,14 @@ export function SignUpForm() {
     const usernameError = validateUsername(username);
     if (usernameError) {
       toast.error(usernameError);
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      toast.error(passwordError);
       setIsLoading(false);
       return;
     }
@@ -152,6 +165,9 @@ export function SignUpForm() {
                 )}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Minimum 8 characters
+            </p>
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full cursor-pointer">
