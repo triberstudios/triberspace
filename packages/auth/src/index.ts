@@ -133,7 +133,7 @@ export const auth = betterAuth({
             if (!sessionUser.firstName || !sessionUser.lastName) {
               await db.update(user).set({
                 firstName: sessionUser.firstName || sessionUser.username || 'User',
-                lastName: sessionUser.lastName || ''
+                lastName: sessionUser.lastName || ' '  // Space instead of empty string
               }).where(eq(user.id, sessionUser.id));
               console.log(`✅ Auto-set firstName/lastName for user: ${sessionUser.id}`);
             }
