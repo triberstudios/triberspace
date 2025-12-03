@@ -47,7 +47,7 @@ const start = async () => {
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Dev-Bypass'],
     });
 
-    // Serve Sketchfab OAuth callback page 
+    // Serve Sketchfab OAuth callback page
     // This route serves the callback.html file when Sketchfab redirects back
     fastify.get('/auth/sketchfab/callback', async (request, reply) => {
       try {
