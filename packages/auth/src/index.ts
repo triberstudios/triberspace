@@ -128,7 +128,7 @@ export const auth = betterAuth({
           try {
             await db.insert(creators).values({
               userId: newSession.user.id,
-              public_id: generateCreatorId(),
+              publicId: generateCreatorId(),
               bio: null
             });
             console.log(`✅ Creator record auto-created for user: ${newSession.user.id}`);
