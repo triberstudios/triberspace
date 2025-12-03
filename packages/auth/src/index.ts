@@ -4,7 +4,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { username } from "better-auth/plugins";
 import { createAuthMiddleware } from "better-auth/api";
-import { db, creators, users } from "@triberspace/database";
+import { db, creators, user } from "@triberspace/database";
 import { eq } from "drizzle-orm";
 
 // Load .env from root directory
@@ -129,13 +129,13 @@ export const auth = betterAuth({
           try {
             // Auto-set firstName/lastName if missing (for email/password signups)
             // Google OAuth already provides these via mapProfileToUser
-            const user = newSession.user as any;
-            if (!user.firstName || !user.lastName) {
-              await db.update(users).set({
-                firstName: user.firstName || user.username || 'User',
-                lastName: user.lastName || ''
-              }).where(eq(users.id, user.id));
-              console.log(`✅ Auto-set firstName/lastName for user: ${user.id}`);
+            const sessionUser = newSession.user as any;
+            if (!sessionUser.firstName || !sessionUser.lastName) {
+              await db.update(user).set({
+                firstName: sessionUser.firstName || sessionUser.username || 'User',
+                lastName: sessionUser.lastName || ''
+              }).where(eq(user.id, sessionUser.id));
+              console.log(`✅ Auto-set firstName/lastName for user: ${sessionUser.id}`);
             }
 
             // Create creator record
